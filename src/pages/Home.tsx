@@ -1,8 +1,108 @@
 import { Trophy, TrendingUp, Target, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Home() {
+  const { user } = useAuth();
+
+  // Fetch user data
+  const { data: userData } = useQuery({
+    queryKey: ['user-data', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*, wallets(*)')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch completed tasks this week
+  const { data: weeklyTasks } = useQuery({
+    queryKey: ['weekly-tasks', user?.id],
+    queryFn: async () => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      
+      const { data, error } = await supabase
+        .from('user_tasks')
+        .select('points_earned')
+        .eq('user_id', user?.id)
+        .eq('status', 'completed')
+        .gte('completed_at', weekAgo.toISOString());
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch completed tasks today
+  const { data: todayTasks } = useQuery({
+    queryKey: ['today-tasks', user?.id],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data, error } = await supabase
+        .from('user_tasks')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'completed')
+        .gte('completed_at', today.toISOString());
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch recent activities
+  const { data: recentActivities } = useQuery({
+    queryKey: ['recent-activities', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_tasks')
+        .select('*, tasks(*)')
+        .eq('user_id', user?.id)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false })
+        .limit(3);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const totalPoints = userData?.wallets?.[0]?.available_points || 0;
+  const level = userData?.level || 1;
+  const weeklyPoints = weeklyTasks?.reduce((sum, task) => sum + (task.points_earned || 0), 0) || 0;
+  const todayCompleted = todayTasks?.length || 0;
+  
+  // Calculate progress to next level (assume 1000 points per level)
+  const pointsForNextLevel = level * 1000;
+  const currentLevelPoints = (userData?.total_points || 0) % 1000;
+  const progressToNextLevel = (currentLevelPoints / 1000) * 100;
+
+  const getTimeAgo = (date: string) => {
+    const now = new Date();
+    const completed = new Date(date);
+    const diffInHours = Math.floor((now.getTime() - completed.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    if (diffInHours < 48) return 'Yesterday';
+    return `${Math.floor(diffInHours / 24)} days ago`;
+  };
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       <div className="max-w-md mx-auto space-y-6">
@@ -17,7 +117,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-white/80 text-sm font-medium mb-1">Total Points</p>
-              <h2 className="text-white text-4xl font-bold">2,450</h2>
+              <h2 className="text-white text-4xl font-bold">{totalPoints.toLocaleString()}</h2>
             </div>
             <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl">
               <Trophy className="w-8 h-8 text-white" />
@@ -25,10 +125,10 @@ export default function Home() {
           </div>
           <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-white/90 font-medium">Level 5</span>
-              <span className="text-white/90">78% to Level 6</span>
+              <span className="text-white/90 font-medium">Level {level}</span>
+              <span className="text-white/90">{Math.round(progressToNextLevel)}% to Level {level + 1}</span>
             </div>
-            <Progress value={78} className="mt-2 h-2 bg-white/20" />
+            <Progress value={progressToNextLevel} className="mt-2 h-2 bg-white/20" />
           </div>
         </Card>
 
@@ -41,7 +141,7 @@ export default function Home() {
               </div>
               <span className="text-muted-foreground text-sm font-medium">This Week</span>
             </div>
-            <p className="text-2xl font-bold">+320</p>
+            <p className="text-2xl font-bold">+{weeklyPoints}</p>
             <p className="text-xs text-muted-foreground mt-1">Points earned</p>
           </Card>
 
@@ -52,7 +152,7 @@ export default function Home() {
               </div>
               <span className="text-muted-foreground text-sm font-medium">Completed</span>
             </div>
-            <p className="text-2xl font-bold">12/15</p>
+            <p className="text-2xl font-bold">{todayCompleted}</p>
             <p className="text-xs text-muted-foreground mt-1">Today's tasks</p>
           </Card>
         </div>
@@ -61,29 +161,35 @@ export default function Home() {
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">Recent Activity</h3>
           
-          {[
-            { title: "Daily Survey", points: "+50", time: "2 hours ago", icon: Clock },
-            { title: "Watch Video", points: "+25", time: "5 hours ago", icon: Clock },
-            { title: "Share App", points: "+100", time: "Yesterday", icon: Clock },
-          ].map((activity, index) => (
-            <Card
-              key={index}
-              className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border hover:shadow-hover transition-all duration-300"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-secondary p-2 rounded-xl">
-                    <activity.icon className="w-5 h-5 text-secondary-foreground" />
+          {recentActivities && recentActivities.length > 0 ? (
+            recentActivities.map((activity) => (
+              <Card
+                key={activity.id}
+                className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border hover:shadow-hover transition-all duration-300"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-secondary p-2 rounded-xl">
+                      <Clock className="w-5 h-5 text-secondary-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{activity.tasks?.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {activity.completed_at ? getTimeAgo(activity.completed_at) : 'Recently'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm">{activity.title}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
+                  <span className="text-accent font-bold text-lg">+{activity.points_earned}</span>
                 </div>
-                <span className="text-accent font-bold text-lg">{activity.points}</span>
-              </div>
+              </Card>
+            ))
+          ) : (
+            <Card className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border">
+              <p className="text-center text-muted-foreground text-sm">
+                No activities yet. Start completing tasks to see your progress!
+              </p>
             </Card>
-          ))}
+          )}
         </div>
       </div>
     </div>

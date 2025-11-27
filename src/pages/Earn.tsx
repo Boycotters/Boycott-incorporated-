@@ -1,52 +1,127 @@
-import { Video, FileText, Share2, Star, CheckCircle2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Video, FileText, Share2, Clock, Zap } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-const tasks = [
-  {
-    id: 1,
-    title: "Complete Daily Survey",
-    description: "Answer 5 quick questions",
-    points: 50,
-    time: "2 min",
-    icon: FileText,
-    difficulty: "Easy",
-    category: "Survey",
-  },
-  {
-    id: 2,
-    title: "Watch Sponsored Video",
-    description: "Watch a 30-second video",
-    points: 25,
-    time: "30 sec",
-    icon: Video,
-    difficulty: "Easy",
-    category: "Video",
-  },
-  {
-    id: 3,
-    title: "Invite 3 Friends",
-    description: "Share referral link",
-    points: 200,
-    time: "5 min",
-    icon: Share2,
-    difficulty: "Medium",
-    category: "Social",
-  },
-  {
-    id: 4,
-    title: "Rate Our App",
-    description: "Leave a review on app store",
-    points: 100,
-    time: "1 min",
-    icon: Star,
-    difficulty: "Easy",
-    category: "Review",
-  },
-];
+const iconMap: Record<string, any> = {
+  Video,
+  FileText,
+  Share2,
+  Clock,
+  Zap,
+};
 
 export default function Earn() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch available tasks
+  const { data: tasks, isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('is_active', true)
+        .order('points_reward', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch user's completed tasks
+  const { data: userTasks } = useQuery({
+    queryKey: ['user-tasks', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_tasks')
+        .select('task_id, status')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Complete task mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      // First, create user_task record
+      const { data: userTask, error: userTaskError } = await supabase
+        .from('user_tasks')
+        .insert({
+          user_id: user?.id,
+          task_id: taskId,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .select('*, tasks(*)')
+        .single();
+
+      if (userTaskError) throw userTaskError;
+
+      // Update points using the database function
+      const { error: pointsError } = await supabase.rpc('update_user_points', {
+        user_id: user?.id,
+        points_to_add: userTask.tasks.points_reward,
+      });
+
+      if (pointsError) throw pointsError;
+
+      return userTask;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Task completed! 🎉",
+        description: `You earned ${data.tasks.points_reward} points!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['user-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['weekly-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isTaskCompleted = (taskId: string) => {
+    return userTasks?.some(ut => ut.task_id === taskId && ut.status === 'completed');
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy':
+        return 'bg-green-500/10 text-green-500';
+      case 'medium':
+        return 'bg-yellow-500/10 text-yellow-500';
+      case 'hard':
+        return 'bg-red-500/10 text-red-500';
+      default:
+        return 'bg-gray-500/10 text-gray-500';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pb-24">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       <div className="max-w-md mx-auto space-y-6">
@@ -56,78 +131,81 @@ export default function Earn() {
           <p className="text-muted-foreground">Complete tasks to earn rewards</p>
         </div>
 
-        {/* Daily Bonus */}
-        <Card className="bg-gradient-accent p-6 rounded-3xl shadow-hover border-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/90 text-sm font-medium mb-1">Daily Login Bonus</p>
-              <h3 className="text-white text-2xl font-bold">+50 Points</h3>
+        {/* Daily Login Bonus */}
+        <Card className="bg-gradient-primary border-0 rounded-3xl overflow-hidden shadow-hover">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-white text-2xl mb-1">Daily Login Bonus</CardTitle>
+                <CardDescription className="text-white/80">Claim your daily reward</CardDescription>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl">
+                <Zap className="w-8 h-8 text-white" />
+              </div>
             </div>
-            <Button
-              size="lg"
-              className="bg-white text-accent hover:bg-white/90 font-bold rounded-2xl px-6"
-            >
-              Claim Now
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full bg-white text-primary hover:bg-white/90 font-semibold py-6 rounded-2xl">
+              Claim 50 Points
             </Button>
-          </div>
+          </CardContent>
         </Card>
 
-        {/* Tasks List */}
+        {/* Available Tasks */}
         <div className="space-y-4">
-          {tasks.map((task) => (
-            <Card
-              key={task.id}
-              className="bg-gradient-card p-5 rounded-3xl shadow-card border border-border hover:shadow-hover transition-all duration-300"
-            >
-              <div className="flex gap-4">
-                <div className="bg-secondary p-3 rounded-2xl h-fit">
-                  <task.icon className="w-6 h-6 text-secondary-foreground" />
-                </div>
-                
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-bold text-base">{task.title}</h3>
-                      <Badge
-                        variant="secondary"
-                        className="bg-accent/10 text-accent font-bold border-0 rounded-xl"
-                      >
-                        +{task.points}
-                      </Badge>
+          <h2 className="text-xl font-semibold">Available Tasks</h2>
+          
+          {tasks?.map((task) => {
+            const IconComponent = iconMap[task.category || 'Clock'] || Clock;
+            const completed = isTaskCompleted(task.id);
+            
+            return (
+              <Card key={task.id} className="bg-gradient-card rounded-2xl shadow-card border border-border hover:shadow-hover transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="bg-primary/10 p-2.5 rounded-xl">
+                        <IconComponent className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-lg mb-1">{task.title}</CardTitle>
+                        <CardDescription className="text-sm">{task.description}</CardDescription>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="rounded-lg text-xs">
-                        {task.time}
-                      </Badge>
-                      <Badge variant="outline" className="rounded-lg text-xs">
-                        {task.difficulty}
-                      </Badge>
-                    </div>
+                    <span className="text-accent font-bold text-lg whitespace-nowrap ml-2">
+                      +{task.points_reward}
+                    </span>
                   </div>
-                  
-                  <Button className="w-full bg-primary hover:bg-primary/90 rounded-2xl font-semibold">
-                    Start Task
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Completed Tasks */}
-        <div className="space-y-3 pt-4">
-          <h3 className="text-lg font-semibold text-muted-foreground">Completed Today</h3>
-          <Card className="bg-muted/30 p-4 rounded-2xl border border-border">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              <div className="flex-1">
-                <p className="font-semibold text-sm">Morning Check-in</p>
-                <p className="text-xs text-muted-foreground">Completed 8:30 AM</p>
-              </div>
-              <span className="text-primary font-bold">+10</span>
-            </div>
-          </Card>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {task.difficulty && (
+                        <Badge variant="secondary" className={getDifficultyColor(task.difficulty)}>
+                          {task.difficulty}
+                        </Badge>
+                      )}
+                      {task.category && (
+                        <Badge variant="outline" className="text-xs">
+                          {task.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      onClick={() => !completed && completeTaskMutation.mutate(task.id)}
+                      disabled={completed || completeTaskMutation.isPending}
+                      className={completed 
+                        ? "bg-green-500/20 text-green-500 hover:bg-green-500/20" 
+                        : "bg-primary hover:bg-primary/90"
+                      }
+                    >
+                      {completed ? "Completed ✓" : completeTaskMutation.isPending ? "Processing..." : "Start Task"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>
