@@ -316,6 +316,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      process_referral: {
+        Args: { new_user_id: string; referrer_code: string }
+        Returns: boolean
+      }
       update_user_points: {
         Args: { points_to_add: number; user_id: string }
         Returns: undefined

@@ -33,7 +33,7 @@ export const useAuth = () => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -51,14 +51,14 @@ export const useAuth = () => {
         description: "Account created successfully. Please check your email to verify.",
       });
 
-      return { error: null };
+      return { error: null, data };
     } catch (error: any) {
       toast({
         title: "Signup failed",
         description: error.message,
         variant: "destructive",
       });
-      return { error };
+      return { error, data: null };
     }
   };
 
