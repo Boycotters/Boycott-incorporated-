@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { 
   Video, FileText, Share2, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
-  BookOpen, Rocket, MessageCircle, Trophy, Sparkles 
+  BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2 
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { TaskVerificationModal } from "@/components/task-verification";
 
 const iconMap: Record<string, any> = {
   social: MessageCircle,
@@ -23,10 +25,31 @@ const iconMap: Record<string, any> = {
   app_install: Rocket,
 };
 
+const verificationIcons: Record<string, any> = {
+  screenshot: Camera,
+  url: Link2,
+  timer: Clock,
+  instant: Zap,
+};
+
+interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  points_reward: number;
+  category: string | null;
+  difficulty: string | null;
+  verification_type: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+}
+
 export default function Earn() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
 
   // Fetch available tasks
   const { data: tasks, isLoading } = useQuery({
@@ -39,7 +62,7 @@ export default function Earn() {
         .order('points_reward', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as Task[];
     },
   });
 
@@ -60,8 +83,11 @@ export default function Earn() {
 
   // Complete task mutation
   const completeTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      // First, create user_task record
+    mutationFn: async ({ taskId, proofUrl }: { taskId: string; proofUrl?: string }) => {
+      const task = tasks?.find(t => t.id === taskId);
+      if (!task) throw new Error('Task not found');
+
+      // Create user_task record with proof
       const { data: userTask, error: userTaskError } = await supabase
         .from('user_tasks')
         .insert({
@@ -69,6 +95,8 @@ export default function Earn() {
           task_id: taskId,
           status: 'completed',
           completed_at: new Date().toISOString(),
+          proof_url: proofUrl || null,
+          proof_submitted_at: proofUrl ? new Date().toISOString() : null,
         })
         .select('*, tasks(*)')
         .single();
@@ -78,17 +106,17 @@ export default function Earn() {
       // Update points using the database function
       const { error: pointsError } = await supabase.rpc('update_user_points', {
         user_id: user?.id,
-        points_to_add: userTask.tasks.points_reward,
+        points_to_add: task.points_reward,
       });
 
       if (pointsError) throw pointsError;
 
-      return userTask;
+      return { userTask, points: task.points_reward };
     },
     onSuccess: (data) => {
       toast({
         title: "Task completed! 🎉",
-        description: `You earned ${data.tasks.points_reward} points!`,
+        description: `You earned ${data.points} points!`,
       });
       queryClient.invalidateQueries({ queryKey: ['user-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
@@ -105,6 +133,25 @@ export default function Earn() {
     },
   });
 
+  const handleTaskClick = (task: Task) => {
+    if (isTaskCompleted(task.id)) return;
+    
+    const verificationType = task.verification_type || 'instant';
+    
+    if (verificationType === 'instant') {
+      // Direct completion for instant tasks
+      completeTaskMutation.mutate({ taskId: task.id });
+    } else {
+      // Open verification modal for other types
+      setSelectedTask(task);
+      setVerificationModalOpen(true);
+    }
+  };
+
+  const handleVerificationComplete = (taskId: string, proofUrl?: string) => {
+    completeTaskMutation.mutate({ taskId, proofUrl });
+  };
+
   const isTaskCompleted = (taskId: string) => {
     return userTasks?.some(ut => ut.task_id === taskId && ut.status === 'completed');
   };
@@ -118,7 +165,16 @@ export default function Earn() {
       case 'hard':
         return 'bg-red-500/10 text-red-500';
       default:
-        return 'bg-gray-500/10 text-gray-500';
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getVerificationLabel = (type: string | null) => {
+    switch (type) {
+      case 'screenshot': return 'Screenshot';
+      case 'url': return 'Link';
+      case 'timer': return 'Timer';
+      default: return 'Instant';
     }
   };
 
@@ -165,6 +221,7 @@ export default function Earn() {
           
           {tasks?.map((task) => {
             const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
+            const VerifyIcon = verificationIcons[task.verification_type || 'instant'] || Zap;
             const completed = isTaskCompleted(task.id);
             
             return (
@@ -187,20 +244,19 @@ export default function Earn() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {task.difficulty && (
                         <Badge variant="secondary" className={getDifficultyColor(task.difficulty)}>
                           {task.difficulty}
                         </Badge>
                       )}
-                      {task.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {task.category}
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <VerifyIcon className="w-3 h-3" />
+                        {getVerificationLabel(task.verification_type)}
+                      </Badge>
                     </div>
                     <Button
-                      onClick={() => !completed && completeTaskMutation.mutate(task.id)}
+                      onClick={() => handleTaskClick(task)}
                       disabled={completed || completeTaskMutation.isPending}
                       className={completed 
                         ? "bg-green-500/20 text-green-500 hover:bg-green-500/20" 
@@ -216,6 +272,20 @@ export default function Earn() {
           })}
         </div>
       </div>
+
+      {/* Verification Modal */}
+      <TaskVerificationModal
+        open={verificationModalOpen}
+        onOpenChange={setVerificationModalOpen}
+        task={selectedTask ? {
+          id: selectedTask.id,
+          title: selectedTask.title,
+          verification_type: selectedTask.verification_type || 'instant',
+          points_reward: selectedTask.points_reward,
+        } : null}
+        userId={user?.id || ''}
+        onVerificationComplete={handleVerificationComplete}
+      />
     </div>
   );
 }
