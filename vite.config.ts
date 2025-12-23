@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
-        name: "TaskReward - Earn Rewards Daily",
-        short_name: "TaskReward",
+        name: "Nexus - Earn Rewards Daily",
+        short_name: "Nexus",
         description: "Complete fun tasks and earn points to redeem amazing rewards",
         theme_color: "#14b8a6",
         background_color: "#f5f7fa",
