@@ -16,12 +16,13 @@ import ResetPassword from "./pages/ResetPassword";
 import TransactionHistory from "./pages/TransactionHistory";
 import Referrals from "./pages/Referrals";
 import Settings from "./pages/Settings";
+import Achievements from "./pages/Achievements";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavRoutes = ['/auth', '/reset-password', '/transactions', '/referrals', '/settings'];
+  const hideNavRoutes = ['/auth', '/reset-password', '/transactions', '/referrals', '/settings', '/achievements'];
   const showNav = !hideNavRoutes.includes(location.pathname);
 
   return (
@@ -37,6 +38,7 @@ const AppContent = () => {
         <Route path="/transactions" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
         <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

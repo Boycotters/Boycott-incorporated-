@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean | null
+          name: string
+          points_reward: number | null
+          requirement_type: string
+          requirement_value: number
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          icon: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_reward?: number | null
+          requirement_type: string
+          requirement_value: number
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_reward?: number | null
+          requirement_type?: string
+          requirement_value?: number
+        }
+        Relationships: []
+      }
       redemptions: {
         Row: {
           created_at: string | null
@@ -198,6 +237,42 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tasks: {
         Row: {
           completed_at: string | null
@@ -316,6 +391,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_award_achievements: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean

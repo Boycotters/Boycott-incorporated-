@@ -7,18 +7,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-const achievements = [
-  { id: 1, name: "First Steps", icon: "🎯", earned: true },
-  { id: 2, name: "Streak Master", icon: "🔥", earned: true },
-  { id: 3, name: "Social Star", icon: "⭐", earned: false },
-  { id: 4, name: "Task Champion", icon: "🏆", earned: true },
-];
+interface Achievement {
+  id: string;
+  name: string;
+  icon: string;
+}
 
-const stats = [
-  { label: "Tasks Completed", value: "156", icon: Target },
-  { label: "Current Streak", value: "12 days", icon: Zap },
-  { label: "Rewards Claimed", value: "8", icon: Gift },
-];
+interface UserAchievement {
+  achievement_id: string;
+  achievements: Achievement;
+}
 
 export default function Profile() {
   const { user, signOut } = useAuth();
@@ -52,6 +50,41 @@ export default function Profile() {
       
       if (error) throw error;
       return count || 0;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch user's earned achievements (latest 4)
+  const { data: userAchievements } = useQuery({
+    queryKey: ['profile-achievements', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('user_achievements')
+        .select(`
+          achievement_id,
+          achievements (id, name, icon)
+        `)
+        .eq('user_id', user.id)
+        .order('earned_at', { ascending: false })
+        .limit(4);
+      
+      if (error) throw error;
+      return data as UserAchievement[];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check achievements on profile load
+  useQuery({
+    queryKey: ['check-profile-achievements', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { data, error } = await supabase.rpc('check_and_award_achievements', {
+        p_user_id: user.id
+      });
+      if (error) throw error;
+      return data;
     },
     enabled: !!user?.id,
   });
@@ -142,30 +175,41 @@ export default function Profile() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Achievements</h3>
-            <Button variant="ghost" size="sm" className="rounded-xl">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="rounded-xl"
+              onClick={() => navigate('/achievements')}
+            >
               View All
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
           
           <div className="grid grid-cols-4 gap-3">
-            {achievements.map((achievement) => (
+            {userAchievements && userAchievements.length > 0 ? (
+              userAchievements.map((ua) => (
+                <Card
+                  key={ua.achievement_id}
+                  className="p-3 rounded-2xl shadow-card border-0 bg-gradient-accent hover:scale-105 transition-all duration-300"
+                >
+                  <div className="text-center">
+                    <div className="text-3xl mb-1">{ua.achievements?.icon}</div>
+                    <p className="text-xs font-medium text-white">
+                      {ua.achievements?.name}
+                    </p>
+                  </div>
+                </Card>
+              ))
+            ) : (
               <Card
-                key={achievement.id}
-                className={`p-3 rounded-2xl shadow-card border transition-all duration-300 ${
-                  achievement.earned
-                    ? "bg-gradient-accent border-0 hover:scale-105"
-                    : "bg-muted/30 border-border opacity-50"
-                }`}
+                className="col-span-4 p-4 rounded-2xl shadow-card border border-border bg-muted/30 text-center"
               >
-                <div className="text-center">
-                  <div className="text-3xl mb-1">{achievement.icon}</div>
-                  <p className={`text-xs font-medium ${achievement.earned ? "text-white" : "text-muted-foreground"}`}>
-                    {achievement.name}
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Complete tasks to unlock achievements!
+                </p>
               </Card>
-            ))}
+            )}
           </div>
         </div>
 
