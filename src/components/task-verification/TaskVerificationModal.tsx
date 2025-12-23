@@ -7,6 +7,7 @@ import {
 import { ScreenshotVerification } from "./ScreenshotVerification";
 import { UrlVerification } from "./UrlVerification";
 import { TimerVerification } from "./TimerVerification";
+import { DataVerification } from "./DataVerification";
 
 interface Task {
   id: string;
@@ -69,8 +70,17 @@ export function TaskVerificationModal({
             onCancel={handleCancel}
           />
         );
+      case 'instant':
+        return (
+          <DataVerification
+            taskId={task.id}
+            userId={userId}
+            taskTitle={task.title}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
       default:
-        // Instant verification - shouldn't reach here
         handleComplete();
         return null;
     }
@@ -78,7 +88,7 @@ export function TaskVerificationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center">{task.title}</DialogTitle>
         </DialogHeader>
