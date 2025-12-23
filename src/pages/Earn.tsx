@@ -1,4 +1,7 @@
-import { Video, FileText, Share2, Clock, Zap } from "lucide-react";
+import { 
+  Video, FileText, Share2, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
+  BookOpen, Rocket, MessageCircle, Trophy, Sparkles 
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +11,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const iconMap: Record<string, any> = {
-  Video,
-  FileText,
-  Share2,
-  Clock,
-  Zap,
+  social: MessageCircle,
+  gaming: Gamepad2,
+  lifestyle: Heart,
+  shopping: ShoppingBag,
+  learning: BookOpen,
+  quick: Zap,
+  challenge: Trophy,
+  survey: FileText,
+  video_ad: Video,
+  app_install: Rocket,
 };
 
 export default function Earn() {
@@ -156,7 +164,7 @@ export default function Earn() {
           <h2 className="text-xl font-semibold">Available Tasks</h2>
           
           {tasks?.map((task) => {
-            const IconComponent = iconMap[task.category || 'Clock'] || Clock;
+            const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
             const completed = isTaskCompleted(task.id);
             
             return (
