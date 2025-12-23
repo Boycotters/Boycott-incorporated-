@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { 
   Video, FileText, Share2, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
-  BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2 
+  BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2,
+  Flame, CheckCircle2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,12 +45,78 @@ interface Task {
   created_at: string | null;
 }
 
+interface LoginStreakResult {
+  claimed: boolean;
+  already_claimed_today: boolean;
+  current_streak: number;
+  longest_streak: number;
+  bonus_points: number;
+}
+
 export default function Earn() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+
+  // Fetch user streak data
+  const { data: userData } = useQuery({
+    queryKey: ['user-streak', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('current_streak, longest_streak, last_login_date')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check if already claimed today
+  const hasClaimedToday = userData?.last_login_date === new Date().toISOString().split('T')[0];
+
+  // Calculate potential bonus points (same formula as DB function)
+  const currentStreak = userData?.current_streak || 0;
+  const potentialBonus = 5 + Math.floor(Math.min(currentStreak + 1, 30) / 7) * 5;
+
+  // Claim daily bonus mutation
+  const claimDailyBonus = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('check_login_streak', {
+        p_user_id: user?.id
+      });
+      
+      if (error) throw error;
+      return data as unknown as LoginStreakResult;
+    },
+    onSuccess: (data) => {
+      if (data.claimed) {
+        toast({
+          title: `Day ${data.current_streak} Streak! 🔥`,
+          description: `You earned ${data.bonus_points} bonus points!`,
+        });
+      } else if (data.already_claimed_today) {
+        toast({
+          title: "Already Claimed",
+          description: "Come back tomorrow to continue your streak!",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['user-streak'] });
+      queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch available tasks
   const { data: tasks, isLoading } = useQuery({
@@ -195,16 +262,50 @@ export default function Earn() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-white text-2xl mb-1">Daily Login Bonus</CardTitle>
-                <CardDescription className="text-white/80">Claim your daily reward</CardDescription>
+                <CardDescription className="text-white/80">
+                  {hasClaimedToday 
+                    ? `Day ${currentStreak} streak! Come back tomorrow` 
+                    : `Claim your Day ${currentStreak + 1} reward`
+                  }
+                </CardDescription>
               </div>
               <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl">
-                <Zap className="w-8 h-8 text-white" />
+                <Flame className="w-8 h-8 text-white" />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <Button className="w-full bg-white text-primary hover:bg-white/90 font-semibold py-6 rounded-2xl">
-              Claim 50 Points
+          <CardContent className="space-y-3">
+            {/* Streak Stats */}
+            <div className="flex items-center justify-between text-white/80 text-sm">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4" />
+                <span>Current Streak: {currentStreak} days</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4" />
+                <span>Best: {userData?.longest_streak || 0}</span>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={() => claimDailyBonus.mutate()}
+              disabled={hasClaimedToday || claimDailyBonus.isPending}
+              className={`w-full font-semibold py-6 rounded-2xl transition-all ${
+                hasClaimedToday 
+                  ? "bg-white/30 text-white/70 cursor-not-allowed" 
+                  : "bg-white text-primary hover:bg-white/90"
+              }`}
+            >
+              {hasClaimedToday ? (
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Claimed Today
+                </span>
+              ) : claimDailyBonus.isPending ? (
+                "Claiming..."
+              ) : (
+                `Claim +${potentialBonus} Points`
+              )}
             </Button>
           </CardContent>
         </Card>
