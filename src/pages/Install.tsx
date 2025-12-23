@@ -65,7 +65,7 @@ const Install = () => {
             </div>
             <CardTitle>App Installed!</CardTitle>
             <CardDescription>
-              TaskReward is already installed on your device.
+              Nexus is already installed on your device.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -85,9 +85,9 @@ const Install = () => {
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <Smartphone className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle>Install TaskReward</CardTitle>
+          <CardTitle>Install Nexus</CardTitle>
           <CardDescription>
-            Add TaskReward to your home screen for the best experience
+            Add Nexus to your home screen for the best experience
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
