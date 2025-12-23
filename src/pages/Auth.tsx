@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Zap, ArrowLeft } from "lucide-react";
+import { Zap, ArrowLeft, Gift } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,10 +34,14 @@ const forgotPasswordSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  
+  // Get referral code from URL
+  const referralCode = searchParams.get('ref');
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -145,19 +149,34 @@ const Auth = () => {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(result.data.email, result.data.password, result.data.fullName);
-    setIsLoading(false);
+    const { error, data } = await signUp(result.data.email, result.data.password, result.data.fullName);
     
     if (error) {
+      setIsLoading(false);
       toast({
         title: "Signup failed",
         description: error.message || "Could not create account",
         variant: "destructive",
       });
     } else {
+      // Process referral if code exists and user was created
+      if (referralCode && data?.user?.id) {
+        try {
+          await supabase.rpc('process_referral', {
+            referrer_code: referralCode,
+            new_user_id: data.user.id
+          });
+        } catch (refError) {
+          console.error('Referral processing failed:', refError);
+        }
+      }
+      
+      setIsLoading(false);
       toast({
         title: "Account created",
-        description: "Please check your email to verify your account",
+        description: referralCode 
+          ? "Welcome! Your referrer will receive bonus points." 
+          : "Please check your email to verify your account",
       });
     }
   };
@@ -223,7 +242,14 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          {referralCode && (
+            <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-center gap-2">
+              <Gift className="w-5 h-5 text-primary" />
+              <span className="text-sm">You were invited! Sign up to get started.</span>
+            </div>
+          )}
+
+          <Tabs defaultValue={referralCode ? "signup" : "login"} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
