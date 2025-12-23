@@ -1,12 +1,25 @@
-import { Trophy, TrendingUp, Target, Clock } from "lucide-react";
+import { Trophy, TrendingUp, Target, Clock, Flame, Gift } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
+
+interface StreakResult {
+  claimed: boolean;
+  already_claimed_today: boolean;
+  current_streak: number;
+  longest_streak: number;
+  bonus_points: number;
+}
 
 export default function Home() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [streakData, setStreakData] = useState<StreakResult | null>(null);
 
   // Fetch user data
   const { data: userData } = useQuery({
@@ -23,6 +36,36 @@ export default function Home() {
     },
     enabled: !!user?.id,
   });
+
+  // Check login streak on load
+  const checkStreakMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      const { data, error } = await supabase.rpc('check_login_streak', {
+        p_user_id: user.id
+      });
+      
+      if (error) throw error;
+      return data as unknown as StreakResult;
+    },
+    onSuccess: (data) => {
+      setStreakData(data);
+      
+      if (data.claimed) {
+        toast.success(`🔥 Day ${data.current_streak} streak! +${data.bonus_points} bonus points!`);
+        queryClient.invalidateQueries({ queryKey: ['user-data'] });
+        queryClient.invalidateQueries({ queryKey: ['check-achievements'] });
+      }
+    },
+  });
+
+  // Auto-check streak on component mount
+  useEffect(() => {
+    if (user?.id && !streakData) {
+      checkStreakMutation.mutate();
+    }
+  }, [user?.id]);
 
   // Fetch completed tasks this week
   const { data: weeklyTasks } = useQuery({
@@ -88,9 +131,11 @@ export default function Home() {
   const todayCompleted = todayTasks?.length || 0;
   
   // Calculate progress to next level (assume 1000 points per level)
-  const pointsForNextLevel = level * 1000;
   const currentLevelPoints = (userData?.total_points || 0) % 1000;
   const progressToNextLevel = (currentLevelPoints / 1000) * 100;
+
+  const currentStreak = streakData?.current_streak || userData?.current_streak || 0;
+  const longestStreak = streakData?.longest_streak || userData?.longest_streak || 0;
 
   const getTimeAgo = (date: string) => {
     const now = new Date();
@@ -111,6 +156,45 @@ export default function Home() {
           <h1 className="text-3xl font-bold">Welcome back!</h1>
           <p className="text-muted-foreground">Keep earning rewards daily</p>
         </div>
+
+        {/* Daily Streak Card */}
+        <Card className="bg-gradient-to-br from-orange-500 to-red-600 p-5 rounded-3xl shadow-hover border-0 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <Flame className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm font-medium">Daily Streak</p>
+                  <p className="text-white text-2xl font-bold">{currentStreak} Days</p>
+                </div>
+              </div>
+              {streakData?.already_claimed_today ? (
+                <div className="bg-white/20 px-3 py-1.5 rounded-xl">
+                  <span className="text-white text-sm font-medium">✓ Claimed</span>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  className="bg-white text-orange-600 hover:bg-white/90 font-bold rounded-xl"
+                  onClick={() => checkStreakMutation.mutate()}
+                  disabled={checkStreakMutation.isPending}
+                >
+                  <Gift className="w-4 h-4 mr-1" />
+                  Claim
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-white/80">Best streak: {longestStreak} days</span>
+              <span className="text-white/80">
+                Next bonus: +{5 + Math.floor(Math.min(currentStreak + 1, 30) / 7) * 5} pts
+              </span>
+            </div>
+          </div>
+        </Card>
 
         {/* Points Card */}
         <Card className="bg-gradient-primary p-6 rounded-3xl shadow-hover border-0">

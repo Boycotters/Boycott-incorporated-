@@ -321,33 +321,42 @@ export type Database = {
       users: {
         Row: {
           created_at: string | null
+          current_streak: number | null
           email: string
           full_name: string | null
           id: string
           is_verified: boolean | null
+          last_login_date: string | null
           level: number | null
+          longest_streak: number | null
           phone: string | null
           referral_code: string | null
           total_points: number | null
         }
         Insert: {
           created_at?: string | null
+          current_streak?: number | null
           email: string
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
+          last_login_date?: string | null
           level?: number | null
+          longest_streak?: number | null
           phone?: string | null
           referral_code?: string | null
           total_points?: number | null
         }
         Update: {
           created_at?: string | null
+          current_streak?: number | null
           email?: string
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
+          last_login_date?: string | null
           level?: number | null
+          longest_streak?: number | null
           phone?: string | null
           referral_code?: string | null
           total_points?: number | null
@@ -395,6 +404,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean
