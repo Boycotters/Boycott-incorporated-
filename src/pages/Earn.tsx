@@ -136,16 +136,10 @@ export default function Earn() {
   const handleTaskClick = (task: Task) => {
     if (isTaskCompleted(task.id)) return;
     
-    const verificationType = task.verification_type || 'instant';
-    
-    if (verificationType === 'instant') {
-      // Direct completion for instant tasks
-      completeTaskMutation.mutate({ taskId: task.id });
-    } else {
-      // Open verification modal for other types
-      setSelectedTask(task);
-      setVerificationModalOpen(true);
-    }
+    // All tasks now go through verification modal
+    // This prevents users from just clicking without actually completing tasks
+    setSelectedTask(task);
+    setVerificationModalOpen(true);
   };
 
   const handleVerificationComplete = (taskId: string, proofUrl?: string) => {
