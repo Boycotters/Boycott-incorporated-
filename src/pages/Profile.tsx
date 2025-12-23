@@ -1,11 +1,11 @@
 import { Settings, Trophy, Target, Zap, ChevronRight, Award, Gift, LogOut } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const achievements = [
   { id: 1, name: "First Steps", icon: "🎯", earned: true },
@@ -22,6 +22,7 @@ const stats = [
 
 export default function Profile() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const { data: userData } = useQuery({
     queryKey: ['user-profile', user?.id],
@@ -171,12 +172,13 @@ export default function Profile() {
         {/* Menu Items */}
         <div className="space-y-2">
           {[
-            { label: "Transaction History", icon: Trophy },
-            { label: "Referral Program", icon: Award },
-            { label: "Settings & Privacy", icon: Settings },
+            { label: "Transaction History", icon: Trophy, path: "/transactions" },
+            { label: "Referral Program", icon: Award, path: "/referrals" },
+            { label: "Settings & Privacy", icon: Settings, path: "/settings" },
           ].map((item, index) => (
             <Card
               key={index}
+              onClick={() => navigate(item.path)}
               className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border hover:shadow-hover transition-all duration-300 cursor-pointer"
             >
               <div className="flex items-center justify-between">

@@ -13,12 +13,15 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
+import TransactionHistory from "./pages/TransactionHistory";
+import Referrals from "./pages/Referrals";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavRoutes = ['/auth', '/reset-password'];
+  const hideNavRoutes = ['/auth', '/reset-password', '/transactions', '/referrals', '/settings'];
   const showNav = !hideNavRoutes.includes(location.pathname);
 
   return (
@@ -31,6 +34,9 @@ const AppContent = () => {
         <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
         <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
+        <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
