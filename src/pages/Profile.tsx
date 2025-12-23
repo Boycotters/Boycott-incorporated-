@@ -1,4 +1,4 @@
-import { Settings, Trophy, Target, Zap, ChevronRight, Award, Gift, LogOut } from "lucide-react";
+import { Settings, Trophy, Target, Zap, ChevronRight, Award, Gift, LogOut, BarChart3 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -216,6 +216,7 @@ export default function Profile() {
         {/* Menu Items */}
         <div className="space-y-2">
           {[
+            { label: "Analytics Dashboard", icon: BarChart3, path: "/analytics" },
             { label: "Transaction History", icon: Trophy, path: "/transactions" },
             { label: "Referral Program", icon: Award, path: "/referrals" },
             { label: "Settings & Privacy", icon: Settings, path: "/settings" },
