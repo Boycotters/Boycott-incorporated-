@@ -1,15 +1,15 @@
-import { Trophy, TrendingUp, Target, Clock, Flame, Gift, Crown, Calendar as CalendarIcon, ChevronRight, Award, Users } from "lucide-react";
+import { Trophy, TrendingUp, Target, Clock, Flame, Gift, Crown, ChevronRight, Award, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { format, addDays, subDays, isToday } from "date-fns";
 
 interface StreakResult {
   claimed: boolean;
@@ -39,7 +39,22 @@ export default function Home() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [streakData, setStreakData] = useState<StreakResult | null>(null);
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Generate 7 days with today in the middle
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(subDays(today, 3), i);
+      return {
+        date,
+        dayName: format(date, 'EEE'),
+        dayNum: format(date, 'd'),
+        isToday: isToday(date),
+        isSelected: format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+      };
+    });
+  }, [selectedDate]);
 
   // Fetch user data
   const { data: userData } = useQuery({
@@ -280,143 +295,131 @@ export default function Home() {
     : 100;
 
   return (
-    <div className="min-h-screen pb-24 px-4 pt-6">
-      <div className="max-w-md mx-auto space-y-5">
+    <div className="min-h-screen pb-24 px-4 pt-4">
+      <div className="max-w-md mx-auto space-y-3">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Welcome back!</h1>
-          <p className="text-muted-foreground">Keep earning rewards daily</p>
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-bold">Welcome back!</h1>
+          <p className="text-sm text-muted-foreground">Keep earning rewards daily</p>
         </div>
 
-        {/* Calendar Card */}
-        <Card className="bg-gradient-card p-4 rounded-3xl shadow-card border border-border overflow-hidden">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarIcon className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold">Activity Calendar</h3>
-          </div>
-          <div className="flex justify-center">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-xl border-0 p-0"
-              classNames={{
-                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                month: "space-y-2",
-                caption: "flex justify-center pt-1 relative items-center",
-                caption_label: "text-sm font-medium",
-                nav: "space-x-1 flex items-center",
-                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex",
-                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
-                row: "flex w-full mt-1",
-                cell: "h-8 w-8 text-center text-sm p-0 relative",
-                day: "h-8 w-8 p-0 font-normal text-xs hover:bg-primary/10 rounded-lg transition-colors",
-                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                day_today: "bg-accent text-accent-foreground font-bold",
-                day_outside: "opacity-30",
-              }}
-            />
-          </div>
-        </Card>
+        {/* Week Calendar Strip */}
+        <div className="flex gap-1.5 justify-between">
+          {weekDays.map((day) => (
+            <button
+              key={day.dayNum}
+              onClick={() => setSelectedDate(day.date)}
+              className={`flex-1 flex flex-col items-center py-2 px-1 rounded-2xl transition-all ${
+                day.isToday 
+                  ? 'bg-primary text-primary-foreground shadow-md' 
+                  : day.isSelected 
+                    ? 'bg-primary/20 text-primary' 
+                    : 'bg-card border border-border hover:bg-muted'
+              }`}
+            >
+              <span className={`text-[10px] uppercase font-medium ${day.isToday ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                {day.dayName}
+              </span>
+              <span className={`text-base font-bold ${day.isToday ? '' : ''}`}>
+                {day.dayNum}
+              </span>
+            </button>
+          ))}
+        </div>
 
         {/* VIP Status Card */}
         <Card 
-          className={`bg-gradient-to-br ${getTierGradient(vipTier?.slug || 'bronze')} p-5 rounded-3xl shadow-hover border-0 cursor-pointer hover:scale-[1.02] transition-transform`}
+          className={`bg-gradient-to-br ${getTierGradient(vipTier?.slug || 'bronze')} p-3 rounded-2xl shadow-hover border-0 cursor-pointer hover:scale-[1.01] transition-transform`}
           onClick={() => navigate('/vip')}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="text-4xl">{vipTier?.icon || '🥉'}</div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{vipTier?.icon || '🥉'}</span>
               <div>
-                <p className="text-white/80 text-sm font-medium">{vipTier?.name || 'Bronze'} Member</p>
-                <p className="text-white text-xl font-bold">
+                <p className="text-white/80 text-xs font-medium">{vipTier?.name || 'Bronze'}</p>
+                <p className="text-white text-sm font-bold">
                   {vipTier?.multiplier && vipTier.multiplier > 1 
-                    ? `${vipTier.multiplier}x Points Multiplier` 
-                    : 'Standard Rewards'}
+                    ? `${vipTier.multiplier}x Multiplier` 
+                    : 'Standard'}
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-white/60" />
-          </div>
-          {nextVipTier && (
-            <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl">
-              <div className="flex items-center justify-between text-xs text-white/80 mb-1">
-                <span>Progress to {nextVipTier.icon} {nextVipTier.name}</span>
-                <span>{(nextVipTier.min_points - (userData?.total_points || 0)).toLocaleString()} pts left</span>
+            {nextVipTier && (
+              <div className="flex-1 mx-3">
+                <Progress value={progressToNextTier} className="h-1.5 bg-white/20" />
+                <p className="text-[10px] text-white/70 mt-0.5 text-right">{(nextVipTier.min_points - (userData?.total_points || 0)).toLocaleString()} to {nextVipTier.name}</p>
               </div>
-              <Progress value={progressToNextTier} className="h-2 bg-white/20" />
-            </div>
-          )}
+            )}
+            <ChevronRight className="w-4 h-4 text-white/60" />
+          </div>
         </Card>
 
         {/* Quick Stats Row */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <Card 
-            className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all"
+            className="bg-gradient-card p-3 rounded-xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all"
             onClick={() => navigate('/referrals')}
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-green-500/10 p-2 rounded-xl">
-                <Users className="w-5 h-5 text-green-500" />
+            <div className="flex items-center gap-2">
+              <div className="bg-green-500/10 p-1.5 rounded-lg">
+                <Users className="w-4 h-4 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{userStats?.referrals || 0}</p>
-                <p className="text-xs text-muted-foreground">Referrals</p>
+                <p className="text-lg font-bold leading-none">{userStats?.referrals || 0}</p>
+                <p className="text-[10px] text-muted-foreground">Referrals</p>
               </div>
             </div>
           </Card>
           <Card 
-            className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all"
+            className="bg-gradient-card p-3 rounded-xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all"
             onClick={() => navigate('/achievements')}
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-500/10 p-2 rounded-xl">
-                <Award className="w-5 h-5 text-purple-500" />
+            <div className="flex items-center gap-2">
+              <div className="bg-purple-500/10 p-1.5 rounded-lg">
+                <Award className="w-4 h-4 text-purple-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{userStats?.achievements || 0}</p>
-                <p className="text-xs text-muted-foreground">Achievements</p>
+                <p className="text-lg font-bold leading-none">{userStats?.achievements || 0}</p>
+                <p className="text-[10px] text-muted-foreground">Achievements</p>
               </div>
             </div>
           </Card>
         </div>
 
         {/* Daily Streak Card */}
-        <Card className="bg-gradient-to-br from-orange-500 to-red-600 p-5 rounded-3xl shadow-hover border-0 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <Card className="bg-gradient-to-br from-orange-500 to-red-600 p-3 rounded-2xl shadow-hover border-0 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <Flame className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-white/20 p-1.5 rounded-lg">
+                  <Flame className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-white/80 text-sm font-medium">Daily Streak</p>
-                  <p className="text-white text-2xl font-bold">{currentStreak} Days</p>
+                  <p className="text-white/80 text-xs font-medium">Daily Streak</p>
+                  <p className="text-white text-lg font-bold leading-tight">{currentStreak} Days</p>
                 </div>
               </div>
               {streakData?.already_claimed_today ? (
-                <div className="bg-white/20 px-3 py-1.5 rounded-xl">
-                  <span className="text-white text-sm font-medium">✓ Claimed</span>
+                <div className="bg-white/20 px-2 py-1 rounded-lg">
+                  <span className="text-white text-xs font-medium">✓ Claimed</span>
                 </div>
               ) : (
                 <Button
                   size="sm"
-                  className="bg-white text-orange-600 hover:bg-white/90 font-bold rounded-xl"
+                  className="bg-white text-orange-600 hover:bg-white/90 font-bold rounded-lg text-xs h-7 px-2"
                   onClick={() => checkStreakMutation.mutate()}
                   disabled={checkStreakMutation.isPending}
                 >
-                  <Gift className="w-4 h-4 mr-1" />
+                  <Gift className="w-3 h-3 mr-1" />
                   Claim
                 </Button>
               )}
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-white/80">Best streak: {longestStreak} days</span>
-              <span className="text-white/80">
-                Next bonus: +{5 + Math.floor(Math.min(currentStreak + 1, 30) / 7) * 5} pts
+            <div className="flex items-center justify-between text-[10px] mt-1.5">
+              <span className="text-white/70">Best: {longestStreak} days</span>
+              <span className="text-white/70">
+                Next: +{5 + Math.floor(Math.min(currentStreak + 1, 30) / 7) * 5} pts
               </span>
             </div>
           </div>
@@ -425,47 +428,46 @@ export default function Home() {
         {/* Featured Reward */}
         {featuredReward && (
           <Card 
-            className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all overflow-hidden"
+            className="bg-gradient-card p-3 rounded-xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all"
             onClick={() => navigate('/marketplace')}
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Gift className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold">Featured Reward</h3>
-              <Badge variant="secondary" className="ml-auto text-xs">Hot 🔥</Badge>
-            </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {featuredReward.image && (
                 <img 
                   src={featuredReward.image} 
                   alt={featuredReward.name}
-                  className="w-16 h-16 rounded-xl object-cover"
+                  className="w-12 h-12 rounded-lg object-cover"
                 />
               )}
-              <div className="flex-1">
-                <p className="font-semibold">{featuredReward.name}</p>
-                <p className="text-sm text-muted-foreground">Redeem now!</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Gift className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] text-muted-foreground uppercase font-medium">Featured</span>
+                  <Badge variant="secondary" className="ml-auto text-[10px] h-4 px-1.5">🔥</Badge>
+                </div>
+                <p className="font-semibold text-sm truncate">{featuredReward.name}</p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-primary">{featuredReward.points_cost}</p>
-                <p className="text-xs text-muted-foreground">points</p>
+                <p className="text-base font-bold text-primary">{featuredReward.points_cost}</p>
+                <p className="text-[10px] text-muted-foreground">pts</p>
               </div>
             </div>
           </Card>
         )}
 
         {/* Leaderboard Preview */}
-        <Card className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-yellow-500" />
-              <h3 className="font-semibold">Top Earners</h3>
+        <Card className="bg-gradient-card p-3 rounded-xl shadow-card border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Crown className="w-4 h-4 text-yellow-500" />
+              <h3 className="text-sm font-semibold">Top Earners</h3>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs">
+            <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2">
               View All
-              <ChevronRight className="w-4 h-4 ml-1" />
+              <ChevronRight className="w-3 h-3 ml-0.5" />
             </Button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {leaderboard?.map((leader, index) => {
               const position = getLeaderboardPosition(index);
               const isCurrentUser = leader.id === user?.id;
@@ -473,19 +475,18 @@ export default function Home() {
               return (
                 <div 
                   key={leader.id}
-                  className={`flex items-center justify-between p-2 rounded-xl ${position.bg} ${isCurrentUser ? 'ring-2 ring-primary' : ''}`}
+                  className={`flex items-center justify-between p-1.5 rounded-lg ${position.bg} ${isCurrentUser ? 'ring-1 ring-primary' : ''}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl w-8 text-center">{position.emoji}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base w-6 text-center">{position.emoji}</span>
                     <div>
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-xs">
                         {leader.full_name || 'Anonymous'}
                         {isCurrentUser && <span className="text-primary ml-1">(You)</span>}
                       </p>
-                      <p className="text-xs text-muted-foreground capitalize">{leader.vip_tier} tier</p>
                     </div>
                   </div>
-                  <p className="font-bold text-sm">{leader.total_points.toLocaleString()} pts</p>
+                  <p className="font-bold text-xs">{leader.total_points.toLocaleString()} pts</p>
                 </div>
               );
             })}
@@ -493,80 +494,78 @@ export default function Home() {
         </Card>
 
         {/* Points Card */}
-        <Card className="bg-gradient-primary p-6 rounded-3xl shadow-hover border-0">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="bg-gradient-primary p-4 rounded-2xl shadow-hover border-0">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-white/80 text-sm font-medium mb-1">Total Points</p>
-              <h2 className="text-white text-4xl font-bold">{totalPoints.toLocaleString()}</h2>
+              <p className="text-white/80 text-xs font-medium">Total Points</p>
+              <h2 className="text-white text-2xl font-bold">{totalPoints.toLocaleString()}</h2>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl">
-              <Trophy className="w-8 h-8 text-white" />
+            <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
+              <Trophy className="w-5 h-5 text-white" />
             </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-2xl">
-            <div className="flex items-center justify-between text-sm">
+          <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-white/90 font-medium">Level {level}</span>
-              <span className="text-white/90">{Math.round(progressToNextLevel)}% to Level {level + 1}</span>
+              <span className="text-white/90">{Math.round(progressToNextLevel)}% to Lvl {level + 1}</span>
             </div>
-            <Progress value={progressToNextLevel} className="mt-2 h-2 bg-white/20" />
+            <Progress value={progressToNextLevel} className="mt-1 h-1.5 bg-white/20" />
           </div>
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="bg-primary/10 p-2 rounded-xl">
-                <TrendingUp className="w-5 h-5 text-primary" />
+        <div className="grid grid-cols-2 gap-2">
+          <Card className="bg-gradient-card p-3 rounded-xl shadow-card border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="bg-primary/10 p-1.5 rounded-lg">
+                <TrendingUp className="w-3.5 h-3.5 text-primary" />
               </div>
-              <span className="text-muted-foreground text-sm font-medium">This Week</span>
+              <span className="text-muted-foreground text-[10px] font-medium">This Week</span>
             </div>
-            <p className="text-2xl font-bold">+{weeklyPoints}</p>
-            <p className="text-xs text-muted-foreground mt-1">Points earned</p>
+            <p className="text-lg font-bold">+{weeklyPoints}</p>
           </Card>
 
-          <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="bg-accent/10 p-2 rounded-xl">
-                <Target className="w-5 h-5 text-accent" />
+          <Card className="bg-gradient-card p-3 rounded-xl shadow-card border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="bg-accent/10 p-1.5 rounded-lg">
+                <Target className="w-3.5 h-3.5 text-accent" />
               </div>
-              <span className="text-muted-foreground text-sm font-medium">Completed</span>
+              <span className="text-muted-foreground text-[10px] font-medium">Today</span>
             </div>
-            <p className="text-2xl font-bold">{todayCompleted}</p>
-            <p className="text-xs text-muted-foreground mt-1">Today's tasks</p>
+            <p className="text-lg font-bold">{todayCompleted} tasks</p>
           </Card>
         </div>
 
         {/* Recent Activity */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold">Recent Activity</h3>
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold">Recent Activity</h3>
           
           {recentActivities && recentActivities.length > 0 ? (
             recentActivities.map((activity) => (
               <Card
                 key={activity.id}
-                className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border hover:shadow-hover transition-all duration-300"
+                className="bg-gradient-card p-2.5 rounded-xl shadow-card border border-border hover:shadow-hover transition-all duration-300"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-secondary p-2 rounded-xl">
-                      <Clock className="w-5 h-5 text-secondary-foreground" />
+                  <div className="flex items-center gap-2">
+                    <div className="bg-secondary p-1.5 rounded-lg">
+                      <Clock className="w-3.5 h-3.5 text-secondary-foreground" />
                     </div>
                     <div>
-                      <p className="font-semibold text-sm">{activity.tasks?.title}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-xs">{activity.tasks?.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
                         {activity.completed_at ? getTimeAgo(activity.completed_at) : 'Recently'}
                       </p>
                     </div>
                   </div>
-                  <span className="text-accent font-bold text-lg">+{activity.points_earned}</span>
+                  <span className="text-accent font-bold text-sm">+{activity.points_earned}</span>
                 </div>
               </Card>
             ))
           ) : (
-            <Card className="bg-gradient-card p-4 rounded-2xl shadow-card border border-border">
-              <p className="text-center text-muted-foreground text-sm">
-                No activities yet. Start completing tasks to see your progress!
+            <Card className="bg-gradient-card p-3 rounded-xl shadow-card border border-border">
+              <p className="text-center text-muted-foreground text-xs">
+                No activities yet. Start completing tasks!
               </p>
             </Card>
           )}
