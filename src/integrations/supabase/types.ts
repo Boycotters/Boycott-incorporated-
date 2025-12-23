@@ -255,6 +255,7 @@ export type Database = {
           is_active: boolean | null
           points_reward: number
           title: string
+          verification_type: string | null
         }
         Insert: {
           category?: string | null
@@ -265,6 +266,7 @@ export type Database = {
           is_active?: boolean | null
           points_reward: number
           title: string
+          verification_type?: string | null
         }
         Update: {
           category?: string | null
@@ -275,6 +277,7 @@ export type Database = {
           is_active?: boolean | null
           points_reward?: number
           title?: string
+          verification_type?: string | null
         }
         Relationships: []
       }
@@ -358,27 +361,39 @@ export type Database = {
           created_at: string | null
           id: string
           points_earned: number | null
+          proof_submitted_at: string | null
+          proof_url: string | null
           status: string | null
           task_id: string | null
+          timer_started_at: string | null
           user_id: string | null
+          verification_notes: string | null
         }
         Insert: {
           completed_at?: string | null
           created_at?: string | null
           id?: string
           points_earned?: number | null
+          proof_submitted_at?: string | null
+          proof_url?: string | null
           status?: string | null
           task_id?: string | null
+          timer_started_at?: string | null
           user_id?: string | null
+          verification_notes?: string | null
         }
         Update: {
           completed_at?: string | null
           created_at?: string | null
           id?: string
           points_earned?: number | null
+          proof_submitted_at?: string | null
+          proof_url?: string | null
           status?: string | null
           task_id?: string | null
+          timer_started_at?: string | null
           user_id?: string | null
+          verification_notes?: string | null
         }
         Relationships: [
           {
