@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { CheckCircle2, XCircle, CalendarDays, Flame, Trophy, Star } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle2, XCircle, CalendarDays, Flame, Trophy, Star, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { format, subDays, isSameDay, startOfDay } from "date-fns";
+import { subDays, isSameDay, startOfDay } from "date-fns";
 
 interface DataVerificationProps {
   taskId: string;
@@ -90,6 +91,48 @@ export function DataVerification({
     setRequirement({ type: 'login', value: 1 });
   };
 
+  const getProgressData = (): { current: number; target: number; percentage: number; remaining: string } => {
+    if (!userData || !requirement) {
+      return { current: 0, target: 1, percentage: 0, remaining: "" };
+    }
+
+    switch (requirement.type) {
+      case 'streak':
+        const streakProgress = Math.min((userData.current_streak / requirement.value) * 100, 100);
+        const streakRemaining = requirement.value - userData.current_streak;
+        return {
+          current: userData.current_streak,
+          target: requirement.value,
+          percentage: streakProgress,
+          remaining: streakRemaining > 0 ? `${streakRemaining} more day${streakRemaining > 1 ? 's' : ''} needed` : ""
+        };
+
+      case 'level':
+        const levelProgress = Math.min((userData.level / requirement.value) * 100, 100);
+        const levelRemaining = requirement.value - userData.level;
+        return {
+          current: userData.level,
+          target: requirement.value,
+          percentage: levelProgress,
+          remaining: levelRemaining > 0 ? `${levelRemaining} more level${levelRemaining > 1 ? 's' : ''} needed` : ""
+        };
+
+      case 'points':
+        const pointsProgress = Math.min((userData.total_points / requirement.value) * 100, 100);
+        const pointsRemaining = requirement.value - userData.total_points;
+        return {
+          current: userData.total_points,
+          target: requirement.value,
+          percentage: pointsProgress,
+          remaining: pointsRemaining > 0 ? `${pointsRemaining.toLocaleString()} more points needed` : ""
+        };
+
+      case 'login':
+      default:
+        return { current: 1, target: 1, percentage: 100, remaining: "" };
+    }
+  };
+
   const checkVerification = (): { passed: boolean; message: string } => {
     if (!userData || !requirement) {
       return { passed: false, message: "Unable to verify data" };
@@ -125,18 +168,18 @@ export function DataVerification({
 
       case 'login':
       default:
-        // Check if user has logged in today
         const today = startOfDay(new Date());
         const lastLogin = userData.last_login_date ? startOfDay(new Date(userData.last_login_date)) : null;
         
         if (lastLogin && isSameDay(today, lastLogin)) {
           return { passed: true, message: "You're logged in today!" };
         }
-        return { passed: true, message: "Login verified!" }; // They're clearly logged in if they're here
+        return { passed: true, message: "Login verified!" };
     }
   };
 
   const verification = checkVerification();
+  const progress = getProgressData();
 
   // Generate calendar dates for visualization
   const getStreakDates = () => {
@@ -194,6 +237,42 @@ export function DataVerification({
         </div>
         <p className="text-sm text-muted-foreground">{verification.message}</p>
       </div>
+
+      {/* Progress Bar - Only show when not verified */}
+      {!verification.passed && requirement && requirement.type !== 'login' && (
+        <div className="w-full space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Your Progress</span>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {progress.current} / {progress.target}
+            </span>
+          </div>
+          
+          <div className="relative">
+            <Progress 
+              value={progress.percentage} 
+              className="h-4 bg-muted"
+            />
+            <div 
+              className="absolute inset-0 flex items-center justify-center text-xs font-semibold"
+              style={{ 
+                color: progress.percentage > 50 ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))' 
+              }}
+            >
+              {Math.round(progress.percentage)}%
+            </div>
+          </div>
+          
+          {progress.remaining && (
+            <p className="text-xs text-muted-foreground text-center bg-muted/50 py-2 px-3 rounded-lg">
+              {progress.remaining}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Stats Display */}
       {userData && (
