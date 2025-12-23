@@ -332,6 +332,7 @@ export type Database = {
           phone: string | null
           referral_code: string | null
           total_points: number | null
+          vip_tier: string | null
         }
         Insert: {
           created_at?: string | null
@@ -346,6 +347,7 @@ export type Database = {
           phone?: string | null
           referral_code?: string | null
           total_points?: number | null
+          vip_tier?: string | null
         }
         Update: {
           created_at?: string | null
@@ -360,6 +362,43 @@ export type Database = {
           phone?: string | null
           referral_code?: string | null
           total_points?: number | null
+          vip_tier?: string | null
+        }
+        Relationships: []
+      }
+      vip_tiers: {
+        Row: {
+          benefits: string[]
+          color: string
+          created_at: string | null
+          icon: string
+          id: string
+          min_points: number
+          multiplier: number
+          name: string
+          slug: string
+        }
+        Insert: {
+          benefits?: string[]
+          color: string
+          created_at?: string | null
+          icon: string
+          id?: string
+          min_points?: number
+          multiplier?: number
+          name: string
+          slug: string
+        }
+        Update: {
+          benefits?: string[]
+          color?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          min_points?: number
+          multiplier?: number
+          name?: string
+          slug?: string
         }
         Relationships: []
       }
@@ -405,6 +444,7 @@ export type Database = {
         Returns: number
       }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
+      get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean
