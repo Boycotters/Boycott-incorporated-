@@ -49,6 +49,48 @@ export type Database = {
           },
         ]
       }
+      referrals: {
+        Row: {
+          bonus_points: number
+          created_at: string | null
+          id: string
+          referred_id: string
+          referrer_id: string
+          status: string | null
+        }
+        Insert: {
+          bonus_points?: number
+          created_at?: string | null
+          id?: string
+          referred_id: string
+          referrer_id: string
+          status?: string | null
+        }
+        Update: {
+          bonus_points?: number
+          created_at?: string | null
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rewards: {
         Row: {
           category: string | null
@@ -210,6 +252,7 @@ export type Database = {
           is_verified: boolean | null
           level: number | null
           phone: string | null
+          referral_code: string | null
           total_points: number | null
         }
         Insert: {
@@ -220,6 +263,7 @@ export type Database = {
           is_verified?: boolean | null
           level?: number | null
           phone?: string | null
+          referral_code?: string | null
           total_points?: number | null
         }
         Update: {
@@ -230,6 +274,7 @@ export type Database = {
           is_verified?: boolean | null
           level?: number | null
           phone?: string | null
+          referral_code?: string | null
           total_points?: number | null
         }
         Relationships: []
