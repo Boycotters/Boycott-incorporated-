@@ -245,6 +245,30 @@ export type Database = {
         }
         Relationships: []
       }
+      streak_milestones: {
+        Row: {
+          bonus_points: number
+          claimed_at: string | null
+          id: string
+          milestone_days: number
+          user_id: string
+        }
+        Insert: {
+          bonus_points: number
+          claimed_at?: string | null
+          id?: string
+          milestone_days: number
+          user_id: string
+        }
+        Update: {
+          bonus_points?: number
+          claimed_at?: string | null
+          id?: string
+          milestone_days?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category: string | null
@@ -544,6 +568,7 @@ export type Database = {
         Returns: number
       }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
+      check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
       get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }

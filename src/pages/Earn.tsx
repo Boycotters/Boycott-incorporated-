@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Video, FileText, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
   BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2,
-  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock
+  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock, Timer, Award
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TaskVerificationModal } from "@/components/task-verification";
+import { useConfetti } from "@/hooks/useConfetti";
 
 const iconMap: Record<string, any> = {
   social: MessageCircle,
@@ -90,6 +91,28 @@ export default function Earn() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [timeUntilReset, setTimeUntilReset] = useState("");
+  const { fireConfetti, fireStreakConfetti, fireMilestoneConfetti, fireTierUpgradeConfetti } = useConfetti();
+
+  // Countdown timer to midnight
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0);
+      
+      const diff = midnight.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      setTimeUntilReset(`${hours}h ${minutes}m`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch user data including VIP tier
   const { data: userData } = useQuery({
@@ -187,15 +210,36 @@ export default function Earn() {
       });
       
       if (error) throw error;
-      return data as unknown as LoginStreakResult;
+      
+      // Also check for streak milestones
+      const { data: milestoneData } = await supabase.rpc('check_streak_milestones', {
+        p_user_id: user?.id
+      });
+      
+      return { 
+        loginData: data as unknown as LoginStreakResult,
+        milestoneData: milestoneData as unknown as { milestones_awarded: Array<{days: number, bonus: number}>, total_bonus: number }
+      };
     },
-    onSuccess: (data) => {
-      if (data.claimed) {
+    onSuccess: ({ loginData, milestoneData }) => {
+      if (loginData.claimed) {
+        fireStreakConfetti();
         toast({
-          title: `Day ${data.current_streak} Streak! 🔥`,
-          description: `You earned ${data.bonus_points} bonus points!`,
+          title: `Day ${loginData.current_streak} Streak! 🔥`,
+          description: `You earned ${loginData.bonus_points} bonus points!`,
         });
-      } else if (data.already_claimed_today) {
+        
+        // Check if milestones were awarded
+        if (milestoneData?.total_bonus > 0) {
+          setTimeout(() => {
+            fireMilestoneConfetti();
+            toast({
+              title: "🏆 Milestone Achieved!",
+              description: `You earned ${milestoneData.total_bonus} bonus points for your streak milestone!`,
+            });
+          }, 1500);
+        }
+      } else if (loginData.already_claimed_today) {
         toast({
           title: "Already Claimed",
           description: "Come back tomorrow to continue your streak!",
@@ -205,6 +249,7 @@ export default function Earn() {
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['streak-milestones'] });
     },
     onError: (error: any) => {
       toast({
@@ -269,6 +314,7 @@ export default function Earn() {
           title: `${data.message} 🎉`,
           description: `You now have +${data.daily_task_bonus} extra daily tasks!`,
         });
+        fireTierUpgradeConfetti();
         setShowUpgradeModal(false);
       } else {
         toast({
@@ -319,6 +365,27 @@ export default function Earn() {
     },
     enabled: !!user?.id,
   });
+
+  // Fetch user's earned streak milestones
+  const { data: earnedMilestones } = useQuery({
+    queryKey: ['streak-milestones', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('streak_milestones')
+        .select('milestone_days, bonus_points')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const MILESTONES = [
+    { days: 7, bonus: 50 },
+    { days: 14, bonus: 100 },
+    { days: 30, bonus: 250 },
+  ];
 
   // Calculate tasks completed today
   const todayStart = useMemo(() => {
@@ -373,6 +440,7 @@ export default function Earn() {
       return { userTask, points: task.points_reward };
     },
     onSuccess: (data) => {
+      fireConfetti();
       toast({
         title: "Task completed! 🎉",
         description: `You earned ${data.points} points!`,
@@ -465,19 +533,27 @@ export default function Earn() {
                 <Target className="w-5 h-5 text-primary" />
                 <span className="font-semibold">Daily Tasks</span>
               </div>
-              <Badge variant={hasReachedDailyLimit ? "secondary" : "default"} className="text-xs">
-                {tasksCompletedToday}/{dailyTaskLimit} completed
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={hasReachedDailyLimit ? "secondary" : "default"} className="text-xs">
+                  {tasksCompletedToday}/{dailyTaskLimit} completed
+                </Badge>
+              </div>
             </div>
             
             <Progress value={dailyProgress} className="h-2" />
             
-            <p className="text-xs text-muted-foreground text-center">
-              {hasReachedDailyLimit 
-                ? "🎉 Great job! Come back tomorrow for more tasks" 
-                : `${remainingTasksToday} task${remainingTasksToday !== 1 ? 's' : ''} remaining today`
-              }
-            </p>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {hasReachedDailyLimit 
+                  ? "🎉 Come back tomorrow" 
+                  : `${remainingTasksToday} task${remainingTasksToday !== 1 ? 's' : ''} left`
+                }
+              </span>
+              <div className="flex items-center gap-1">
+                <Timer className="w-3 h-3" />
+                <span>Resets in {timeUntilReset}</span>
+              </div>
+            </div>
 
             {/* Tier Info & Upgrade */}
             {currentTier && (
@@ -522,6 +598,50 @@ export default function Earn() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Streak Milestones */}
+        <Card className="bg-gradient-card border border-border rounded-2xl overflow-hidden">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Award className="w-5 h-5 text-yellow-500" />
+              <span className="font-semibold">Streak Milestones</span>
+            </div>
+            
+            <div className="flex justify-between gap-2">
+              {MILESTONES.map((milestone) => {
+                const isEarned = earnedMilestones?.some(m => m.milestone_days === milestone.days);
+                const isNext = currentStreak < milestone.days && !isEarned;
+                const progress = isNext ? Math.min((currentStreak / milestone.days) * 100, 100) : 0;
+                
+                return (
+                  <div 
+                    key={milestone.days}
+                    className={`flex-1 text-center p-3 rounded-xl border transition-all ${
+                      isEarned 
+                        ? "bg-yellow-500/10 border-yellow-500/30" 
+                        : isNext 
+                          ? "bg-primary/5 border-primary/20" 
+                          : "bg-muted/30 border-border"
+                    }`}
+                  >
+                    <div className={`text-2xl mb-1 ${isEarned ? "" : "grayscale opacity-50"}`}>
+                      {milestone.days === 7 ? "🥉" : milestone.days === 14 ? "🥈" : "🥇"}
+                    </div>
+                    <p className="text-xs font-medium">{milestone.days} Days</p>
+                    <p className={`text-xs ${isEarned ? "text-yellow-500" : "text-muted-foreground"}`}>
+                      {isEarned ? "Earned!" : `+${milestone.bonus} pts`}
+                    </p>
+                    {isNext && !isEarned && (
+                      <div className="mt-1">
+                        <Progress value={progress} className="h-1" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
