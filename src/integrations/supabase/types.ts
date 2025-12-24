@@ -92,6 +92,13 @@ export type Database = {
             foreignKeyName: "notification_queue_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -123,6 +130,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "push_tokens_user_id_fkey"
             columns: ["user_id"]
@@ -197,7 +211,21 @@ export type Database = {
             foreignKeyName: "referrals_referred_id_fkey"
             columns: ["referred_id"]
             isOneToOne: true
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
             referencedColumns: ["id"]
           },
           {
@@ -338,6 +366,13 @@ export type Database = {
             foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -368,6 +403,13 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
             referencedColumns: ["id"]
           },
           {
@@ -425,6 +467,13 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
             referencedColumns: ["id"]
           },
           {
@@ -553,6 +602,13 @@ export type Database = {
             foreignKeyName: "wallets_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -560,7 +616,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leaderboard: {
+        Row: {
+          current_streak: number | null
+          full_name: string | null
+          id: string | null
+          level: number | null
+          longest_streak: number | null
+          total_points: number | null
+          vip_tier: string | null
+        }
+        Insert: {
+          current_streak?: number | null
+          full_name?: string | null
+          id?: string | null
+          level?: number | null
+          longest_streak?: number | null
+          total_points?: number | null
+          vip_tier?: string | null
+        }
+        Update: {
+          current_streak?: number | null
+          full_name?: string | null
+          id?: string | null
+          level?: number | null
+          longest_streak?: number | null
+          total_points?: number | null
+          vip_tier?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_and_award_achievements: {
@@ -569,6 +654,16 @@ export type Database = {
       }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
+      create_transaction: {
+        Args: {
+          p_description: string
+          p_points_amount: number
+          p_status?: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
