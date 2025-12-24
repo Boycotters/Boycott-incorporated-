@@ -543,6 +543,10 @@ export type Database = {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean
       }
+      recover_streak: {
+        Args: { p_recovery_cost?: number; p_user_id: string }
+        Returns: Json
+      }
       update_user_points: {
         Args: { points_to_add: number; user_id: string }
         Returns: undefined
