@@ -465,34 +465,40 @@ export type Database = {
           benefits: string[]
           color: string
           created_at: string | null
+          daily_task_bonus: number
           icon: string
           id: string
           min_points: number
           multiplier: number
           name: string
           slug: string
+          upgrade_cost: number
         }
         Insert: {
           benefits?: string[]
           color: string
           created_at?: string | null
+          daily_task_bonus?: number
           icon: string
           id?: string
           min_points?: number
           multiplier?: number
           name: string
           slug: string
+          upgrade_cost?: number
         }
         Update: {
           benefits?: string[]
           color?: string
           created_at?: string | null
+          daily_task_bonus?: number
           icon?: string
           id?: string
           min_points?: number
           multiplier?: number
           name?: string
           slug?: string
+          upgrade_cost?: number
         }
         Relationships: []
       }
@@ -542,6 +548,10 @@ export type Database = {
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean
+      }
+      purchase_tier_upgrade: {
+        Args: { p_target_tier: string; p_user_id: string }
+        Returns: Json
       }
       recover_streak: {
         Args: { p_recovery_cost?: number; p_user_id: string }
