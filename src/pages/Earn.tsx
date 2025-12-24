@@ -63,21 +63,41 @@ interface StreakRecoveryResult {
 }
 
 const STREAK_RECOVERY_COST = 50;
-const DAILY_TASK_LIMIT = 5; // Maximum tasks per day
+const BASE_DAILY_TASK_LIMIT = 5; // Base tasks per day
+
+interface VipTier {
+  slug: string;
+  name: string;
+  icon: string;
+  daily_task_bonus: number;
+  upgrade_cost: number;
+  min_points: number;
+}
+
+interface TierUpgradeResult {
+  success: boolean;
+  error?: string;
+  message: string;
+  new_tier?: string;
+  points_spent?: number;
+  daily_task_bonus?: number;
+}
+
 export default function Earn() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Fetch user streak data
+  // Fetch user data including VIP tier
   const { data: userData } = useQuery({
     queryKey: ['user-streak', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('current_streak, longest_streak, last_login_date')
+        .select('current_streak, longest_streak, last_login_date, vip_tier')
         .eq('id', user?.id)
         .single();
       
@@ -86,6 +106,36 @@ export default function Earn() {
     },
     enabled: !!user?.id,
   });
+
+  // Fetch VIP tiers
+  const { data: vipTiers } = useQuery({
+    queryKey: ['vip-tiers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vip_tiers')
+        .select('slug, name, icon, daily_task_bonus, upgrade_cost, min_points')
+        .order('min_points', { ascending: true });
+      
+      if (error) throw error;
+      return data as VipTier[];
+    },
+  });
+
+  // Get current tier data
+  const currentTier = useMemo(() => {
+    if (!vipTiers || !userData?.vip_tier) return null;
+    return vipTiers.find(t => t.slug === userData.vip_tier);
+  }, [vipTiers, userData?.vip_tier]);
+
+  // Get next available tier for upgrade
+  const nextTier = useMemo(() => {
+    if (!vipTiers || !currentTier) return null;
+    const currentIndex = vipTiers.findIndex(t => t.slug === currentTier.slug);
+    return vipTiers[currentIndex + 1] || null;
+  }, [vipTiers, currentTier]);
+
+  // Calculate daily task limit based on tier
+  const dailyTaskLimit = BASE_DAILY_TASK_LIMIT + (currentTier?.daily_task_bonus || 0);
 
   // Fetch wallet for recovery cost check
   const { data: wallet } = useQuery({
@@ -202,6 +252,44 @@ export default function Earn() {
     },
   });
 
+  // Tier upgrade mutation
+  const upgradeTier = useMutation({
+    mutationFn: async (targetTier: string) => {
+      const { data, error } = await supabase.rpc('purchase_tier_upgrade', {
+        p_user_id: user?.id,
+        p_target_tier: targetTier
+      });
+      
+      if (error) throw error;
+      return data as unknown as TierUpgradeResult;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: `${data.message} 🎉`,
+          description: `You now have +${data.daily_task_bonus} extra daily tasks!`,
+        });
+        setShowUpgradeModal(false);
+      } else {
+        toast({
+          title: "Upgrade Failed",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['user-streak'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['user-data'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Fetch available tasks
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['tasks'],
@@ -248,9 +336,9 @@ export default function Earn() {
     ).length;
   }, [userTasks, todayStart]);
 
-  const remainingTasksToday = DAILY_TASK_LIMIT - tasksCompletedToday;
+  const remainingTasksToday = dailyTaskLimit - tasksCompletedToday;
   const hasReachedDailyLimit = remainingTasksToday <= 0;
-  const dailyProgress = Math.min((tasksCompletedToday / DAILY_TASK_LIMIT) * 100, 100);
+  const dailyProgress = Math.min((tasksCompletedToday / dailyTaskLimit) * 100, 100);
 
   // Complete task mutation
   const completeTaskMutation = useMutation({
@@ -371,23 +459,69 @@ export default function Earn() {
 
         {/* Daily Task Progress */}
         <Card className="bg-gradient-card border border-border rounded-2xl overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-primary" />
                 <span className="font-semibold">Daily Tasks</span>
               </div>
               <Badge variant={hasReachedDailyLimit ? "secondary" : "default"} className="text-xs">
-                {tasksCompletedToday}/{DAILY_TASK_LIMIT} completed
+                {tasksCompletedToday}/{dailyTaskLimit} completed
               </Badge>
             </div>
-            <Progress value={dailyProgress} className="h-2 mb-2" />
+            
+            <Progress value={dailyProgress} className="h-2" />
+            
             <p className="text-xs text-muted-foreground text-center">
               {hasReachedDailyLimit 
                 ? "🎉 Great job! Come back tomorrow for more tasks" 
                 : `${remainingTasksToday} task${remainingTasksToday !== 1 ? 's' : ''} remaining today`
               }
             </p>
+
+            {/* Tier Info & Upgrade */}
+            {currentTier && (
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{currentTier.icon}</span>
+                  <div>
+                    <p className="text-sm font-medium">{currentTier.name} Tier</p>
+                    <p className="text-xs text-muted-foreground">
+                      {currentTier.daily_task_bonus > 0 
+                        ? `+${currentTier.daily_task_bonus} bonus tasks/day` 
+                        : "Base limit"
+                      }
+                    </p>
+                  </div>
+                </div>
+                {nextTier && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      if (availablePoints >= nextTier.upgrade_cost) {
+                        upgradeTier.mutate(nextTier.slug);
+                      } else {
+                        toast({
+                          title: "Not enough points",
+                          description: `You need ${nextTier.upgrade_cost} points to upgrade to ${nextTier.name}`,
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={upgradeTier.isPending}
+                    className="text-xs"
+                  >
+                    {upgradeTier.isPending ? "Upgrading..." : (
+                      <>
+                        <span className="mr-1">{nextTier.icon}</span>
+                        Upgrade ({nextTier.upgrade_cost} pts)
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
