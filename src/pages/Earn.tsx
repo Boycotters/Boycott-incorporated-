@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   Video, FileText, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
   BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2,
-  Flame, CheckCircle2, RotateCcw, AlertTriangle
+  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,7 +63,7 @@ interface StreakRecoveryResult {
 }
 
 const STREAK_RECOVERY_COST = 50;
-
+const DAILY_TASK_LIMIT = 5; // Maximum tasks per day
 export default function Earn() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -222,7 +223,7 @@ export default function Earn() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_tasks')
-        .select('task_id, status')
+        .select('task_id, status, completed_at')
         .eq('user_id', user?.id);
       
       if (error) throw error;
@@ -230,6 +231,26 @@ export default function Earn() {
     },
     enabled: !!user?.id,
   });
+
+  // Calculate tasks completed today
+  const todayStart = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now.toISOString();
+  }, []);
+
+  const tasksCompletedToday = useMemo(() => {
+    if (!userTasks) return 0;
+    return userTasks.filter(ut => 
+      ut.status === 'completed' && 
+      ut.completed_at && 
+      new Date(ut.completed_at) >= new Date(todayStart)
+    ).length;
+  }, [userTasks, todayStart]);
+
+  const remainingTasksToday = DAILY_TASK_LIMIT - tasksCompletedToday;
+  const hasReachedDailyLimit = remainingTasksToday <= 0;
+  const dailyProgress = Math.min((tasksCompletedToday / DAILY_TASK_LIMIT) * 100, 100);
 
   // Complete task mutation
   const completeTaskMutation = useMutation({
@@ -286,6 +307,15 @@ export default function Earn() {
   const handleTaskClick = (task: Task) => {
     if (isTaskCompleted(task.id)) return;
     
+    // Check daily limit
+    if (hasReachedDailyLimit) {
+      toast({
+        title: "Daily Limit Reached",
+        description: "Come back tomorrow for more tasks!",
+      });
+      return;
+    }
+    
     // All tasks now go through verification modal
     // This prevents users from just clicking without actually completing tasks
     setSelectedTask(task);
@@ -338,6 +368,28 @@ export default function Earn() {
           <h1 className="text-3xl font-bold">Earn Points</h1>
           <p className="text-muted-foreground">Complete tasks to earn rewards</p>
         </div>
+
+        {/* Daily Task Progress */}
+        <Card className="bg-gradient-card border border-border rounded-2xl overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                <span className="font-semibold">Daily Tasks</span>
+              </div>
+              <Badge variant={hasReachedDailyLimit ? "secondary" : "default"} className="text-xs">
+                {tasksCompletedToday}/{DAILY_TASK_LIMIT} completed
+              </Badge>
+            </div>
+            <Progress value={dailyProgress} className="h-2 mb-2" />
+            <p className="text-xs text-muted-foreground text-center">
+              {hasReachedDailyLimit 
+                ? "🎉 Great job! Come back tomorrow for more tasks" 
+                : `${remainingTasksToday} task${remainingTasksToday !== 1 ? 's' : ''} remaining today`
+              }
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Streak Recovery Alert - Show when streak is broken but recoverable */}
         {isStreakRecoverable && (
@@ -442,21 +494,31 @@ export default function Earn() {
             const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
             const VerifyIcon = verificationIcons[task.verification_type || 'instant'] || Zap;
             const completed = isTaskCompleted(task.id);
+            const isLocked = hasReachedDailyLimit && !completed;
             
             return (
-              <Card key={task.id} className="bg-gradient-card rounded-2xl shadow-card border border-border hover:shadow-hover transition-all duration-300">
+              <Card 
+                key={task.id} 
+                className={`bg-gradient-card rounded-2xl shadow-card border border-border transition-all duration-300 ${
+                  isLocked ? "opacity-60" : "hover:shadow-hover"
+                }`}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
-                      <div className="bg-primary/10 p-2.5 rounded-xl">
-                        <IconComponent className="w-6 h-6 text-primary" />
+                      <div className={`p-2.5 rounded-xl ${isLocked ? "bg-muted" : "bg-primary/10"}`}>
+                        {isLocked ? (
+                          <Lock className="w-6 h-6 text-muted-foreground" />
+                        ) : (
+                          <IconComponent className="w-6 h-6 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <CardTitle className="text-lg mb-1">{task.title}</CardTitle>
                         <CardDescription className="text-sm">{task.description}</CardDescription>
                       </div>
                     </div>
-                    <span className="text-accent font-bold text-lg whitespace-nowrap ml-2">
+                    <span className={`font-bold text-lg whitespace-nowrap ml-2 ${isLocked ? "text-muted-foreground" : "text-accent"}`}>
                       +{task.points_reward}
                     </span>
                   </div>
@@ -476,13 +538,23 @@ export default function Earn() {
                     </div>
                     <Button
                       onClick={() => handleTaskClick(task)}
-                      disabled={completed || completeTaskMutation.isPending}
-                      className={completed 
-                        ? "bg-green-500/20 text-green-500 hover:bg-green-500/20" 
-                        : "bg-primary hover:bg-primary/90"
+                      disabled={completed || completeTaskMutation.isPending || isLocked}
+                      className={
+                        completed 
+                          ? "bg-green-500/20 text-green-500 hover:bg-green-500/20" 
+                          : isLocked
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-primary hover:bg-primary/90"
                       }
                     >
-                      {completed ? "Completed ✓" : completeTaskMutation.isPending ? "Processing..." : "Start Task"}
+                      {completed 
+                        ? "Completed ✓" 
+                        : isLocked 
+                          ? "Tomorrow" 
+                          : completeTaskMutation.isPending 
+                            ? "Processing..." 
+                            : "Start Task"
+                      }
                     </Button>
                   </div>
                 </CardContent>
