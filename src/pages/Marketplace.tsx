@@ -35,7 +35,7 @@ export default function Marketplace() {
         .from('wallets')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
