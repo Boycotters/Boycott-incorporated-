@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { 
-  Video, FileText, Share2, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
+  Video, FileText, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
   BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2,
-  Flame, CheckCircle2
+  Flame, CheckCircle2, RotateCcw, AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,16 @@ interface LoginStreakResult {
   bonus_points: number;
 }
 
+interface StreakRecoveryResult {
+  success: boolean;
+  error?: string;
+  message: string;
+  recovered_streak?: number;
+  points_spent?: number;
+}
+
+const STREAK_RECOVERY_COST = 50;
+
 export default function Earn() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -76,12 +86,47 @@ export default function Earn() {
     enabled: !!user?.id,
   });
 
-  // Check if already claimed today
-  const hasClaimedToday = userData?.last_login_date === new Date().toISOString().split('T')[0];
+  // Fetch wallet for recovery cost check
+  const { data: wallet } = useQuery({
+    queryKey: ['wallet', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('available_points')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check streak status
+  const today = new Date().toISOString().split('T')[0];
+  const hasClaimedToday = userData?.last_login_date === today;
+  
+  // Check if streak is broken (missed more than 1 day)
+  const lastLogin = userData?.last_login_date ? new Date(userData.last_login_date) : null;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  const isStreakBroken = lastLogin && 
+    userData?.last_login_date !== today && 
+    userData?.last_login_date !== yesterdayStr &&
+    userData?.current_streak > 0;
+
+  // Check if streak is recoverable (within 48 hours)
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  const isStreakRecoverable = isStreakBroken && lastLogin && lastLogin >= twoDaysAgo;
 
   // Calculate potential bonus points (same formula as DB function)
   const currentStreak = userData?.current_streak || 0;
   const potentialBonus = 5 + Math.floor(Math.min(currentStreak + 1, 30) / 7) * 5;
+  const availablePoints = wallet?.available_points || 0;
+  const canAffordRecovery = availablePoints >= STREAK_RECOVERY_COST;
 
   // Claim daily bonus mutation
   const claimDailyBonus = useMutation({
@@ -108,6 +153,44 @@ export default function Earn() {
       queryClient.invalidateQueries({ queryKey: ['user-streak'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Recover streak mutation
+  const recoverStreak = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('recover_streak', {
+        p_user_id: user?.id,
+        p_recovery_cost: STREAK_RECOVERY_COST
+      });
+      
+      if (error) throw error;
+      return data as unknown as StreakRecoveryResult;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "Streak Recovered! 🔄",
+          description: `Your ${data.recovered_streak} day streak is saved! Now claim your daily bonus.`,
+        });
+      } else {
+        toast({
+          title: "Recovery Failed",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['user-streak'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['user-data'] });
     },
     onError: (error: any) => {
       toast({
@@ -256,6 +339,43 @@ export default function Earn() {
           <p className="text-muted-foreground">Complete tasks to earn rewards</p>
         </div>
 
+        {/* Streak Recovery Alert - Show when streak is broken but recoverable */}
+        {isStreakRecoverable && (
+          <Card className="bg-destructive/10 border-destructive/30 rounded-3xl overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="bg-destructive/20 p-2 rounded-xl">
+                  <AlertTriangle className="w-6 h-6 text-destructive" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-lg text-destructive">Streak Broken!</CardTitle>
+                  <CardDescription className="text-destructive/80">
+                    Your {currentStreak} day streak is at risk
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Recover your streak within 48 hours for <span className="font-bold text-destructive">{STREAK_RECOVERY_COST} points</span>
+              </p>
+              <Button 
+                onClick={() => recoverStreak.mutate()}
+                disabled={!canAffordRecovery || recoverStreak.isPending}
+                className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                {recoverStreak.isPending 
+                  ? "Recovering..." 
+                  : canAffordRecovery 
+                    ? `Recover Streak (-${STREAK_RECOVERY_COST} pts)` 
+                    : `Need ${STREAK_RECOVERY_COST - availablePoints} more points`
+                }
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Daily Login Bonus */}
         <Card className="bg-gradient-primary border-0 rounded-3xl overflow-hidden shadow-hover">
           <CardHeader className="pb-4">
@@ -265,7 +385,9 @@ export default function Earn() {
                 <CardDescription className="text-white/80">
                   {hasClaimedToday 
                     ? `Day ${currentStreak} streak! Come back tomorrow` 
-                    : `Claim your Day ${currentStreak + 1} reward`
+                    : isStreakRecoverable
+                      ? "Recover your streak first!"
+                      : `Claim your Day ${currentStreak + 1} reward`
                   }
                 </CardDescription>
               </div>
@@ -289,9 +411,9 @@ export default function Earn() {
             
             <Button 
               onClick={() => claimDailyBonus.mutate()}
-              disabled={hasClaimedToday || claimDailyBonus.isPending}
+              disabled={hasClaimedToday || claimDailyBonus.isPending || isStreakRecoverable}
               className={`w-full font-semibold py-6 rounded-2xl transition-all ${
-                hasClaimedToday 
+                hasClaimedToday || isStreakRecoverable
                   ? "bg-white/30 text-white/70 cursor-not-allowed" 
                   : "bg-white text-primary hover:bg-white/90"
               }`}
@@ -301,6 +423,8 @@ export default function Earn() {
                   <CheckCircle2 className="w-5 h-5" />
                   Claimed Today
                 </span>
+              ) : isStreakRecoverable ? (
+                "Recover streak to claim"
               ) : claimDailyBonus.isPending ? (
                 "Claiming..."
               ) : (
