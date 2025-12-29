@@ -8,10 +8,12 @@ import { ScreenshotVerification } from "./ScreenshotVerification";
 import { UrlVerification } from "./UrlVerification";
 import { TimerVerification } from "./TimerVerification";
 import { DataVerification } from "./DataVerification";
+import { SurveyVerification } from "./SurveyVerification";
 
 interface Task {
   id: string;
   title: string;
+  description?: string | null;
   verification_type: string;
   points_reward: number;
 }
@@ -57,6 +59,8 @@ export function TaskVerificationModal({
         return (
           <UrlVerification
             taskId={task.id}
+            taskTitle={task.title}
+            taskDescription={task.description || undefined}
             onComplete={(proofUrl) => handleComplete(proofUrl)}
             onCancel={handleCancel}
           />
@@ -65,7 +69,18 @@ export function TaskVerificationModal({
         return (
           <TimerVerification
             taskId={task.id}
+            taskTitle={task.title}
+            taskDescription={task.description || undefined}
             durationSeconds={30}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
+      case 'survey':
+        return (
+          <SurveyVerification
+            taskId={task.id}
+            taskTitle={task.title}
             onComplete={() => handleComplete()}
             onCancel={handleCancel}
           />
