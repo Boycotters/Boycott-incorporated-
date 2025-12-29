@@ -21,12 +21,13 @@ import Achievements from "./pages/Achievements";
 import Analytics from "./pages/Analytics";
 import VIP from "./pages/VIP";
 import Withdraw from "./pages/Withdraw";
+import Surveys from "./pages/Surveys";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw'];
+  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys'];
   const showNav = !hideNavRoutes.includes(location.pathname);
 
   return (
@@ -47,6 +48,7 @@ const AppContent = () => {
         <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
         <Route path="/vip" element={<ProtectedRoute><VIP /></ProtectedRoute>} />
         <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
+        <Route path="/surveys" element={<ProtectedRoute><Surveys /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
