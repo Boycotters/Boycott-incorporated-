@@ -84,7 +84,8 @@ export function AISurveyVerification({
     };
 
     loadSurvey();
-  }, [taskTitle, userLevel, taskCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (aiLoading || !survey) {
     return (

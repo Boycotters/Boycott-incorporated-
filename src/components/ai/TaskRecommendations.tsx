@@ -40,7 +40,8 @@ export function TaskRecommendations({
 
   useEffect(() => {
     loadRecommendations();
-  }, [userLevel, vipTier]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
