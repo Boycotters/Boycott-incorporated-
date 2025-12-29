@@ -614,6 +614,63 @@ export type Database = {
           },
         ]
       }
+      withdrawals: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          fee: number
+          id: string
+          net_amount: number
+          phone_number: string
+          processed_at: string | null
+          provider: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          fee?: number
+          id?: string
+          net_amount: number
+          phone_number: string
+          processed_at?: string | null
+          provider: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          fee?: number
+          id?: string
+          net_amount?: number
+          phone_number?: string
+          processed_at?: string | null
+          provider?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       leaderboard: {
@@ -675,6 +732,15 @@ export type Database = {
       }
       recover_streak: {
         Args: { p_recovery_cost?: number; p_user_id: string }
+        Returns: Json
+      }
+      request_withdrawal: {
+        Args: {
+          p_amount: number
+          p_phone_number: string
+          p_provider: string
+          p_user_id: string
+        }
         Returns: Json
       }
       update_user_points: {
