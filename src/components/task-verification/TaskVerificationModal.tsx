@@ -9,11 +9,13 @@ import { UrlVerification } from "./UrlVerification";
 import { TimerVerification } from "./TimerVerification";
 import { DataVerification } from "./DataVerification";
 import { SurveyVerification } from "./SurveyVerification";
+import { AISurveyVerification } from "./AISurveyVerification";
 
 interface Task {
   id: string;
   title: string;
   description?: string | null;
+  category?: string | null;
   verification_type: string;
   points_reward: number;
 }
@@ -23,6 +25,7 @@ interface TaskVerificationModalProps {
   onOpenChange: (open: boolean) => void;
   task: Task | null;
   userId: string;
+  userLevel?: number;
   onVerificationComplete: (taskId: string, proofUrl?: string) => void;
 }
 
@@ -31,6 +34,7 @@ export function TaskVerificationModal({
   onOpenChange,
   task,
   userId,
+  userLevel = 1,
   onVerificationComplete,
 }: TaskVerificationModalProps) {
   if (!task) return null;
@@ -81,6 +85,17 @@ export function TaskVerificationModal({
           <SurveyVerification
             taskId={task.id}
             taskTitle={task.title}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
+      case 'ai_survey':
+        return (
+          <AISurveyVerification
+            taskId={task.id}
+            taskTitle={task.title}
+            taskCategory={task.category || undefined}
+            userLevel={userLevel}
             onComplete={() => handleComplete()}
             onCancel={handleCancel}
           />

@@ -1,1 +1,7 @@
 project_id = "dnsbtexptssimysgncca"
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.ai-service]
+verify_jwt = false
