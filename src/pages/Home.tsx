@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, addDays, subDays, isToday } from "date-fns";
+import { LiveWalletCard } from "@/components/wallet";
 
 interface StreakResult {
   claimed: boolean;
@@ -250,6 +251,7 @@ export default function Home() {
   });
 
   const totalPoints = userData?.wallets?.[0]?.available_points || 0;
+  const lockedPoints = userData?.wallets?.[0]?.locked_points || 0;
   const level = userData?.level || 1;
   const weeklyPoints = weeklyTasks?.reduce((sum, task) => sum + (task.points_earned || 0), 0) || 0;
   const todayCompleted = todayTasks?.length || 0;
@@ -302,6 +304,12 @@ export default function Home() {
           <h1 className="text-2xl font-bold">Welcome back!</h1>
           <p className="text-sm text-muted-foreground">Keep earning rewards daily</p>
         </div>
+
+        {/* Live Wallet Card */}
+        <LiveWalletCard 
+          availablePoints={totalPoints} 
+          lockedPoints={lockedPoints}
+        />
 
         {/* Week Calendar Strip */}
         <div className="flex gap-1.5 justify-between">
