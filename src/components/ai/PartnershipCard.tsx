@@ -39,7 +39,8 @@ export function PartnershipCard({
 
   useEffect(() => {
     loadPartnership();
-  }, [brandCategory, targetAudience, campaignType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
