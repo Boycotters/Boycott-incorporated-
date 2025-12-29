@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Video, FileText, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
   BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2,
-  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock, Timer, Award
+  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock, Timer, Award, ChevronRight
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ interface TierUpgradeResult {
 }
 
 export default function Earn() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -737,6 +739,27 @@ export default function Earn() {
                 `Claim +${potentialBonus} Points`
               )}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Surveys Quick Access */}
+        <Card 
+          className="bg-gradient-card border border-border rounded-2xl overflow-hidden cursor-pointer hover:border-primary/50 transition-all"
+          onClick={() => navigate('/surveys')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2.5 rounded-xl">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Surveys</h3>
+                  <p className="text-sm text-muted-foreground">Answer AI-generated surveys for points</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
           </CardContent>
         </Card>
 
