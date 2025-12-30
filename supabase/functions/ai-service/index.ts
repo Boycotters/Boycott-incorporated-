@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,9 +17,34 @@ type AIAction =
 interface AIRequest {
   action: AIAction;
   data: Record<string, any>;
+  userId?: string;
 }
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Rate limit: 10 AI requests per minute per user
+async function checkRateLimit(userId: string | undefined, action: string): Promise<{ allowed: boolean; message?: string }> {
+  if (!userId) {
+    return { allowed: true }; // Allow anonymous requests but they won't be logged
+  }
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  
+  const { data, error } = await supabase.rpc('check_ai_rate_limit', {
+    p_user_id: userId,
+    p_action: action,
+    p_limit_per_minute: 10
+  });
+  
+  if (error) {
+    console.error('Rate limit check error:', error);
+    return { allowed: true }; // Allow if rate limit check fails
+  }
+  
+  return data as { allowed: boolean; message?: string };
+}
 
 async function callAI(systemPrompt: string, userPrompt: string, useTools = false, tools?: any[]) {
   const body: any = {
@@ -292,8 +318,20 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const { action, data } = await req.json() as AIRequest;
-    console.log(`AI Service: Processing action "${action}"`);
+    const { action, data, userId } = await req.json() as AIRequest;
+    console.log(`AI Service: Processing action "${action}" for user ${userId || 'anonymous'}`);
+
+    // Check rate limit
+    const rateLimitResult = await checkRateLimit(userId, action);
+    if (!rateLimitResult.allowed) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: rateLimitResult.message || 'Rate limit exceeded. Please wait a moment.' 
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     let result;
 
@@ -330,7 +368,7 @@ serve(async (req) => {
     
     const err = error as Error;
     
-    // Handle rate limiting
+    // Handle rate limiting from AI gateway
     if (err.message?.includes('429')) {
       return new Response(JSON.stringify({ 
         success: false, 

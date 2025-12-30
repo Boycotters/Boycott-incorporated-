@@ -53,6 +53,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_usage_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notification_queue: {
         Row: {
           body: string
@@ -433,6 +475,7 @@ export type Database = {
           task_id: string | null
           timer_started_at: string | null
           user_id: string | null
+          verification_data: Json | null
           verification_notes: string | null
         }
         Insert: {
@@ -446,6 +489,7 @@ export type Database = {
           task_id?: string | null
           timer_started_at?: string | null
           user_id?: string | null
+          verification_data?: Json | null
           verification_notes?: string | null
         }
         Update: {
@@ -459,6 +503,7 @@ export type Database = {
           task_id?: string | null
           timer_started_at?: string | null
           user_id?: string | null
+          verification_data?: Json | null
           verification_notes?: string | null
         }
         Relationships: [
@@ -794,6 +839,22 @@ export type Database = {
       }
     }
     Functions: {
+      admin_update_withdrawal: {
+        Args: {
+          p_admin_notes?: string
+          p_status: string
+          p_withdrawal_id: string
+        }
+        Returns: Json
+      }
+      check_ai_rate_limit: {
+        Args: {
+          p_action: string
+          p_limit_per_minute?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       check_and_award_achievements: {
         Args: { p_user_id: string }
         Returns: number
@@ -819,6 +880,7 @@ export type Database = {
         Returns: string
       }
       get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
+      is_admin: { Args: { p_user_id?: string }; Returns: boolean }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean
@@ -837,6 +899,14 @@ export type Database = {
           p_phone_number: string
           p_provider: string
           p_user_id: string
+        }
+        Returns: Json
+      }
+      secure_complete_task: {
+        Args: {
+          p_task_id: string
+          p_user_id: string
+          p_verification_data?: Json
         }
         Returns: Json
       }

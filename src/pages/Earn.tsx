@@ -409,37 +409,32 @@ export default function Earn() {
   const hasReachedDailyLimit = remainingTasksToday <= 0;
   const dailyProgress = Math.min((tasksCompletedToday / dailyTaskLimit) * 100, 100);
 
-  // Complete task mutation
+  // Complete task mutation - now using secure server-side function
   const completeTaskMutation = useMutation({
-    mutationFn: async ({ taskId, proofUrl }: { taskId: string; proofUrl?: string }) => {
+    mutationFn: async ({ taskId, proofUrl, verificationData }: { taskId: string; proofUrl?: string; verificationData?: Record<string, any> }) => {
       const task = tasks?.find(t => t.id === taskId);
       if (!task) throw new Error('Task not found');
 
-      // Create user_task record with proof
-      const { data: userTask, error: userTaskError } = await supabase
-        .from('user_tasks')
-        .insert({
-          user_id: user?.id,
-          task_id: taskId,
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          proof_url: proofUrl || null,
-          proof_submitted_at: proofUrl ? new Date().toISOString() : null,
-        })
-        .select('*, tasks(*)')
-        .single();
-
-      if (userTaskError) throw userTaskError;
-
-      // Update points using the database function
-      const { error: pointsError } = await supabase.rpc('update_user_points', {
-        user_id: user?.id,
-        points_to_add: task.points_reward,
+      // Use secure server-side function for task completion
+      const { data: result, error } = await supabase.rpc('secure_complete_task', {
+        p_user_id: user?.id,
+        p_task_id: taskId,
+        p_verification_data: {
+          ...verificationData,
+          file_path: proofUrl || null,
+          submitted_url: verificationData?.submitted_url || null,
+        }
       });
 
-      if (pointsError) throw pointsError;
+      if (error) throw error;
+      
+      const typedResult = result as { success: boolean; message: string; points?: number; already_completed?: boolean };
+      
+      if (!typedResult.success) {
+        throw new Error(typedResult.message);
+      }
 
-      return { userTask, points: task.points_reward };
+      return { points: typedResult.points || task.points_reward };
     },
     onSuccess: (data) => {
       fireConfetti();
@@ -449,6 +444,7 @@ export default function Earn() {
       });
       queryClient.invalidateQueries({ queryKey: ['user-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
@@ -480,8 +476,8 @@ export default function Earn() {
     setVerificationModalOpen(true);
   };
 
-  const handleVerificationComplete = (taskId: string, proofUrl?: string) => {
-    completeTaskMutation.mutate({ taskId, proofUrl });
+  const handleVerificationComplete = (taskId: string, proofUrl?: string, verificationData?: Record<string, any>) => {
+    completeTaskMutation.mutate({ taskId, proofUrl, verificationData });
   };
 
   const isTaskCompleted = (taskId: string) => {
