@@ -763,6 +763,27 @@ export default function Earn() {
           </CardContent>
         </Card>
 
+        {/* Videos Quick Access */}
+        <Card 
+          className="bg-gradient-to-r from-purple-500 to-pink-500 border-0 rounded-2xl overflow-hidden cursor-pointer hover:opacity-90 transition-all"
+          onClick={() => navigate('/videos')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2.5 rounded-xl">
+                  <Video className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Watch & Earn</h3>
+                  <p className="text-sm text-white/80">Watch short videos for quick points</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-white/80" />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Available Tasks */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Available Tasks</h2>
