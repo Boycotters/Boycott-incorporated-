@@ -485,6 +485,44 @@ export type Database = {
           },
         ]
       }
+      user_video_views: {
+        Row: {
+          completed: boolean
+          id: string
+          points_awarded: number
+          user_id: string
+          video_id: string
+          watch_duration_seconds: number
+          watched_at: string
+        }
+        Insert: {
+          completed?: boolean
+          id?: string
+          points_awarded?: number
+          user_id: string
+          video_id: string
+          watch_duration_seconds?: number
+          watched_at?: string
+        }
+        Update: {
+          completed?: boolean
+          id?: string
+          points_awarded?: number
+          user_id?: string
+          video_id?: string
+          watch_duration_seconds?: number
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_video_views_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string | null
@@ -530,6 +568,57 @@ export type Database = {
           referral_code?: string | null
           total_points?: number | null
           vip_tier?: string | null
+        }
+        Relationships: []
+      }
+      videos: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_seconds: number
+          id: string
+          is_active: boolean
+          partner_name: string | null
+          points_reward: number
+          source: string
+          thumbnail_url: string | null
+          title: string
+          video_url: string
+          view_count: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number
+          id?: string
+          is_active?: boolean
+          partner_name?: string | null
+          points_reward?: number
+          source?: string
+          thumbnail_url?: string | null
+          title: string
+          video_url: string
+          view_count?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number
+          id?: string
+          is_active?: boolean
+          partner_name?: string | null
+          points_reward?: number
+          source?: string
+          thumbnail_url?: string | null
+          title?: string
+          video_url?: string
+          view_count?: number
         }
         Relationships: []
       }
@@ -711,6 +800,14 @@ export type Database = {
       }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
+      complete_video_watch: {
+        Args: {
+          p_user_id: string
+          p_video_id: string
+          p_watch_duration: number
+        }
+        Returns: Json
+      }
       create_transaction: {
         Args: {
           p_description: string

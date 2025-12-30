@@ -1,0 +1,1 @@
+export { VideoVerification } from "./VideoVerification";
