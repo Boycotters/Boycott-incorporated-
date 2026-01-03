@@ -377,28 +377,34 @@ export type Database = {
       }
       transactions: {
         Row: {
+          amount: number | null
           created_at: string | null
           description: string | null
           id: string
           points_amount: number | null
+          reference_id: string | null
           status: string | null
           type: string | null
           user_id: string | null
         }
         Insert: {
+          amount?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
           points_amount?: number | null
+          reference_id?: string | null
           status?: string | null
           type?: string | null
           user_id?: string | null
         }
         Update: {
+          amount?: number | null
           created_at?: string | null
           description?: string | null
           id?: string
           points_amount?: number | null
+          reference_id?: string | null
           status?: string | null
           type?: string | null
           user_id?: string | null
@@ -847,6 +853,10 @@ export type Database = {
         }
         Returns: Json
       }
+      award_survey_points: {
+        Args: { p_points: number; p_survey_title: string; p_user_id: string }
+        Returns: Json
+      }
       check_ai_rate_limit: {
         Args: {
           p_action: string
@@ -891,6 +901,10 @@ export type Database = {
       }
       recover_streak: {
         Args: { p_recovery_cost?: number; p_user_id: string }
+        Returns: Json
+      }
+      redeem_reward: {
+        Args: { p_reward_id: string; p_user_id: string }
         Returns: Json
       }
       request_withdrawal: {
