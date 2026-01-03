@@ -86,25 +86,41 @@ export default function Discover() {
     enabled: !!user?.id,
   });
 
-  // Fetch REAL live activity from transactions
+  // Fetch REAL live activity from transactions (no join to avoid RLS issues)
   const { data: liveActivities, refetch: refetchActivities } = useQuery({
     queryKey: ['live-activities'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('transactions')
-        .select('*, users:user_id(full_name)')
+        .select('*')
+        .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(10);
       
       if (error) throw error;
       
-      return data?.map(tx => ({
-        user: tx.users?.full_name?.split(' ')[0] || 'User',
-        action: tx.type === 'earn' ? 'earned' : tx.type === 'redeem' ? 'redeemed' : 'completed',
-        task: tx.description?.replace('Completed: ', '').replace('Redeemed: ', '') || 'Task',
-        points: tx.points_amount || 0,
-        time: formatTimeAgo(tx.created_at || new Date().toISOString()),
-      })) || [];
+      return data?.map(tx => {
+        // Map transaction type to readable action
+        const actionMap: Record<string, string> = {
+          'task_completion': 'completed',
+          'survey_completion': 'completed survey',
+          'video_reward': 'watched',
+          'daily_bonus': 'claimed',
+          'streak_milestone': 'reached milestone',
+          'achievement': 'unlocked',
+          'redemption': 'redeemed',
+          'referral_bonus': 'got referral bonus',
+          'earn': 'earned',
+        };
+        
+        return {
+          user: 'User',
+          action: actionMap[tx.type || ''] || 'earned',
+          task: tx.description?.replace('Completed task: ', '').replace('Completed survey: ', '').replace('Watched video: ', '').slice(0, 30) || 'Task',
+          points: tx.points_amount || 0,
+          time: formatTimeAgo(tx.created_at || new Date().toISOString()),
+        };
+      }) || [];
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });

@@ -171,24 +171,21 @@ export default function Surveys() {
 
   const completeSurveyMutation = useMutation({
     mutationFn: async (points: number) => {
-      // Update points using the database function
-      const { error: pointsError } = await supabase.rpc('update_user_points', {
-        user_id: user?.id,
-        points_to_add: points,
-      });
-
-      if (pointsError) throw pointsError;
-
-      // Create a transaction record
-      await supabase.rpc('create_transaction', {
+      // Use the secure server-side function to award survey points
+      const { data, error } = await supabase.rpc('award_survey_points', {
         p_user_id: user?.id,
-        p_type: 'task_completion',
-        p_points_amount: points,
-        p_description: `Completed AI Survey: ${activeSurvey?.title}`,
-        p_status: 'completed'
+        p_points: points,
+        p_survey_title: activeSurvey?.title || 'AI Survey',
       });
 
-      return points;
+      if (error) throw error;
+      
+      const result = data as { success: boolean; points_awarded: number; message: string };
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      return result.points_awarded;
     },
     onSuccess: (points) => {
       fireConfetti();

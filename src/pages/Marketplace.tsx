@@ -78,60 +78,33 @@ export default function Marketplace() {
     enabled: !!user?.id,
   });
 
-  // Redeem reward mutation
+  // Redeem reward mutation - using secure server-side function
   const redeemMutation = useMutation({
     mutationFn: async (reward: any) => {
-      const availablePoints = wallet?.available_points || 0;
+      const { data, error } = await supabase.rpc('redeem_reward', {
+        p_user_id: user?.id,
+        p_reward_id: reward.id,
+      });
+
+      if (error) throw error;
       
-      if (availablePoints < reward.points_cost) {
-        throw new Error('Insufficient points');
+      const result = data as { success: boolean; message: string; reward_name?: string; points_spent?: number };
+      
+      if (!result.success) {
+        throw new Error(result.message);
       }
 
-      // Create redemption record
-      const { error: redemptionError } = await supabase
-        .from('redemptions')
-        .insert({
-          user_id: user?.id,
-          reward_id: reward.id,
-          points_spent: reward.points_cost,
-          status: 'pending',
-        });
-
-      if (redemptionError) throw redemptionError;
-
-      // Deduct points from wallet
-      const { error: walletError } = await supabase
-        .from('wallets')
-        .update({
-          available_points: availablePoints - reward.points_cost,
-        })
-        .eq('user_id', user?.id);
-
-      if (walletError) throw walletError;
-
-      // Create transaction record
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user?.id,
-          type: 'redeem',
-          points_amount: -reward.points_cost,
-          description: `Redeemed: ${reward.name}`,
-          status: 'completed',
-        });
-
-      if (transactionError) throw transactionError;
-
-      return reward;
+      return { ...reward, result };
     },
-    onSuccess: (reward) => {
+    onSuccess: (data) => {
       toast({
         title: "Reward redeemed! 🎁",
-        description: `You've successfully redeemed ${reward.name}. Check your email for details.`,
+        description: `You've successfully redeemed ${data.name}. Check your email for details.`,
       });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['redemptions'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries({ queryKey: ['rewards'] });
       setConfirmReward(null);
     },
     onError: (error: any) => {
