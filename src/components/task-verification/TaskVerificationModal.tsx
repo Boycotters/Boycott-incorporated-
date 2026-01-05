@@ -10,6 +10,7 @@ import { TimerVerification } from "./TimerVerification";
 import { DataVerification } from "./DataVerification";
 import { SurveyVerification } from "./SurveyVerification";
 import { AISurveyVerification } from "./AISurveyVerification";
+import { QuizVerification } from "./QuizVerification";
 
 interface Task {
   id: string;
@@ -47,6 +48,11 @@ export function TaskVerificationModal({
     onVerificationComplete(task.id, proofUrl);
     onOpenChange(false);
   };
+
+  // Check if this is a quiz task (has percentage requirement in title/description)
+  const isQuizTask = task.title.toLowerCase().includes('quiz') || 
+                     task.description?.toLowerCase().includes('score') ||
+                     task.description?.toLowerCase().includes('%');
 
   const renderVerification = () => {
     switch (task.verification_type) {
@@ -90,6 +96,30 @@ export function TaskVerificationModal({
           />
         );
       case 'ai_survey':
+        // If it's a quiz task, use QuizVerification
+        if (isQuizTask) {
+          // Extract pass percentage from description if available
+          const percentMatch = task.description?.match(/(\d+)%/);
+          const passPercentage = percentMatch ? parseInt(percentMatch[1]) : 80;
+          
+          return (
+            <QuizVerification
+              taskId={task.id}
+              taskTitle={task.title}
+              taskCategory={task.category || undefined}
+              userLevel={userLevel}
+              passPercentage={passPercentage}
+              onComplete={(passed, score) => {
+                if (passed) {
+                  handleComplete();
+                } else {
+                  handleCancel();
+                }
+              }}
+              onCancel={handleCancel}
+            />
+          );
+        }
         return (
           <AISurveyVerification
             taskId={task.id}

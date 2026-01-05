@@ -12,7 +12,8 @@ type AIAction =
   | 'recommend_tasks' 
   | 'moderate_content'
   | 'analyze_user'
-  | 'generate_partnership';
+  | 'generate_partnership'
+  | 'generate_quiz';
 
 interface AIRequest {
   action: AIAction;
@@ -321,6 +322,58 @@ Generate an engaging, CREATIVE task that users will want to complete. Make it DI
   return await callAI(systemPrompt, userPrompt, true, tools);
 }
 
+// Generate quiz with pass/fail scoring
+async function generateQuiz(data: { topic: string; category: string; difficulty: string; questionCount: number; passPercentage: number }) {
+  const systemPrompt = `You are an expert quiz creator for a Zambian rewards app. Create engaging, educational quiz questions that test knowledge while being fun. Include questions relevant to Zambian culture, lifestyle, and general knowledge when appropriate. Make sure each question has exactly 4 options with only one correct answer.`;
+  
+  const randomSeed = Math.floor(Math.random() * 1000);
+  const questionStyles = ['trivia', 'educational', 'fun facts', 'practical knowledge', 'current events'];
+  const randomStyle = questionStyles[Math.floor(Math.random() * questionStyles.length)];
+  
+  const userPrompt = `Create a ${randomStyle} quiz (Variation: ${randomSeed}):
+- Topic: ${data.topic}
+- Category: ${data.category}
+- Difficulty: ${data.difficulty}
+- Number of Questions: ${data.questionCount}
+- Pass Percentage: ${data.passPercentage}%
+
+Generate ${data.questionCount} UNIQUE quiz questions with 4 options each. Each question should have exactly one correct answer. Include brief explanations for why the correct answer is right. Make questions engaging and educational.`;
+
+  const tools = [{
+    type: 'function',
+    function: {
+      name: 'create_quiz',
+      description: 'Create a quiz with questions',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Quiz title' },
+          description: { type: 'string', description: 'Brief quiz description' },
+          passPercentage: { type: 'number', description: 'Required percentage to pass' },
+          timePerQuestion: { type: 'number', description: 'Seconds per question' },
+          questions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                question: { type: 'string' },
+                options: { type: 'array', items: { type: 'string' }, description: 'Exactly 4 options' },
+                correctAnswer: { type: 'number', description: 'Index of correct option (0-3)' },
+                explanation: { type: 'string', description: 'Why this answer is correct' }
+              },
+              required: ['id', 'question', 'options', 'correctAnswer']
+            }
+          }
+        },
+        required: ['title', 'description', 'passPercentage', 'timePerQuestion', 'questions']
+      }
+    }
+  }];
+
+  return await callAI(systemPrompt, userPrompt, true, tools);
+}
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -367,6 +420,9 @@ serve(async (req) => {
         break;
       case 'generate_partnership':
         result = await generatePartnership(data as { brandCategory: string; targetAudience: string; campaignType: string });
+        break;
+      case 'generate_quiz':
+        result = await generateQuiz(data as { topic: string; category: string; difficulty: string; questionCount: number; passPercentage: number });
         break;
       default:
         throw new Error(`Unknown action: ${action}`);
