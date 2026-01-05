@@ -87,15 +87,20 @@ async function callAI(systemPrompt: string, userPrompt: string, useTools = false
 
 // Generate dynamic survey questions
 async function generateSurvey(data: { taskType: string; userLevel: number; category: string; previousAnswers?: string[] }) {
-  const systemPrompt = `You are an expert survey designer for a rewards app. Generate engaging, relevant survey questions that users will enjoy answering. The surveys should be appropriate for the user's level and category.`;
+  const systemPrompt = `You are an expert survey designer for a Zambian rewards app called Pesa Rewards. Generate engaging, relevant survey questions that users will enjoy answering. The surveys should be appropriate for the user's level and category. Be creative and generate DIFFERENT questions each time. Include questions relevant to Zambian lifestyle, culture, and local context when appropriate.`;
   
-  const userPrompt = `Generate a survey for the following context:
+  // Add randomness for variety
+  const randomSeed = Math.floor(Math.random() * 1000);
+  const surveyStyles = ['conversational', 'professional', 'fun', 'quick', 'in-depth'];
+  const randomStyle = surveyStyles[Math.floor(Math.random() * surveyStyles.length)];
+  
+  const userPrompt = `Generate a ${randomStyle} survey for the following context (Variation: ${randomSeed}):
 - Task Type: ${data.taskType}
 - User Level: ${data.userLevel}
 - Category: ${data.category}
 ${data.previousAnswers ? `- Previous answers indicate interests in: ${data.previousAnswers.join(', ')}` : ''}
 
-Create 4-5 engaging questions that feel personalized and interesting.`;
+Create 4-5 UNIQUE, engaging questions that feel personalized and interesting. Make them DIFFERENT from typical surveys.`;
 
   const tools = [{
     type: 'function',
@@ -166,15 +171,19 @@ Assess whether this appears to be a genuine, quality submission.`;
 
 // AI task recommendations
 async function recommendTasks(data: { userLevel: number; completedCategories: string[]; interests: string[]; vipTier: string }) {
-  const systemPrompt = `You are a personalized task recommendation engine. Suggest tasks that match user interests and skill level, balancing variety with relevance.`;
+  const systemPrompt = `You are a personalized task recommendation engine for a Zambian rewards app. Suggest tasks that match user interests and skill level, balancing variety with relevance. Be creative and suggest different types of tasks each time. Include tasks related to local Zambian context when appropriate.`;
   
-  const userPrompt = `Generate task recommendations for this user:
+  // Add randomness seed for variety
+  const randomSeed = Math.floor(Math.random() * 1000);
+  const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
+  
+  const userPrompt = `Generate task recommendations for this user (Variation seed: ${randomSeed}, Time: ${timeOfDay}):
 - Level: ${data.userLevel}
 - VIP Tier: ${data.vipTier}
 - Recently completed categories: ${data.completedCategories.join(', ') || 'None'}
 - Interests: ${data.interests.join(', ') || 'General'}
 
-Recommend a mix of task types they would enjoy.`;
+Recommend a DIVERSE mix of 4-5 task types they would enjoy. Be creative and suggest DIFFERENT tasks than before. Consider time of day for relevance.`;
 
   const tools = [{
     type: 'function',
@@ -274,14 +283,19 @@ Provide insights for personalization.`;
 
 // Generate partnership/brand tasks
 async function generatePartnership(data: { brandCategory: string; targetAudience: string; campaignType: string }) {
-  const systemPrompt = `You are a partnership and campaign specialist. Create engaging brand collaboration tasks that benefit both users and partners.`;
+  const systemPrompt = `You are a partnership and campaign specialist for a Zambian rewards app. Create engaging brand collaboration tasks that benefit both users and partners. Be creative and generate UNIQUE, DIFFERENT tasks each time. Include Zambian context when relevant.`;
   
-  const userPrompt = `Create a partnership task:
+  // Add randomness for variety
+  const randomSeed = Math.floor(Math.random() * 1000);
+  const themes = ['trendy', 'classic', 'innovative', 'community-focused', 'lifestyle', 'digital', 'local'];
+  const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+  
+  const userPrompt = `Create a UNIQUE partnership task (Variation: ${randomSeed}, Theme: ${randomTheme}):
 - Brand Category: ${data.brandCategory}
 - Target Audience: ${data.targetAudience}
 - Campaign Type: ${data.campaignType}
 
-Generate an engaging task that users will want to complete.`;
+Generate an engaging, CREATIVE task that users will want to complete. Make it DIFFERENT from typical tasks. Consider local Zambian brands and context when appropriate.`;
 
   const tools = [{
     type: 'function',

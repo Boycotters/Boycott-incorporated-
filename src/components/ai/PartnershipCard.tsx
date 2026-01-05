@@ -3,9 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Handshake, Sparkles, ExternalLink, Clock, Coins, RefreshCw, CheckCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Handshake, Sparkles, ExternalLink, Clock, Coins, RefreshCw, CheckCircle, Camera, FileText } from "lucide-react";
 import { useAI, PartnershipTask } from "@/hooks/useAI";
 import { cn } from "@/lib/utils";
+import { UrlVerification } from "@/components/task-verification/UrlVerification";
+import { ScreenshotVerification } from "@/components/task-verification/ScreenshotVerification";
+import { SurveyVerification } from "@/components/task-verification/SurveyVerification";
+import { TimerVerification } from "@/components/task-verification/TimerVerification";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useConfetti } from "@/hooks/useConfetti";
 
 interface PartnershipCardProps {
   brandCategory?: string;
@@ -16,22 +26,49 @@ interface PartnershipCardProps {
 
 const verificationIcons = {
   url: ExternalLink,
-  screenshot: CheckCircle,
-  survey: Sparkles,
+  screenshot: Camera,
+  survey: FileText,
   timer: Clock,
 };
 
+// Variety arrays for AI prompts
+const BRAND_CATEGORIES = [
+  "technology", "lifestyle", "fashion", "food", "entertainment", 
+  "health", "finance", "travel", "gaming", "education", "sports"
+];
+
+const TARGET_AUDIENCES = [
+  "gen-z", "millennials", "young professionals", "students", 
+  "families", "tech enthusiasts", "fitness lovers", "gamers"
+];
+
+const CAMPAIGN_TYPES = [
+  "brand_awareness", "engagement", "product_launch", "social_proof",
+  "user_acquisition", "content_creation", "community_building"
+];
+
 export function PartnershipCard({
-  brandCategory = "technology",
-  targetAudience = "young adults",
-  campaignType = "brand_awareness",
+  brandCategory,
+  targetAudience,
+  campaignType,
   onStartTask
 }: PartnershipCardProps) {
   const [partnership, setPartnership] = useState<PartnershipTask | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const { generatePartnership, loading, error } = useAI();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { fireConfetti } = useConfetti();
 
   const loadPartnership = async () => {
-    const result = await generatePartnership(brandCategory, targetAudience, campaignType);
+    // Add randomness for variety on each refresh
+    const randomBrand = brandCategory || BRAND_CATEGORIES[Math.floor(Math.random() * BRAND_CATEGORIES.length)];
+    const randomAudience = targetAudience || TARGET_AUDIENCES[Math.floor(Math.random() * TARGET_AUDIENCES.length)];
+    const randomCampaign = campaignType || CAMPAIGN_TYPES[Math.floor(Math.random() * CAMPAIGN_TYPES.length)];
+    
+    const result = await generatePartnership(randomBrand, randomAudience, randomCampaign);
     if (result) {
       setPartnership(result);
     }
@@ -42,7 +79,136 @@ export function PartnershipCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) {
+  const handleStartTask = () => {
+    if (partnership) {
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleComplete = async (proofUrl?: string) => {
+    if (!user?.id || !partnership) return;
+    
+    setIsCompleting(true);
+    try {
+      // Award points for partner task completion
+      const { error: txError } = await supabase.rpc('create_transaction', {
+        p_user_id: user.id,
+        p_type: 'task_completion',
+        p_points_amount: partnership.suggestedPoints,
+        p_description: `Completed partner task: ${partnership.title}`,
+        p_status: 'completed'
+      });
+
+      if (txError) throw txError;
+
+      // Update wallet
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('available_points')
+        .eq('user_id', user.id)
+        .single();
+
+      if (wallet) {
+        await supabase
+          .from('wallets')
+          .update({ available_points: (wallet.available_points || 0) + partnership.suggestedPoints })
+          .eq('user_id', user.id);
+      }
+
+      // Update user total points
+      await supabase.rpc('update_user_points', {
+        user_id: user.id,
+        points_to_add: partnership.suggestedPoints
+      });
+
+      fireConfetti();
+      toast({
+        title: "Partner Task Completed! 🎉",
+        description: `You earned ${partnership.suggestedPoints} points!`,
+      });
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      
+      setIsModalOpen(false);
+      
+      // Load new partnership after completion
+      loadPartnership();
+    } catch (err) {
+      console.error('Error completing partner task:', err);
+      toast({
+        title: "Error",
+        description: "Failed to complete task. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+  };
+
+  const renderVerification = () => {
+    if (!partnership || !user?.id) return null;
+    
+    switch (partnership.verificationMethod) {
+      case 'url':
+        return (
+          <UrlVerification
+            taskId={`partner-${Date.now()}`}
+            taskTitle={partnership.title}
+            taskDescription={partnership.description}
+            onComplete={handleComplete}
+            onCancel={handleCancel}
+          />
+        );
+      case 'screenshot':
+        return (
+          <ScreenshotVerification
+            taskId={`partner-${Date.now()}`}
+            userId={user.id}
+            onComplete={(proofUrl) => handleComplete(proofUrl)}
+            onCancel={handleCancel}
+          />
+        );
+      case 'survey':
+        return (
+          <SurveyVerification
+            taskId={`partner-${Date.now()}`}
+            taskTitle={partnership.title}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
+      case 'timer':
+        return (
+          <TimerVerification
+            taskId={`partner-${Date.now()}`}
+            taskTitle={partnership.title}
+            taskDescription={partnership.description}
+            durationSeconds={60}
+            onComplete={handleComplete}
+            onCancel={handleCancel}
+          />
+        );
+      default:
+        return (
+          <div className="text-center py-6">
+            <p className="text-muted-foreground mb-4">Complete the task requirements above</p>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+              <Button onClick={() => handleComplete()}>Mark Complete</Button>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  if (loading && !partnership) {
     return (
       <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
         <CardHeader className="pb-2">
@@ -79,80 +245,106 @@ export function PartnershipCard({
   const VerificationIcon = verificationIcons[partnership.verificationMethod];
 
   return (
-    <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Handshake className="w-4 h-4 text-amber-500" />
+    <>
+      <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent overflow-hidden">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Handshake className="w-4 h-4 text-amber-500" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Partner Task</CardTitle>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  AI-Generated Opportunity
+                </p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-base">Partner Task</CardTitle>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                AI-Generated Opportunity
-              </p>
+            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+              <Coins className="w-3 h-3 mr-1" />
+              {partnership.suggestedPoints} pts
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Task Info */}
+          <div>
+            <h4 className="font-semibold mb-1">{partnership.title}</h4>
+            <p className="text-sm text-muted-foreground">{partnership.description}</p>
+          </div>
+
+          {/* Requirements */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Requirements:</p>
+            <ul className="space-y-1">
+              {partnership.requirements.slice(0, 3).map((req, i) => (
+                <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  {req}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Meta Info */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {partnership.estimatedTime}
+            </div>
+            <div className="flex items-center gap-1">
+              <VerificationIcon className="w-3.5 h-3.5" />
+              {partnership.verificationMethod} verification
             </div>
           </div>
-          <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-            <Coins className="w-3 h-3 mr-1" />
-            {partnership.suggestedPoints} pts
-          </Badge>
-        </div>
-      </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Task Info */}
-        <div>
-          <h4 className="font-semibold mb-1">{partnership.title}</h4>
-          <p className="text-sm text-muted-foreground">{partnership.description}</p>
-        </div>
+          {/* CTA */}
+          <Button 
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+            onClick={handleStartTask}
+          >
+            {partnership.callToAction}
+          </Button>
 
-        {/* Requirements */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Requirements:</p>
-          <ul className="space-y-1">
-            {partnership.requirements.slice(0, 3).map((req, i) => (
-              <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                {req}
-              </li>
-            ))}
-          </ul>
-        </div>
+          {/* Refresh */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full text-xs text-muted-foreground"
+            onClick={loadPartnership}
+            disabled={loading}
+          >
+            <RefreshCw className={cn("w-3 h-3 mr-1", loading && "animate-spin")} />
+            See Different Opportunity
+          </Button>
+        </CardContent>
+      </Card>
 
-        {/* Meta Info */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            {partnership.estimatedTime}
+      {/* Task Completion Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center">{partnership.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">{partnership.description}</p>
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <p className="text-xs font-medium mb-2">Requirements:</p>
+              <ul className="space-y-1">
+                {partnership.requirements.map((req, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                    <CheckCircle className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                    {req}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {renderVerification()}
           </div>
-          <div className="flex items-center gap-1">
-            <VerificationIcon className="w-3.5 h-3.5" />
-            {partnership.verificationMethod} verification
-          </div>
-        </div>
-
-        {/* CTA */}
-        <Button 
-          className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-          onClick={() => onStartTask?.(partnership)}
-        >
-          {partnership.callToAction}
-        </Button>
-
-        {/* Refresh */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full text-xs text-muted-foreground"
-          onClick={loadPartnership}
-          disabled={loading}
-        >
-          <RefreshCw className={cn("w-3 h-3 mr-1", loading && "animate-spin")} />
-          See Different Opportunity
-        </Button>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
