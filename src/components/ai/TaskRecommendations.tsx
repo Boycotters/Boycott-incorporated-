@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,18 @@ const difficultyConfig = {
   hard: { color: "bg-red-500/10 text-red-500 border-red-500/20", icon: Trophy },
 };
 
+// Interest pools for variety
+const INTEREST_POOLS = [
+  ['social', 'gaming'],
+  ['lifestyle', 'shopping'],
+  ['learning', 'challenge'],
+  ['video_ad', 'survey'],
+  ['quick', 'app_install'],
+  ['social', 'lifestyle', 'gaming'],
+  ['shopping', 'learning'],
+  ['challenge', 'quick'],
+];
+
 export function TaskRecommendations({
   userLevel,
   completedCategories,
@@ -29,10 +41,15 @@ export function TaskRecommendations({
   onSelectCategory
 }: TaskRecommendationsProps) {
   const [recommendations, setRecommendations] = useState<RecommendationsResult | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { recommendTasks, loading, error } = useAI();
 
   const loadRecommendations = async () => {
-    const result = await recommendTasks(userLevel, completedCategories, interests, vipTier);
+    // Add randomness to interests for variety
+    const randomInterests = INTEREST_POOLS[Math.floor(Math.random() * INTEREST_POOLS.length)];
+    const combinedInterests = [...new Set([...interests, ...randomInterests])];
+    
+    const result = await recommendTasks(userLevel, completedCategories, combinedInterests, vipTier);
     if (result) {
       setRecommendations(result);
     }
@@ -41,7 +58,11 @@ export function TaskRecommendations({
   useEffect(() => {
     loadRecommendations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshKey]);
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   if (loading) {
     return (
@@ -94,7 +115,7 @@ export function TaskRecommendations({
             variant="ghost" 
             size="icon" 
             className="h-8 w-8"
-            onClick={loadRecommendations}
+            onClick={handleRefresh}
             disabled={loading}
           >
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
