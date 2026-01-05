@@ -14,52 +14,118 @@ interface TimerVerificationProps {
 }
 
 // Sample task content based on task type
-const getTaskContent = (taskTitle?: string) => {
+const getTaskContent = (taskTitle?: string, taskDescription?: string) => {
   const title = taskTitle?.toLowerCase() || "";
+  const desc = taskDescription?.toLowerCase() || "";
   
-  if (title.includes("video") || title.includes("watch") || title.includes("ad")) {
+  if (title.includes("video") || title.includes("watch") || title.includes("ad") || title.includes("tutorial")) {
+    // Generate dynamic tutorial content
+    const tutorialTopics = [
+      { title: "Welcome to Pesa Rewards", content: "Learn how to maximize your earnings with daily tasks, streaks, and referrals." },
+      { title: "Building Your Streak", content: "Log in every day to build your streak and unlock bonus multipliers." },
+      { title: "VIP Benefits Explained", content: "Higher VIP tiers give you better point multipliers and exclusive rewards." },
+      { title: "Smart Earning Tips", content: "Complete high-value tasks first and check flash deals for bonus points." },
+    ];
+    const randomTopic = tutorialTopics[Math.floor(Math.random() * tutorialTopics.length)];
+    
     return {
       type: "video",
       icon: Play,
-      title: "Watch the Video",
-      description: "Watch the complete video to earn your reward. Make sure to watch until the end!",
+      title: "Watch the Tutorial",
+      description: "Watch the complete video to learn and earn your reward.",
       content: (
-        <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center border border-border/50">
-          <div className="text-center space-y-3">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-              <Play className="w-8 h-8 text-primary" />
+        <div className="space-y-3">
+          <div className="aspect-video bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center border border-border/50 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="text-center space-y-3 relative z-10">
+              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto animate-pulse">
+                <Play className="w-8 h-8 text-white ml-1" />
+              </div>
+              <p className="text-sm text-white font-medium">{randomTopic.title}</p>
             </div>
-            <p className="text-sm text-muted-foreground">Video content playing...</p>
           </div>
+          <Card className="p-3 bg-muted/50">
+            <p className="text-sm text-muted-foreground">{randomTopic.content}</p>
+          </Card>
         </div>
       ),
     };
   }
   
-  if (title.includes("article") || title.includes("read") || title.includes("blog")) {
+  if (title.includes("tips") || title.includes("daily") || title.includes("guide") || title.includes("learn")) {
+    const tips = [
+      "Complete tasks during flash deals for 2x points!",
+      "Referring friends earns you 500 bonus points each.",
+      "Daily login streaks unlock milestone bonuses at 7, 14, and 30 days.",
+      "VIP Diamond members get 2x point multipliers on all tasks.",
+      "Watch videos to the end - points are awarded for full views.",
+      "Complete your profile to unlock bonus tasks.",
+      "Check the Discover page for AI-personalized task recommendations.",
+    ];
+    const randomTips = tips.sort(() => Math.random() - 0.5).slice(0, 4);
+    
+    return {
+      type: "article",
+      icon: BookOpen,
+      title: "Read & Learn",
+      description: "Read through these tips carefully to complete the task.",
+      content: (
+        <Card className="p-4 space-y-3 bg-gradient-to-br from-primary/5 to-transparent">
+          <h4 className="font-semibold flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-primary" />
+            Pro Tips for Earning More
+          </h4>
+          <div className="space-y-2">
+            {randomTips.map((tip, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm">
+                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                <p className="text-muted-foreground">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ),
+    };
+  }
+  
+  if (title.includes("article") || title.includes("read") || title.includes("blog") || title.includes("course") || title.includes("financial")) {
+    const articles = [
+      {
+        title: "Smart Money Management in Zambia",
+        content: [
+          "Track all your expenses using a simple notebook or app.",
+          "Save at least 10% of any money you receive.",
+          "Use mobile money for quick, secure transactions.",
+          "Compare prices before making major purchases.",
+          "Build an emergency fund for unexpected costs."
+        ]
+      },
+      {
+        title: "Growing Your Income",
+        content: [
+          "Look for side hustles that match your skills.",
+          "Use apps like Pesa Rewards to earn extra income.",
+          "Invest in learning new skills for better opportunities.",
+          "Network with others to find new income sources.",
+          "Consider small business ideas with low startup costs."
+        ]
+      }
+    ];
+    const article = articles[Math.floor(Math.random() * articles.length)];
+    
     return {
       type: "article",
       icon: BookOpen,
       title: "Read the Article",
       description: "Read through the content below carefully to complete the task.",
       content: (
-        <Card className="p-4 max-h-48 overflow-y-auto space-y-3 bg-muted/30">
-          <h4 className="font-semibold">5 Tips for Better Productivity</h4>
-          <p className="text-sm text-muted-foreground">
-            1. <strong>Start with the hardest task</strong> - Tackle your most challenging work when your energy is highest.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            2. <strong>Take regular breaks</strong> - The Pomodoro Technique suggests 25 minutes of focus followed by 5-minute breaks.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            3. <strong>Eliminate distractions</strong> - Put your phone on silent and close unnecessary tabs.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            4. <strong>Set clear goals</strong> - Know exactly what you want to accomplish each day.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            5. <strong>Review your progress</strong> - End each day by reviewing what you accomplished.
-          </p>
+        <Card className="p-4 max-h-52 overflow-y-auto space-y-3 bg-muted/30">
+          <h4 className="font-semibold">{article.title}</h4>
+          {article.content.map((point, i) => (
+            <p key={i} className="text-sm text-muted-foreground">
+              <strong>{i + 1}.</strong> {point}
+            </p>
+          ))}
         </Card>
       ),
     };
@@ -72,29 +138,60 @@ const getTaskContent = (taskTitle?: string) => {
       title: "Listen to the Audio",
       description: "Listen to the complete audio clip to earn your points.",
       content: (
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-6 border border-border/50">
+        <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 border border-border/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
               <Volume2 className="w-6 h-6 text-primary" />
             </div>
             <div className="flex-1">
+              <p className="text-sm font-medium mb-2">Audio Playing...</p>
               <div className="h-2 bg-primary/30 rounded-full overflow-hidden">
                 <div className="h-full bg-primary animate-pulse" style={{ width: "60%" }} />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Audio playing...</p>
+              <p className="text-xs text-muted-foreground mt-2">Keep listening to complete</p>
             </div>
           </div>
         </div>
       ),
     };
   }
+
+  if (title.includes("browse") || title.includes("deal") || title.includes("shop") || title.includes("preview")) {
+    return {
+      type: "engage",
+      icon: ExternalLink,
+      title: "Explore the Content",
+      description: "Browse through and engage with the content to earn your reward.",
+      content: (
+        <Card className="p-4 space-y-3 bg-gradient-to-br from-accent/10 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+              <ExternalLink className="w-5 h-5 text-accent" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">Exploring Content</p>
+              <p className="text-xs text-muted-foreground">Take your time to browse</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {['Featured Items', 'Special Offers', 'New Arrivals', 'Top Picks'].map((item, i) => (
+              <div key={i} className="bg-background/50 rounded-lg p-2 text-center">
+                <div className="w-8 h-8 bg-muted rounded mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">{item}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ),
+    };
+  }
   
-  // Default: app install / engagement task
+  // Default: general engagement task
   return {
     type: "engage",
     icon: ExternalLink,
     title: "Complete the Task",
-    description: "Follow the instructions and engage with the content to earn your reward.",
+    description: taskDescription || "Follow the instructions and engage with the content to earn your reward.",
     content: (
       <Card className="p-4 space-y-3 bg-muted/30">
         <div className="flex items-center gap-3">
@@ -137,7 +234,7 @@ export function TimerVerification({
   const [elapsed, setElapsed] = useState(0);
   const [completed, setCompleted] = useState(false);
 
-  const taskContent = getTaskContent(taskTitle);
+  const taskContent = getTaskContent(taskTitle, taskDescription);
   const TaskIcon = taskContent.icon;
 
   useEffect(() => {
