@@ -469,6 +469,48 @@ export type Database = {
           },
         ]
       }
+      user_game_plays: {
+        Row: {
+          game_type: string
+          id: string
+          played_at: string
+          points_earned: number
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          game_type: string
+          id?: string
+          played_at?: string
+          points_earned?: number
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          game_type?: string
+          id?: string
+          played_at?: string
+          points_earned?: number
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tasks: {
         Row: {
           completed_at: string | null
@@ -889,8 +931,18 @@ export type Database = {
         }
         Returns: string
       }
+      get_game_plays_remaining: { Args: { p_user_id: string }; Returns: Json }
       get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      play_game: {
+        Args: {
+          p_game_type: string
+          p_points_earned: number
+          p_score?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       process_referral: {
         Args: { new_user_id: string; referrer_code: string }
         Returns: boolean
