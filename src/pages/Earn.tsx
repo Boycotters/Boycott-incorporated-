@@ -780,6 +780,27 @@ export default function Earn() {
           </CardContent>
         </Card>
 
+        {/* Games Quick Access */}
+        <Card 
+          className="bg-gradient-to-r from-amber-500 to-orange-500 border-0 rounded-2xl overflow-hidden cursor-pointer hover:opacity-90 transition-all"
+          onClick={() => navigate('/games')}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2.5 rounded-xl">
+                  <Gamepad2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Play & Earn</h3>
+                  <p className="text-sm text-white/80">Win points with fun mini games</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-white/80" />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Available Tasks */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Available Tasks</h2>

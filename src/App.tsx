@@ -24,12 +24,13 @@ import Withdraw from "./pages/Withdraw";
 import Surveys from "./pages/Surveys";
 import Videos from "./pages/Videos";
 import Admin from "./pages/Admin";
+import Games from "./pages/Games";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys', '/videos', '/admin'];
+  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys', '/videos', '/admin', '/games'];
   const showNav = !hideNavRoutes.includes(location.pathname);
 
   return (
@@ -53,6 +54,7 @@ const AppContent = () => {
         <Route path="/surveys" element={<ProtectedRoute><Surveys /></ProtectedRoute>} />
         <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
