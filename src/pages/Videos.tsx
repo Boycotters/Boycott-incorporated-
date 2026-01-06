@@ -449,24 +449,11 @@ export default function Videos() {
           )}
         </div>
 
-        {/* Video Progress Indicator */}
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-1">
-          {videos.map((_, index) => (
-            <div
-              key={index}
-              className={cn(
-                "w-1 rounded-full transition-all",
-                index === currentIndex 
-                  ? "h-6 bg-white" 
-                  : "h-2 bg-white/30"
-              )}
-              onClick={() => {
-                setCurrentIndex(index);
-                setProgress(0);
-                setWatchTime(0);
-              }}
-            />
-          ))}
+        {/* Video Counter */}
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+          <div className="bg-black/40 backdrop-blur-sm rounded-full px-3 py-1.5 text-white text-xs font-medium">
+            {currentIndex + 1}/{videos.length}
+          </div>
         </div>
       </div>
     </div>
