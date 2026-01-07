@@ -1,4 +1,4 @@
 export { SpinWheel } from "./SpinWheel";
 export { MemoryMatch } from "./MemoryMatch";
-export { ScratchCard } from "./ScratchCard";
+export { Basketball } from "./Basketball";
 export { KeepyUppy } from "./KeepyUppy";
