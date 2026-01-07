@@ -95,6 +95,87 @@ export type Database = {
         }
         Relationships: []
       }
+      game_achievements: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          game_type: string | null
+          icon: string
+          id: string
+          is_active: boolean | null
+          name: string
+          points_reward: number
+          requirement_type: string
+          requirement_value: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          game_type?: string | null
+          icon: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_reward?: number
+          requirement_type: string
+          requirement_value: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          game_type?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_reward?: number
+          requirement_type?: string
+          requirement_value?: number
+        }
+        Relationships: []
+      }
+      game_tournaments: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string
+          entry_fee: number | null
+          game_type: string
+          id: string
+          max_participants: number | null
+          name: string
+          prize_pool: number
+          start_time: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          entry_fee?: number | null
+          game_type: string
+          id?: string
+          max_participants?: number | null
+          name: string
+          prize_pool?: number
+          start_time: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          entry_fee?: number | null
+          game_type?: string
+          id?: string
+          max_participants?: number | null
+          name?: string
+          prize_pool?: number
+          start_time?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
       notification_queue: {
         Row: {
           body: string
@@ -375,6 +456,61 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_participants: {
+        Row: {
+          attempts: number | null
+          best_score: number | null
+          id: string
+          joined_at: string | null
+          prize_won: number | null
+          rank: number | null
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          best_score?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_won?: number | null
+          rank?: number | null
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          best_score?: number | null
+          id?: string
+          joined_at?: string | null
+          prize_won?: number | null
+          rank?: number | null
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_participants_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "game_tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number | null
@@ -462,6 +598,49 @@ export type Database = {
           },
           {
             foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_game_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_game_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "game_achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_game_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_game_achievements_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -931,9 +1110,24 @@ export type Database = {
         }
         Returns: string
       }
+      get_game_leaderboard: {
+        Args: { p_game_type?: string; p_period?: string }
+        Returns: {
+          best_score: number
+          full_name: string
+          games_played: number
+          rank: number
+          total_score: number
+          user_id: string
+        }[]
+      }
       get_game_plays_remaining: { Args: { p_user_id: string }; Returns: Json }
       get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      join_tournament: {
+        Args: { p_tournament_id: string; p_user_id: string }
+        Returns: Json
+      }
       play_game: {
         Args: {
           p_game_type: string
@@ -974,6 +1168,10 @@ export type Database = {
           p_user_id: string
           p_verification_data?: Json
         }
+        Returns: Json
+      }
+      submit_tournament_score: {
+        Args: { p_score: number; p_tournament_id: string; p_user_id: string }
         Returns: Json
       }
       update_user_points: {
