@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RotateCw, Sparkles } from "lucide-react";
@@ -10,44 +10,60 @@ interface SpinWheelProps {
 }
 
 const WHEEL_SEGMENTS = [
-  { points: 10, color: "hsl(var(--primary))", label: "10" },
-  { points: 25, color: "hsl(var(--accent))", label: "25" },
-  { points: 50, color: "hsl(340 82% 52%)", label: "50" },
-  { points: 15, color: "hsl(var(--secondary))", label: "15" },
-  { points: 100, color: "hsl(48 96% 53%)", label: "100" },
-  { points: 20, color: "hsl(var(--muted))", label: "20" },
-  { points: 75, color: "hsl(280 65% 60%)", label: "75" },
-  { points: 30, color: "hsl(160 84% 39%)", label: "30" },
+  { points: 5, color: "hsl(var(--muted))", label: "5", weight: 25 },
+  { points: 10, color: "hsl(var(--primary))", label: "10", weight: 20 },
+  { points: 15, color: "hsl(var(--secondary))", label: "15", weight: 18 },
+  { points: 20, color: "hsl(var(--accent))", label: "20", weight: 15 },
+  { points: 30, color: "hsl(160 84% 39%)", label: "30", weight: 10 },
+  { points: 50, color: "hsl(280 65% 60%)", label: "50", weight: 7 },
+  { points: 75, color: "hsl(340 82% 52%)", label: "75", weight: 4 },
+  { points: 100, color: "hsl(48 96% 53%)", label: "100", weight: 1 },
 ];
+
+// Weighted random selection - harder to get big prizes
+function selectWeightedSegment(): number {
+  const totalWeight = WHEEL_SEGMENTS.reduce((sum, seg) => sum + seg.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  for (let i = 0; i < WHEEL_SEGMENTS.length; i++) {
+    random -= WHEEL_SEGMENTS[i].weight;
+    if (random <= 0) return i;
+  }
+  return 0;
+}
 
 export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps) {
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<number | null>(null);
+  const [spinning, setSpinning] = useState(false);
   const wheelRef = useRef<HTMLDivElement>(null);
 
-  const handleSpin = () => {
-    if (playsRemaining <= 0 || isSpinning) return;
+  const handleSpin = useCallback(() => {
+    if (playsRemaining <= 0 || isSpinning || spinning) return;
 
     setResult(null);
+    setSpinning(true);
     
-    // Random segment selection
-    const segmentIndex = Math.floor(Math.random() * WHEEL_SEGMENTS.length);
+    // Weighted random segment selection
+    const segmentIndex = selectWeightedSegment();
     const segment = WHEEL_SEGMENTS[segmentIndex];
     
-    // Calculate rotation (5-8 full spins + landing position)
-    const spins = 5 + Math.random() * 3;
+    // Calculate rotation (6-10 full spins + landing position for smooth animation)
+    const spins = 6 + Math.random() * 4;
     const segmentAngle = 360 / WHEEL_SEGMENTS.length;
+    // Pointer is at top (0 degrees), we need to land segment under pointer
     const landingAngle = segmentIndex * segmentAngle + segmentAngle / 2;
     const totalRotation = spins * 360 + (360 - landingAngle);
     
     setRotation(prev => prev + totalRotation);
     
-    // Delay result display until spin completes
+    // Delay result display until spin completes (match animation duration)
     setTimeout(() => {
       setResult(segment.points);
+      setSpinning(false);
       onSpin(segment.points);
-    }, 4000);
-  };
+    }, 5000);
+  }, [playsRemaining, isSpinning, spinning, onSpin]);
 
   const segmentAngle = 360 / WHEEL_SEGMENTS.length;
 
@@ -76,11 +92,10 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
           {/* Wheel */}
           <div
             ref={wheelRef}
-            className="w-full h-full rounded-full border-4 border-border shadow-lg overflow-hidden transition-transform ease-out"
+            className="w-full h-full rounded-full border-4 border-border shadow-xl overflow-hidden"
             style={{
               transform: `rotate(${rotation}deg)`,
-              transitionDuration: isSpinning ? "4s" : "0s",
-              transitionTimingFunction: "cubic-bezier(0.17, 0.67, 0.12, 0.99)",
+              transition: spinning ? "transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
             }}
           >
             <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -135,10 +150,15 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
               <circle cx="50" cy="50" r="4" fill="hsl(var(--primary))" />
             </svg>
           </div>
+          
+          {/* Glow effect during spin */}
+          {spinning && (
+            <div className="absolute inset-0 rounded-full animate-pulse bg-primary/20 blur-xl pointer-events-none" />
+          )}
         </div>
 
         {/* Result Display */}
-        {result !== null && !isSpinning && (
+        {result !== null && !spinning && (
           <div className="text-center animate-bounce">
             <p className="text-2xl font-bold text-primary">+{result} Points!</p>
           </div>
@@ -147,12 +167,12 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
         {/* Spin Button */}
         <Button
           onClick={handleSpin}
-          disabled={playsRemaining <= 0 || isSpinning}
+          disabled={playsRemaining <= 0 || isSpinning || spinning}
           className="w-full max-w-xs"
           size="lg"
         >
-          <RotateCw className={`w-5 h-5 mr-2 ${isSpinning ? "animate-spin" : ""}`} />
-          {isSpinning ? "Spinning..." : playsRemaining > 0 ? "Spin Now!" : "No Spins Left"}
+          <RotateCw className={`w-5 h-5 mr-2 ${spinning ? "animate-spin" : ""}`} />
+          {spinning ? "Spinning..." : playsRemaining > 0 ? "Spin Now!" : "No Spins Left"}
         </Button>
       </CardContent>
     </Card>
