@@ -144,6 +144,7 @@ export type Database = {
           id: string
           max_participants: number | null
           name: string
+          prize_distribution: Json | null
           prize_pool: number
           start_time: string
           status: string | null
@@ -157,6 +158,7 @@ export type Database = {
           id?: string
           max_participants?: number | null
           name: string
+          prize_distribution?: Json | null
           prize_pool?: number
           start_time: string
           status?: string | null
@@ -170,6 +172,7 @@ export type Database = {
           id?: string
           max_participants?: number | null
           name?: string
+          prize_distribution?: Json | null
           prize_pool?: number
           start_time?: string
           status?: string | null
@@ -690,6 +693,68 @@ export type Database = {
           },
         ]
       }
+      user_inventory: {
+        Row: {
+          created_at: string | null
+          equipped_at: string | null
+          id: string
+          is_equipped: boolean | null
+          item_type: string
+          redemption_id: string | null
+          reward_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          equipped_at?: string | null
+          id?: string
+          is_equipped?: boolean | null
+          item_type: string
+          redemption_id?: string | null
+          reward_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          equipped_at?: string | null
+          id?: string
+          is_equipped?: boolean | null
+          item_type?: string
+          redemption_id?: string | null
+          reward_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_redemption_id_fkey"
+            columns: ["redemption_id"]
+            isOneToOne: false
+            referencedRelation: "redemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_inventory_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_inventory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_inventory_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_tasks: {
         Row: {
           completed_at: string | null
@@ -1109,6 +1174,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      equip_inventory_item: {
+        Args: { p_equip?: boolean; p_inventory_id: string; p_user_id: string }
+        Returns: Json
       }
       get_game_leaderboard: {
         Args: { p_game_type?: string; p_period?: string }

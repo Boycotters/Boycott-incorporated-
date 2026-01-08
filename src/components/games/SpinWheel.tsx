@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RotateCw, Sparkles } from "lucide-react";
@@ -10,14 +10,14 @@ interface SpinWheelProps {
 }
 
 const WHEEL_SEGMENTS = [
-  { points: 5, color: "hsl(var(--muted))", label: "5", weight: 25 },
-  { points: 10, color: "hsl(var(--primary))", label: "10", weight: 20 },
+  { points: 5, color: "hsl(var(--muted))", label: "5", weight: 30 },
+  { points: 10, color: "hsl(var(--primary))", label: "10", weight: 22 },
   { points: 15, color: "hsl(var(--secondary))", label: "15", weight: 18 },
-  { points: 20, color: "hsl(var(--accent))", label: "20", weight: 15 },
-  { points: 30, color: "hsl(160 84% 39%)", label: "30", weight: 10 },
-  { points: 50, color: "hsl(280 65% 60%)", label: "50", weight: 7 },
-  { points: 75, color: "hsl(340 82% 52%)", label: "75", weight: 4 },
-  { points: 100, color: "hsl(48 96% 53%)", label: "100", weight: 1 },
+  { points: 20, color: "hsl(var(--accent))", label: "20", weight: 13 },
+  { points: 30, color: "hsl(160 84% 39%)", label: "30", weight: 9 },
+  { points: 50, color: "hsl(280 65% 60%)", label: "50", weight: 5 },
+  { points: 75, color: "hsl(340 82% 52%)", label: "75", weight: 2.5 },
+  { points: 100, color: "hsl(48 96% 53%)", label: "💎100", weight: 0.5 },
 ];
 
 // Weighted random selection - harder to get big prizes
@@ -36,20 +36,31 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<number | null>(null);
   const [spinning, setSpinning] = useState(false);
+  const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
+  const hasCompletedRef = useRef(false);
+
+  // Reset completion flag when component becomes ready for new spin
+  useEffect(() => {
+    if (!spinning && !isSpinning) {
+      hasCompletedRef.current = false;
+    }
+  }, [spinning, isSpinning]);
 
   const handleSpin = useCallback(() => {
     if (playsRemaining <= 0 || isSpinning || spinning) return;
 
     setResult(null);
     setSpinning(true);
+    hasCompletedRef.current = false;
     
     // Weighted random segment selection
     const segmentIndex = selectWeightedSegment();
     const segment = WHEEL_SEGMENTS[segmentIndex];
+    setSelectedSegment(segmentIndex);
     
-    // Calculate rotation (6-10 full spins + landing position for smooth animation)
-    const spins = 6 + Math.random() * 4;
+    // Calculate rotation (8-12 full spins + landing position for dramatic effect)
+    const spins = 8 + Math.random() * 4;
     const segmentAngle = 360 / WHEEL_SEGMENTS.length;
     // Pointer is at top (0 degrees), we need to land segment under pointer
     const landingAngle = segmentIndex * segmentAngle + segmentAngle / 2;
@@ -59,9 +70,12 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
     
     // Delay result display until spin completes (match animation duration)
     setTimeout(() => {
-      setResult(segment.points);
-      setSpinning(false);
-      onSpin(segment.points);
+      if (!hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        setResult(segment.points);
+        setSpinning(false);
+        onSpin(segment.points);
+      }
     }, 5000);
   }, [playsRemaining, isSpinning, spinning, onSpin]);
 
@@ -130,7 +144,7 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
                       x={textX}
                       y={textY}
                       fill="white"
-                      fontSize="8"
+                      fontSize={segment.points >= 100 ? "6" : "8"}
                       fontWeight="bold"
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -161,6 +175,7 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
         {result !== null && !spinning && (
           <div className="text-center animate-bounce">
             <p className="text-2xl font-bold text-primary">+{result} Points!</p>
+            {result >= 75 && <p className="text-sm text-muted-foreground">🎉 Amazing spin!</p>}
           </div>
         )}
 
