@@ -35,17 +35,21 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragEnd, setDragEnd] = useState({ x: 0, y: 0 });
   const [hoopX, setHoopX] = useState(150);
+  const [hoopDirection, setHoopDirection] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
   const scoreRef = useRef(0);
   const gameOverRef = useRef(false);
+  const hasCompletedRef = useRef(false);
 
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
   const BALL_SIZE = 35;
   const HOOP_WIDTH = 50;
   const HOOP_Y = 80;
-  const GRAVITY = 0.5;
+  const GRAVITY = 0.45;
+  const BALL_START_X = 150;
+  const BALL_START_Y = 290;
 
   useEffect(() => {
     scoreRef.current = score;
@@ -56,7 +60,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
   }, [gameOver]);
 
   const startGame = useCallback(() => {
-    setBall({ x: 150, y: 280, vx: 0, vy: 0, visible: false, scored: false });
+    setBall({ x: BALL_START_X, y: BALL_START_Y, vx: 0, vy: 0, visible: false, scored: false });
     setScore(0);
     scoreRef.current = 0;
     setShots(0);
@@ -65,12 +69,15 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     gameOverRef.current = false;
     setEarnedPoints(0);
     setHoopX(150);
+    setHoopDirection(1);
+    hasCompletedRef.current = false;
     setIsPlaying(true);
   }, [setIsPlaying]);
 
   const endGame = useCallback((finalScore: number) => {
-    if (gameOverRef.current) return;
+    if (gameOverRef.current || hasCompletedRef.current) return;
     
+    hasCompletedRef.current = true;
     gameOverRef.current = true;
     setGameOver(true);
     setIsPlaying(false);
@@ -121,16 +128,29 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     }
   }, [timeLeft, isPlaying, gameOver, endGame]);
 
-  // Move hoop every few seconds
+  // Smooth hoop movement
   useEffect(() => {
     if (!isPlaying || gameOver) return;
     
     const moveHoop = setInterval(() => {
-      setHoopX(50 + Math.random() * (CONTAINER_WIDTH - 100));
-    }, 3000);
+      setHoopX(prev => {
+        const speed = 1.5;
+        let newX = prev + (speed * hoopDirection);
+        
+        if (newX >= CONTAINER_WIDTH - 60) {
+          setHoopDirection(-1);
+          newX = CONTAINER_WIDTH - 60;
+        } else if (newX <= 60) {
+          setHoopDirection(1);
+          newX = 60;
+        }
+        
+        return newX;
+      });
+    }, 50);
     
     return () => clearInterval(moveHoop);
-  }, [isPlaying, gameOver]);
+  }, [isPlaying, gameOver, hoopDirection]);
 
   // Ball physics
   useEffect(() => {
@@ -144,10 +164,14 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         let newY = prev.y + newVy;
         let newX = prev.x + prev.vx;
         
-        // Check if ball goes through hoop
+        // Check if ball goes through hoop - more precise detection
+        const hoopLeft = hoopX - HOOP_WIDTH / 2;
+        const hoopRight = hoopX + HOOP_WIDTH / 2;
+        const ballCenterX = newX;
+        
         if (!prev.scored && 
-            newY >= HOOP_Y && newY <= HOOP_Y + 20 &&
-            Math.abs(newX - hoopX) < HOOP_WIDTH / 2 &&
+            newY >= HOOP_Y && newY <= HOOP_Y + 25 &&
+            ballCenterX >= hoopLeft + 5 && ballCenterX <= hoopRight - 5 &&
             prev.vy > 0) {
           setScore(s => s + 1);
           scoreRef.current += 1;
@@ -156,7 +180,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         
         // Ball goes off screen or hits ground
         if (newY > CONTAINER_HEIGHT + 50 || newX < -50 || newX > CONTAINER_WIDTH + 50) {
-          return { x: 150, y: 280, vx: 0, vy: 0, visible: false, scored: false };
+          return { x: BALL_START_X, y: BALL_START_Y, vx: 0, vy: 0, visible: false, scored: false };
         }
         
         return { ...prev, x: newX, y: newY, vy: newVy };
@@ -191,6 +215,10 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
       y = e.clientY - rect.top;
     }
     
+    // Only allow drag from ball area
+    const distToBall = Math.sqrt(Math.pow(x - BALL_START_X, 2) + Math.pow(y - BALL_START_Y, 2));
+    if (distToBall > 60) return;
+    
     setDragStart({ x, y });
     setDragEnd({ x, y });
     setIsDragging(true);
@@ -224,21 +252,22 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     
     setIsDragging(false);
     
-    // Calculate velocity based on drag
+    // Calculate velocity based on drag (swipe up and towards hoop)
     const dx = dragStart.x - dragEnd.x;
     const dy = dragStart.y - dragEnd.y;
-    const power = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.15, 15);
+    const power = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.12, 12);
     
-    if (power > 2) {
+    // Only shoot if swiped upward with enough power
+    if (power > 2 && dy > 10) {
       const angle = Math.atan2(dy, dx);
       const vx = Math.cos(angle) * power;
       const vy = Math.sin(angle) * power;
       
       setBall({
-        x: 150,
-        y: 280,
-        vx: -vx * 0.8,
-        vy: -Math.abs(vy) * 1.2,
+        x: BALL_START_X,
+        y: BALL_START_Y,
+        vx: -vx * 0.7,
+        vy: -Math.abs(vy) * 1.1,
         visible: true,
         scored: false,
       });
@@ -301,7 +330,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
           >
             {/* Backboard */}
             <div 
-              className="absolute bg-white border-4 border-gray-400 rounded transition-all duration-500"
+              className="absolute bg-white border-4 border-gray-400 rounded transition-all duration-100"
               style={{
                 left: hoopX - 35,
                 top: 40,
@@ -312,7 +341,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             
             {/* Hoop */}
             <div 
-              className="absolute transition-all duration-500"
+              className="absolute transition-all duration-100"
               style={{
                 left: hoopX - HOOP_WIDTH / 2,
                 top: HOOP_Y,
@@ -345,10 +374,10 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             {/* Starting ball position indicator */}
             {!ball.visible && isPlaying && (
               <div
-                className="absolute opacity-70"
+                className="absolute"
                 style={{
-                  left: 150 - BALL_SIZE / 2,
-                  top: 280 - BALL_SIZE / 2,
+                  left: BALL_START_X - BALL_SIZE / 2,
+                  top: BALL_START_Y - BALL_SIZE / 2,
                   width: BALL_SIZE,
                   height: BALL_SIZE,
                 }}
@@ -361,8 +390,8 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             {isDragging && (
               <svg className="absolute inset-0 pointer-events-none">
                 <line
-                  x1={150}
-                  y1={280}
+                  x1={BALL_START_X}
+                  y1={BALL_START_Y}
                   x2={dragEnd.x}
                   y2={dragEnd.y}
                   stroke="white"
@@ -370,14 +399,14 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
                   strokeDasharray="5,5"
                   opacity="0.7"
                 />
-                <circle cx={150} cy={280} r="8" fill="white" opacity="0.5" />
+                <circle cx={BALL_START_X} cy={BALL_START_Y} r="8" fill="white" opacity="0.5" />
               </svg>
             )}
             
             {/* Hint */}
             {!ball.visible && isPlaying && shots === 0 && (
               <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white/80 text-sm animate-pulse text-center">
-                👆 Swipe up to shoot!
+                👆 Drag & release to shoot!
               </div>
             )}
             
@@ -406,7 +435,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
           >
             <span className="text-6xl mb-4">🏀</span>
             <p className="text-muted-foreground text-center px-4">
-              Swipe up to shoot baskets!<br/>
+              Drag from the ball and swipe up to shoot!<br/>
               You have 30 seconds.<br/>
               <span className="text-xs mt-2 block">Score 10+ for max points!</span>
             </p>

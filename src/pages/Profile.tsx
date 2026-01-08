@@ -1,7 +1,7 @@
 import { 
   Settings, Trophy, Target, Zap, ChevronRight, Award, Gift, LogOut, 
   BarChart3, Crown, Flame, Users, Copy, Check, Edit3, Phone, Mail,
-  Calendar, TrendingUp, Star
+  Calendar, TrendingUp, Star, Package
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UserInventory } from "@/components/profile";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Achievement {
   id: string;

@@ -29,14 +29,16 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
   const [gameOver, setGameOver] = useState(false);
   const [earnedPoints, setEarnedPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
-  const [lastTapTime, setLastTapTime] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
   const scoreRef = useRef(0);
   const gameOverRef = useRef(false);
+  const ballRef = useRef<Ball>({ x: 150, y: 100, vx: 0, vy: 0, rotation: 0 });
+  const lastTapRef = useRef(0);
+  const hasCompletedRef = useRef(false);
 
-  const GRAVITY = 0.4;
-  const BOUNCE_POWER = -10;
+  const GRAVITY = 0.35;
+  const BOUNCE_POWER = -9;
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
   const BALL_SIZE = 50;
@@ -51,26 +53,34 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     gameOverRef.current = gameOver;
   }, [gameOver]);
 
+  useEffect(() => {
+    ballRef.current = ball;
+  }, [ball]);
+
   const startGame = useCallback(() => {
-    setBall({ x: 150, y: 100, vx: (Math.random() - 0.5) * 2, vy: 0, rotation: 0 });
+    const initialBall = { x: 150, y: 100, vx: (Math.random() - 0.5) * 2, vy: 0, rotation: 0 };
+    setBall(initialBall);
+    ballRef.current = initialBall;
     setScore(0);
     scoreRef.current = 0;
     setTimeLeft(30);
     setGameOver(false);
     gameOverRef.current = false;
     setEarnedPoints(0);
-    setLastTapTime(0);
+    lastTapRef.current = 0;
+    hasCompletedRef.current = false;
     setIsPlaying(true);
   }, [setIsPlaying]);
 
   const endGame = useCallback((finalScore: number) => {
-    if (gameOverRef.current) return;
+    if (gameOverRef.current || hasCompletedRef.current) return;
     
+    hasCompletedRef.current = true;
     gameOverRef.current = true;
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points based on score - more challenging thresholds
+    // Calculate points based on score - challenging thresholds
     let points = 0;
     if (finalScore >= 50) points = 100;
     else if (finalScore >= 35) points = 75;
@@ -140,12 +150,14 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
         }
         
         // Check if ball hit the ground
-        if (newY > CONTAINER_HEIGHT - BALL_RADIUS - 16) { // 16px for ground
+        if (newY > CONTAINER_HEIGHT - BALL_RADIUS - 16) {
           endGame(scoreRef.current);
           return prev;
         }
         
-        return { x: newX, y: newY, vx: newVx, vy: newVy, rotation: newRotation };
+        const newBall = { x: newX, y: newY, vx: newVx, vy: newVy, rotation: newRotation };
+        ballRef.current = newBall;
+        return newBall;
       });
       
       animationRef.current = requestAnimationFrame(gameLoop);
@@ -161,15 +173,15 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
   }, [isPlaying, gameOver, endGame]);
 
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isPlaying || gameOver) return;
+    if (!isPlaying || gameOverRef.current) return;
     
     e.preventDefault();
     e.stopPropagation();
     
-    // Debounce taps (minimum 100ms between taps)
+    // Strict debounce (minimum 150ms between taps)
     const now = Date.now();
-    if (now - lastTapTime < 100) return;
-    setLastTapTime(now);
+    if (now - lastTapRef.current < 150) return;
+    lastTapRef.current = now;
     
     const container = containerRef.current;
     if (!container) return;
@@ -186,25 +198,30 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
       tapY = e.clientY - rect.top;
     }
     
+    // Use ref for current ball position (more accurate)
+    const currentBall = ballRef.current;
+    
     // Calculate distance from tap to ball center
-    const dx = tapX - ball.x;
-    const dy = tapY - ball.y;
+    const dx = tapX - currentBall.x;
+    const dy = tapY - currentBall.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Must tap within ball hitbox (more strict - actual ball size + small tolerance)
-    const hitboxRadius = BALL_RADIUS + 15;
+    // STRICT: Must tap within actual ball radius + small tolerance
+    const hitboxRadius = BALL_RADIUS + 10;
     
-    if (distance <= hitboxRadius && ball.y > 60) {
+    // Ball must be falling (vy > 0) or at least visible, and not too high
+    if (distance <= hitboxRadius && currentBall.y > 40) {
       // Apply upward force
       setBall(prev => ({
         ...prev,
-        vy: BOUNCE_POWER + (Math.random() * 2 - 1), // Slight randomness
-        vx: prev.vx + (tapX - prev.x) * 0.04, // Horizontal movement based on tap position
+        vy: BOUNCE_POWER + (Math.random() * 1.5 - 0.75),
+        vx: prev.vx + (tapX - prev.x) * 0.03,
       }));
       
+      // Increment score ONCE
       setScore(prev => prev + 1);
     }
-  }, [isPlaying, gameOver, ball.x, ball.y, lastTapTime]);
+  }, [isPlaying]);
 
   return (
     <Card className="bg-gradient-card border border-border rounded-2xl overflow-hidden">
@@ -227,7 +244,6 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
       <CardContent className="flex flex-col items-center gap-4 pb-6">
         {isPlaying && !gameOver && (
           <>
-            {/* Stats Bar */}
             <div className="flex items-center justify-between w-full max-w-[300px] text-sm">
               <span className={timeLeft <= 5 ? "text-destructive font-bold animate-pulse" : ""}>
                 ⏱️ {timeLeft}s
@@ -262,7 +278,7 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
             {/* Ground */}
             <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-r from-green-600 to-green-500" />
             
-            {/* Ball */}
+            {/* Ball with visible hitbox indicator */}
             <div
               className="absolute transition-none pointer-events-none"
               style={{
@@ -278,7 +294,7 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
             
             {/* Tap hint */}
             {isPlaying && score === 0 && (
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/80 text-sm animate-pulse">
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white/80 text-sm animate-pulse text-center">
                 👆 Tap the ball!
               </div>
             )}
