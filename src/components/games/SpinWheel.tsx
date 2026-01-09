@@ -54,10 +54,13 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
     setSpinning(true);
     hasCompletedRef.current = false;
     
-    // Weighted random segment selection
+    // Weighted random segment selection - this determines what the user wins
     const segmentIndex = selectWeightedSegment();
     const segment = WHEEL_SEGMENTS[segmentIndex];
     setSelectedSegment(segmentIndex);
+    
+    // Store the won points for later - this is what gets sent to the server
+    const wonPoints = segment.points;
     
     // Calculate rotation (8-12 full spins + landing position for dramatic effect)
     const spins = 8 + Math.random() * 4;
@@ -72,9 +75,10 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
     setTimeout(() => {
       if (!hasCompletedRef.current) {
         hasCompletedRef.current = true;
-        setResult(segment.points);
+        setResult(wonPoints);
         setSpinning(false);
-        onSpin(segment.points);
+        // Send the actual won points to the server (not the segment index)
+        onSpin(wonPoints);
       }
     }, 5000);
   }, [playsRemaining, isSpinning, spinning, onSpin]);

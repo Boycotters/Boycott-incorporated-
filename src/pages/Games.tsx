@@ -312,7 +312,9 @@ export default function Games() {
                     </div>
                     <div>
                       <p className="font-semibold">Games Available</p>
-                      <p className="text-sm text-white/80">3 plays per game daily</p>
+                      <p className="text-sm text-white/80">
+                        {(playsRemaining as any)?.max_per_game || 1} play{((playsRemaining as any)?.max_per_game || 1) !== 1 ? 's' : ''} per game daily
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
