@@ -126,12 +126,22 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     }
   }, [timeLeft, isPlaying, gameOver, endGame]);
 
+  // Track if ball should end game (set outside of render)
+  const shouldEndGameRef = useRef(false);
+
   // Game physics loop
   useEffect(() => {
     if (!isPlaying || gameOver) return;
 
     const gameLoop = () => {
       if (gameOverRef.current) return;
+      
+      // Check if we flagged end game in previous frame
+      if (shouldEndGameRef.current) {
+        shouldEndGameRef.current = false;
+        endGame(scoreRef.current);
+        return;
+      }
       
       setBall(prev => {
         let newVy = prev.vy + GRAVITY;
@@ -149,9 +159,9 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
           newVx = -Math.abs(newVx) * 0.8;
         }
         
-        // Check if ball hit the ground
+        // Check if ball hit the ground - flag for next frame (not during render!)
         if (newY > CONTAINER_HEIGHT - BALL_RADIUS - 16) {
-          endGame(scoreRef.current);
+          shouldEndGameRef.current = true;
           return prev;
         }
         
