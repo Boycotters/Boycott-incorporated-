@@ -95,6 +95,36 @@ export type Database = {
         }
         Relationships: []
       }
+      earning_algorithms: {
+        Row: {
+          config: Json
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       game_achievements: {
         Row: {
           created_at: string | null
@@ -178,6 +208,62 @@ export type Database = {
           status?: string | null
         }
         Relationships: []
+      }
+      mobile_money_transactions: {
+        Row: {
+          amount_zmw: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          external_transaction_id: string | null
+          id: string
+          phone_number: string
+          processed_at: string | null
+          provider: string
+          provider_response: Json | null
+          status: string
+          user_id: string
+          withdrawal_id: string | null
+        }
+        Insert: {
+          amount_zmw: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_transaction_id?: string | null
+          id?: string
+          phone_number: string
+          processed_at?: string | null
+          provider: string
+          provider_response?: Json | null
+          status?: string
+          user_id: string
+          withdrawal_id?: string | null
+        }
+        Update: {
+          amount_zmw?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_transaction_id?: string | null
+          id?: string
+          phone_number?: string
+          processed_at?: string | null
+          provider?: string
+          provider_response?: Json | null
+          status?: string
+          user_id?: string
+          withdrawal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobile_money_transactions_withdrawal_id_fkey"
+            columns: ["withdrawal_id"]
+            isOneToOne: false
+            referencedRelation: "withdrawals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_queue: {
         Row: {
@@ -965,6 +1051,7 @@ export type Database = {
           color: string
           created_at: string | null
           daily_task_bonus: number
+          game_plays_per_attempt: number | null
           icon: string
           id: string
           min_points: number
@@ -978,6 +1065,7 @@ export type Database = {
           color: string
           created_at?: string | null
           daily_task_bonus?: number
+          game_plays_per_attempt?: number | null
           icon: string
           id?: string
           min_points?: number
@@ -991,6 +1079,7 @@ export type Database = {
           color?: string
           created_at?: string | null
           daily_task_bonus?: number
+          game_plays_per_attempt?: number | null
           icon?: string
           id?: string
           min_points?: number
@@ -1155,6 +1244,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      check_daily_earning_cap: { Args: { p_user_id: string }; Returns: Json }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
       complete_video_watch: {

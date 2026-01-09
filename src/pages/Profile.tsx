@@ -486,6 +486,29 @@ export default function Profile() {
           </Card>
         )}
 
+        {/* My Inventory */}
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger asChild>
+            <Card className="bg-gradient-card p-3 rounded-xl shadow-card border border-border cursor-pointer hover:shadow-hover transition-all">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="bg-purple-500/10 p-1.5 rounded-lg">
+                    <Package className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">My Inventory</p>
+                    <p className="text-[10px] text-muted-foreground">Frames, badges & themes</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <UserInventory />
+          </CollapsibleContent>
+        </Collapsible>
+
         {/* Achievements */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
