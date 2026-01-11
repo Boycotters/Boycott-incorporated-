@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_activity_logs: {
+        Row: {
+          action: string
+          admin_user_id: string | null
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           created_at: string
@@ -316,6 +349,54 @@ export type Database = {
           },
         ]
       }
+      platform_stats: {
+        Row: {
+          active_users_today: number | null
+          created_at: string | null
+          games_played: number | null
+          id: string
+          revenue_potential: number | null
+          stat_date: string
+          surveys_completed: number | null
+          tasks_completed: number | null
+          total_points_earned: number | null
+          total_points_withdrawn: number | null
+          total_users: number | null
+          updated_at: string | null
+          videos_watched: number | null
+        }
+        Insert: {
+          active_users_today?: number | null
+          created_at?: string | null
+          games_played?: number | null
+          id?: string
+          revenue_potential?: number | null
+          stat_date?: string
+          surveys_completed?: number | null
+          tasks_completed?: number | null
+          total_points_earned?: number | null
+          total_points_withdrawn?: number | null
+          total_users?: number | null
+          updated_at?: string | null
+          videos_watched?: number | null
+        }
+        Update: {
+          active_users_today?: number | null
+          created_at?: string | null
+          games_played?: number | null
+          id?: string
+          revenue_potential?: number | null
+          stat_date?: string
+          surveys_completed?: number | null
+          tasks_completed?: number | null
+          total_points_earned?: number | null
+          total_points_withdrawn?: number | null
+          total_users?: number | null
+          updated_at?: string | null
+          videos_watched?: number | null
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           created_at: string
@@ -506,6 +587,57 @@ export type Database = {
           id?: string
           milestone_days?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      survey_responses: {
+        Row: {
+          completion_time_seconds: number | null
+          created_at: string | null
+          demographic_data: Json | null
+          device_info: Json | null
+          exported_at: string | null
+          id: string
+          is_exported: boolean | null
+          points_awarded: number | null
+          questions: Json
+          responses: Json
+          survey_id: string
+          survey_title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completion_time_seconds?: number | null
+          created_at?: string | null
+          demographic_data?: Json | null
+          device_info?: Json | null
+          exported_at?: string | null
+          id?: string
+          is_exported?: boolean | null
+          points_awarded?: number | null
+          questions?: Json
+          responses?: Json
+          survey_id: string
+          survey_title: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completion_time_seconds?: number | null
+          created_at?: string | null
+          demographic_data?: Json | null
+          device_info?: Json | null
+          exported_at?: string | null
+          id?: string
+          is_exported?: boolean | null
+          points_awarded?: number | null
+          questions?: Json
+          responses?: Json
+          survey_id?: string
+          survey_title?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1269,6 +1401,7 @@ export type Database = {
         Args: { p_equip?: boolean; p_inventory_id: string; p_user_id: string }
         Returns: Json
       }
+      export_survey_data: { Args: { p_mark_exported?: boolean }; Returns: Json }
       get_game_leaderboard: {
         Args: { p_game_type?: string; p_period?: string }
         Returns: {
@@ -1281,11 +1414,21 @@ export type Database = {
         }[]
       }
       get_game_plays_remaining: { Args: { p_user_id: string }; Returns: Json }
+      get_platform_stats: { Args: never; Returns: Json }
       get_user_vip_tier: { Args: { p_total_points: number }; Returns: string }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
       join_tournament: {
         Args: { p_tournament_id: string; p_user_id: string }
         Returns: Json
+      }
+      log_admin_activity: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_entity_id?: string
+          p_entity_type?: string
+        }
+        Returns: undefined
       }
       play_game: {
         Args: {
