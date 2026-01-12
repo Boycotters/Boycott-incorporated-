@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { 
   Video, FileText, Clock, Zap, Gamepad2, Heart, ShoppingBag, 
   BookOpen, Rocket, MessageCircle, Trophy, Sparkles, Camera, Link2,
-  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock, Timer, Award, ChevronRight
+  Flame, CheckCircle2, RotateCcw, AlertTriangle, Target, Lock, Timer, Award, ChevronRight,
+  Calendar, PartyPopper
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,18 @@ interface TierUpgradeResult {
   daily_task_bonus?: number;
 }
 
+interface TaskAvailability {
+  available: boolean;
+  is_weekend: boolean;
+  has_campaign: boolean;
+  campaign_name?: string;
+  bonus_multiplier?: number;
+  message: string;
+  new_tier?: string;
+  points_spent?: number;
+  daily_task_bonus?: number;
+}
+
 export default function Earn() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -130,6 +143,16 @@ export default function Earn() {
       return data;
     },
     enabled: !!user?.id,
+  });
+
+  // Check if tasks are available today (weekday/weekend logic)
+  const { data: taskAvailability } = useQuery({
+    queryKey: ['task-availability'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('are_tasks_available_today');
+      if (error) throw error;
+      return data as unknown as TaskAvailability;
+    },
   });
 
   // Fetch VIP tiers
@@ -461,6 +484,15 @@ export default function Earn() {
   const handleTaskClick = (task: Task) => {
     if (isTaskCompleted(task.id)) return;
     
+    // Check weekend block
+    if (taskAvailability && !taskAvailability.available && taskAvailability.is_weekend) {
+      toast({
+        title: "Weekend Break",
+        description: "Tasks are available Monday-Friday. Check back on Monday!",
+      });
+      return;
+    }
+    
     // Check daily limit
     if (hasReachedDailyLimit) {
       toast({
@@ -514,6 +546,10 @@ export default function Earn() {
     );
   }
 
+  // Determine if tasks are blocked due to weekend
+  const isWeekendBlocked = taskAvailability && !taskAvailability.available && taskAvailability.is_weekend;
+  const hasWeekendCampaign = taskAvailability?.has_campaign && taskAvailability?.is_weekend;
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       <div className="max-w-md mx-auto space-y-6">
@@ -522,6 +558,47 @@ export default function Earn() {
           <h1 className="text-3xl font-bold">Earn Points</h1>
           <p className="text-muted-foreground">Complete tasks to earn rewards</p>
         </div>
+
+        {/* Weekend Campaign Banner */}
+        {hasWeekendCampaign && (
+          <Card className="bg-gradient-to-r from-violet-500 to-fuchsia-500 border-0 rounded-2xl overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2.5 rounded-xl">
+                  <PartyPopper className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">{taskAvailability?.campaign_name || 'Weekend Campaign'}</h3>
+                  <p className="text-sm text-white/80">
+                    {taskAvailability?.bonus_multiplier && taskAvailability.bonus_multiplier > 1 
+                      ? `${taskAvailability.bonus_multiplier}x bonus points active!` 
+                      : 'Special weekend tasks available!'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Weekend Off Notice */}
+        {isWeekendBlocked && (
+          <Card className="bg-secondary/50 border border-border rounded-2xl overflow-hidden">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                <Calendar className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Weekend Break</h3>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Tasks are available Monday-Friday. Enjoy your weekend and check back on Monday!
+                </p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Special weekend campaigns may unlock bonus tasks
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Daily Task Progress */}
         <Card className="bg-gradient-card border border-border rounded-2xl overflow-hidden">
