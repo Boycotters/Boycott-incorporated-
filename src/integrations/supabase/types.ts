@@ -1416,6 +1416,16 @@ export type Database = {
       check_daily_earning_cap: { Args: { p_user_id: string }; Returns: Json }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
+      complete_ai_partner_task: {
+        Args: {
+          p_points_amount: number
+          p_source?: string
+          p_task_title: string
+          p_task_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       complete_video_watch: {
         Args: {
           p_user_id: string
