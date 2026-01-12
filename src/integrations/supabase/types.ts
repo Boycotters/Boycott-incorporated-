@@ -1261,6 +1261,42 @@ export type Database = {
           },
         ]
       }
+      weekend_campaigns: {
+        Row: {
+          bonus_multiplier: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          name: string
+          start_date: string
+        }
+        Insert: {
+          bonus_multiplier?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          start_date: string
+        }
+        Update: {
+          bonus_multiplier?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          start_date?: string
+        }
+        Relationships: []
+      }
       withdrawals: {
         Row: {
           admin_notes: string | null
@@ -1360,6 +1396,7 @@ export type Database = {
         }
         Returns: Json
       }
+      are_tasks_available_today: { Args: never; Returns: Json }
       award_survey_points: {
         Args: { p_points: number; p_survey_title: string; p_user_id: string }
         Returns: Json

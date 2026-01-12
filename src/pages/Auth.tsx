@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Zap, ArrowLeft, Gift } from "lucide-react";
+import { Zap, ArrowLeft, Gift, Eye, EyeOff, Check, X, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -53,10 +54,23 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
   const [signupErrors, setSignupErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsError, setTermsError] = useState(false);
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotEmailError, setForgotEmailError] = useState<string | null>(null);
+
+  // Password strength indicators
+  const passwordChecks = {
+    minLength: signupPassword.length >= 8,
+    hasLowercase: /[a-z]/.test(signupPassword),
+    hasUppercase: /[A-Z]/.test(signupPassword),
+    hasNumber: /[0-9]/.test(signupPassword),
+  };
+  const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
 
   // Redirect if already logged in
   useEffect(() => {
@@ -130,6 +144,13 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupErrors({});
+    setTermsError(false);
+    
+    // Check terms agreement
+    if (!agreedToTerms) {
+      setTermsError(true);
+      return;
+    }
     
     const result = signupSchema.safeParse({ 
       email: signupEmail, 
@@ -274,21 +295,35 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                    className={loginErrors.password ? "border-destructive" : ""}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showLoginPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                      className={`pr-10 ${loginErrors.password ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                   {loginErrors.password && (
                     <p className="text-sm text-destructive">{loginErrors.password}</p>
                   )}
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign In"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : "Sign In"}
                 </Button>
                 <Button
                   type="button"
@@ -335,24 +370,93 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
-                    className={signupErrors.password ? "border-destructive" : ""}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showSignupPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                      className={`pr-10 ${signupErrors.password ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                   {signupErrors.password && (
                     <p className="text-sm text-destructive">{signupErrors.password}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    Min 8 chars with uppercase, lowercase, and number
-                  </p>
+                  
+                  {/* Password strength indicator */}
+                  {signupPassword.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4].map((level) => (
+                          <div
+                            key={level}
+                            className={`h-1 flex-1 rounded-full transition-colors ${
+                              passwordStrength >= level
+                                ? passwordStrength <= 2 ? 'bg-red-500' : passwordStrength === 3 ? 'bg-yellow-500' : 'bg-green-500'
+                                : 'bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        <div className={`flex items-center gap-1 ${passwordChecks.minLength ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {passwordChecks.minLength ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                          8+ characters
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordChecks.hasLowercase ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {passwordChecks.hasLowercase ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                          Lowercase
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordChecks.hasUppercase ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {passwordChecks.hasUppercase ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                          Uppercase
+                        </div>
+                        <div className={`flex items-center gap-1 ${passwordChecks.hasNumber ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {passwordChecks.hasNumber ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                          Number
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Terms agreement */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Checkbox 
+                      id="terms" 
+                      checked={agreedToTerms}
+                      onCheckedChange={(checked) => {
+                        setAgreedToTerms(checked === true);
+                        setTermsError(false);
+                      }}
+                      className={termsError ? "border-destructive" : ""}
+                    />
+                    <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                      I agree to the Terms of Service and Privacy Policy
+                    </label>
+                  </div>
+                  {termsError && (
+                    <p className="text-sm text-destructive">You must agree to the terms to continue</p>
+                  )}
+                </div>
+                
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Create Account"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
