@@ -90,41 +90,27 @@ export function PartnershipCard({
     
     setIsCompleting(true);
     try {
-      // Award points for partner task completion
-      const { error: txError } = await supabase.rpc('create_transaction', {
+      // Use secure server-side RPC to complete partner task
+      const { data: result, error } = await supabase.rpc('complete_ai_partner_task', {
         p_user_id: user.id,
-        p_type: 'task_completion',
+        p_task_type: 'partner_task',
+        p_task_title: partnership.title,
         p_points_amount: partnership.suggestedPoints,
-        p_description: `Completed partner task: ${partnership.title}`,
-        p_status: 'completed'
+        p_source: 'partner'
       });
 
-      if (txError) throw txError;
-
-      // Update wallet
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('available_points')
-        .eq('user_id', user.id)
-        .single();
-
-      if (wallet) {
-        await supabase
-          .from('wallets')
-          .update({ available_points: (wallet.available_points || 0) + partnership.suggestedPoints })
-          .eq('user_id', user.id);
+      if (error) throw error;
+      
+      const typedResult = result as { success: boolean; message: string; points_awarded?: number };
+      
+      if (!typedResult.success) {
+        throw new Error(typedResult.message);
       }
-
-      // Update user total points
-      await supabase.rpc('update_user_points', {
-        user_id: user.id,
-        points_to_add: partnership.suggestedPoints
-      });
 
       fireConfetti();
       toast({
         title: "Partner Task Completed! 🎉",
-        description: `You earned ${partnership.suggestedPoints} points!`,
+        description: `You earned ${typedResult.points_awarded || partnership.suggestedPoints} points!`,
       });
 
       // Invalidate queries to refresh data
@@ -136,11 +122,11 @@ export function PartnershipCard({
       
       // Load new partnership after completion
       loadPartnership();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error completing partner task:', err);
       toast({
         title: "Error",
-        description: "Failed to complete task. Please try again.",
+        description: err.message || "Failed to complete task. Please try again.",
         variant: "destructive"
       });
     } finally {
