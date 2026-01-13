@@ -196,9 +196,13 @@ const Auth = () => {
       
       setIsLoading(false);
       
-      // Show verification screen instead of just a toast
-      setVerificationEmail(result.data.email);
-      setShowVerificationSent(true);
+      // Show success toast and redirect to home
+      toast({
+        title: "Account created!",
+        description: "Welcome! Please check your email to verify your account for full access.",
+      });
+      
+      navigate("/");
     }
   };
 
