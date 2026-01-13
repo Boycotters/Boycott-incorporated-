@@ -16,6 +16,18 @@ interface WithdrawalResult {
   amount?: number;
   fee?: number;
   net_amount?: number;
+  referral_count?: number;
+  required_referrals?: number;
+}
+
+interface WithdrawalEligibility {
+  eligible: boolean;
+  reason?: string;
+  message: string;
+  referral_count?: number;
+  required_referrals?: number;
+  remaining_referrals?: number;
+  is_verified?: boolean;
 }
 
 export default function Withdraw() {
@@ -35,6 +47,20 @@ export default function Withdraw() {
       
       if (error) throw error;
       return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check withdrawal eligibility
+  const { data: eligibility } = useQuery({
+    queryKey: ['withdrawal-eligibility', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('check_withdrawal_eligibility', {
+        p_user_id: user?.id
+      });
+      
+      if (error) throw error;
+      return data as unknown as WithdrawalEligibility;
     },
     enabled: !!user?.id,
   });
@@ -73,6 +99,7 @@ export default function Withdraw() {
         toast.success(result.message);
         queryClient.invalidateQueries({ queryKey: ['wallet'] });
         queryClient.invalidateQueries({ queryKey: ['withdrawals'] });
+        queryClient.invalidateQueries({ queryKey: ['withdrawal-eligibility'] });
       } else {
         toast.error(result.message);
       }
@@ -124,6 +151,7 @@ export default function Withdraw() {
               availablePoints={wallet?.available_points || 0}
               onSubmit={handleWithdrawal}
               isSubmitting={withdrawMutation.isPending}
+              eligibility={eligibility}
             />
           </TabsContent>
           
