@@ -40,6 +40,8 @@ const Auth = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showVerificationSent, setShowVerificationSent] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   
   // Get referral code from URL
   const referralCode = searchParams.get('ref');
@@ -194,19 +196,56 @@ const Auth = () => {
       
       setIsLoading(false);
       
-      // Clear form
-      setSignupEmail("");
-      setSignupPassword("");
-      setSignupFullName("");
-      setAgreedToTerms(false);
-      
-      toast({
-        title: "Verify your email",
-        description: "We've sent a verification link to your email. Please verify to access all features including withdrawals.",
-        duration: 8000,
-      });
+      // Show verification screen instead of just a toast
+      setVerificationEmail(result.data.email);
+      setShowVerificationSent(true);
     }
   };
+
+  // Verification email sent screen
+  if (showVerificationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
+              <Check className="w-8 h-8 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl">Check Your Email</CardTitle>
+            <CardDescription className="text-base">
+              We've sent a verification link to
+            </CardDescription>
+            <p className="font-semibold text-primary">{verificationEmail}</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2 text-sm">
+              <p className="font-medium">Next steps:</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>Open your email inbox</li>
+                <li>Click the verification link</li>
+                <li>Come back here and sign in</li>
+              </ol>
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Didn't receive the email? Check your spam folder.</p>
+            </div>
+            
+            <Button
+              className="w-full"
+              onClick={() => {
+                setShowVerificationSent(false);
+                setLoginEmail(verificationEmail);
+              }}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (showForgotPassword) {
     return (
