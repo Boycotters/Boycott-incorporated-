@@ -4,12 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Smartphone, AlertCircle, Check } from "lucide-react";
+import { Loader2, Smartphone, AlertCircle, Check, Users, Mail, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface WithdrawalEligibility {
+  eligible: boolean;
+  reason?: string;
+  message: string;
+  referral_count?: number;
+  required_referrals?: number;
+  remaining_referrals?: number;
+  is_verified?: boolean;
+}
 
 interface WithdrawalFormProps {
   availablePoints: number;
   onSubmit: (data: { amount: number; provider: string; phoneNumber: string }) => Promise<void>;
   isSubmitting: boolean;
+  eligibility?: WithdrawalEligibility | null;
 }
 
 const PROVIDERS = [
@@ -21,7 +33,8 @@ const PROVIDERS = [
 const MIN_WITHDRAWAL = 500;
 const FEE_PERCENTAGE = 0.05;
 
-export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting }: WithdrawalFormProps) {
+export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligibility }: WithdrawalFormProps) {
+  const navigate = useNavigate();
   const [amount, setAmount] = useState("");
   const [provider, setProvider] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -44,7 +57,8 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting }: With
   const isValid = amountNum >= MIN_WITHDRAWAL && 
                   amountNum <= availablePoints && 
                   provider && 
-                  phoneNumber.length >= 10;
+                  phoneNumber.length >= 10 &&
+                  (eligibility?.eligible !== false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +67,74 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting }: With
   };
 
   const quickAmounts = [500, 1000, 2000, 5000];
+
+  // Show eligibility requirements if not eligible
+  if (eligibility && !eligibility.eligible) {
+    return (
+      <Card className="p-6 rounded-2xl border-2 border-amber-500/20 bg-amber-500/5">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
+            {eligibility.reason === 'email_not_verified' ? (
+              <Mail className="w-8 h-8 text-amber-500" />
+            ) : (
+              <Lock className="w-8 h-8 text-amber-500" />
+            )}
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-bold mb-2">Unlock Withdrawals</h3>
+            <p className="text-muted-foreground text-sm">{eligibility.message}</p>
+          </div>
+
+          {eligibility.reason === 'insufficient_referrals' && (
+            <div className="bg-background rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                <span className="font-semibold">
+                  {eligibility.referral_count || 0} / {eligibility.required_referrals || 3} Referrals
+                </span>
+              </div>
+              
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-primary rounded-full h-2 transition-all"
+                  style={{ width: `${((eligibility.referral_count || 0) / (eligibility.required_referrals || 3)) * 100}%` }}
+                />
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Invite {eligibility.remaining_referrals} more friend{eligibility.remaining_referrals !== 1 ? 's' : ''} to unlock withdrawals
+              </p>
+              
+              <Button 
+                onClick={() => navigate('/referrals')} 
+                className="w-full"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Invite Friends
+              </Button>
+            </div>
+          )}
+
+          {eligibility.reason === 'email_not_verified' && (
+            <div className="bg-background rounded-xl p-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Check your inbox for the verification email we sent when you signed up.
+              </p>
+              <Button 
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                I've Verified My Email
+              </Button>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">

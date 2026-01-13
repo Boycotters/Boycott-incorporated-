@@ -193,11 +193,17 @@ const Auth = () => {
       }
       
       setIsLoading(false);
+      
+      // Clear form
+      setSignupEmail("");
+      setSignupPassword("");
+      setSignupFullName("");
+      setAgreedToTerms(false);
+      
       toast({
-        title: "Account created",
-        description: referralCode 
-          ? "Welcome! Your referrer will receive bonus points." 
-          : "Please check your email to verify your account",
+        title: "Verify your email",
+        description: "We've sent a verification link to your email. Please verify to access all features including withdrawals.",
+        duration: 8000,
       });
     }
   };

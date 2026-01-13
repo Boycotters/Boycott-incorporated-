@@ -1413,9 +1413,17 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      check_comprehensive_daily_limits: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       check_daily_earning_cap: { Args: { p_user_id: string }; Returns: Json }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
+      check_withdrawal_eligibility: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       complete_ai_partner_task: {
         Args: {
           p_points_amount: number
