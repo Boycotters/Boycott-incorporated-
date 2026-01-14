@@ -349,6 +349,39 @@ export type Database = {
           },
         ]
       }
+      phone_verification_otps: {
+        Row: {
+          attempts: number | null
+          created_at: string
+          expires_at: string
+          id: string
+          otp_code: string
+          phone_number: string
+          user_id: string | null
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          otp_code: string
+          phone_number: string
+          user_id?: string | null
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          phone_number?: string
+          user_id?: string | null
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       platform_stats: {
         Row: {
           active_users_today: number | null
@@ -1090,6 +1123,7 @@ export type Database = {
           level: number | null
           longest_streak: number | null
           phone: string | null
+          phone_verified: boolean | null
           referral_code: string | null
           total_points: number | null
           vip_tier: string | null
@@ -1105,6 +1139,7 @@ export type Database = {
           level?: number | null
           longest_streak?: number | null
           phone?: string | null
+          phone_verified?: boolean | null
           referral_code?: string | null
           total_points?: number | null
           vip_tier?: string | null
@@ -1120,6 +1155,7 @@ export type Database = {
           level?: number | null
           longest_streak?: number | null
           phone?: string | null
+          phone_verified?: boolean | null
           referral_code?: string | null
           total_points?: number | null
           vip_tier?: string | null
@@ -1424,6 +1460,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      cleanup_expired_otps: { Args: never; Returns: undefined }
       complete_ai_partner_task: {
         Args: {
           p_points_amount: number

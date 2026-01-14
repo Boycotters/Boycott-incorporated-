@@ -11,6 +11,7 @@ import { Zap, ArrowLeft, Gift, Eye, EyeOff, Check, X, Loader2 } from "lucide-rea
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PhoneVerification } from "@/components/auth/PhoneVerification";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -40,8 +41,8 @@ const Auth = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showVerificationSent, setShowVerificationSent] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [newUserId, setNewUserId] = useState<string | null>(null);
   
   // Get referral code from URL
   const referralCode = searchParams.get('ref');
@@ -196,55 +197,58 @@ const Auth = () => {
       
       setIsLoading(false);
       
-      // Show success toast and redirect to home
-      toast({
-        title: "Account created!",
-        description: "Welcome! Please check your email to verify your account for full access.",
-      });
-      
-      navigate("/");
+      // Show phone verification step
+      if (data?.user?.id) {
+        setNewUserId(data.user.id);
+        setShowPhoneVerification(true);
+      } else {
+        // Fallback: go to home
+        toast({
+          title: "Account created!",
+          description: "Welcome to the app!",
+        });
+        navigate("/");
+      }
     }
   };
 
-  // Verification email sent screen
-  if (showVerificationSent) {
+  const handlePhoneVerified = () => {
+    toast({
+      title: "Welcome!",
+      description: "Your account is set up and phone verified.",
+    });
+    navigate("/");
+  };
+
+  const handleSkipPhoneVerification = () => {
+    toast({
+      title: "Account created!",
+      description: "You can verify your phone later in Settings.",
+    });
+    navigate("/");
+  };
+
+  // Phone verification screen
+  if (showPhoneVerification) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background p-4">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
-              <Check className="w-8 h-8 text-green-500" />
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center mb-2">
+              <Zap className="w-6 h-6 text-primary-foreground" />
             </div>
-            <CardTitle className="text-2xl">Check Your Email</CardTitle>
-            <CardDescription className="text-base">
-              We've sent a verification link to
+            <CardTitle className="text-2xl">Almost done!</CardTitle>
+            <CardDescription>
+              Verify your phone number for added security
             </CardDescription>
-            <p className="font-semibold text-primary">{verificationEmail}</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-muted/50 rounded-xl p-4 space-y-2 text-sm">
-              <p className="font-medium">Next steps:</p>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Open your email inbox</li>
-                <li>Click the verification link</li>
-                <li>Come back here and sign in</li>
-              </ol>
-            </div>
-            
-            <div className="text-center text-sm text-muted-foreground">
-              <p>Didn't receive the email? Check your spam folder.</p>
-            </div>
-            
-            <Button
-              className="w-full"
-              onClick={() => {
-                setShowVerificationSent(false);
-                setLoginEmail(verificationEmail);
-              }}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Sign In
-            </Button>
+          <CardContent>
+            <PhoneVerification
+              userId={newUserId || undefined}
+              onVerified={handlePhoneVerified}
+              onSkip={handleSkipPhoneVerification}
+              showSkip={true}
+            />
           </CardContent>
         </Card>
       </div>
