@@ -44,12 +44,12 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
 
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
-  const BALL_SIZE = 35;
-  const HOOP_WIDTH = 50;
-  const HOOP_Y = 80;
-  const GRAVITY = 0.45;
+  const BALL_SIZE = 40;
+  const HOOP_WIDTH = 55;
+  const HOOP_Y = 70;
+  const GRAVITY = 0.55; // Heavier gravity for more realistic arc
   const BALL_START_X = 150;
-  const BALL_START_Y = 290;
+  const BALL_START_Y = 280;
 
   useEffect(() => {
     scoreRef.current = score;
@@ -82,14 +82,15 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points based on score - challenging thresholds
+    // Calculate points - BALANCED (max 30 pts, average ~12 pts)
+    // Target: 4 games × K1.20 (12 pts) = K4.80 (48 pts) daily
     let points = 0;
-    if (finalScore >= 10) points = 100;
-    else if (finalScore >= 7) points = 75;
-    else if (finalScore >= 5) points = 50;
-    else if (finalScore >= 3) points = 30;
-    else if (finalScore >= 2) points = 15;
-    else if (finalScore >= 1) points = 5;
+    if (finalScore >= 8) points = 30;
+    else if (finalScore >= 6) points = 22;
+    else if (finalScore >= 4) points = 15;
+    else if (finalScore >= 3) points = 10;
+    else if (finalScore >= 2) points = 6;
+    else if (finalScore >= 1) points = 3;
     else points = 0;
     
     setEarnedPoints(points);
@@ -152,7 +153,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     return () => clearInterval(moveHoop);
   }, [isPlaying, gameOver, hoopDirection]);
 
-  // Ball physics
+  // Ball physics with improved scoring detection
   useEffect(() => {
     if (!ball.visible || gameOver) return;
 
@@ -164,18 +165,34 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         let newY = prev.y + newVy;
         let newX = prev.x + prev.vx;
         
-        // Check if ball goes through hoop - more precise detection
+        // Improved hoop collision detection - larger scoring zone
         const hoopLeft = hoopX - HOOP_WIDTH / 2;
         const hoopRight = hoopX + HOOP_WIDTH / 2;
         const ballCenterX = newX;
+        const ballRadius = BALL_SIZE / 2;
         
-        if (!prev.scored && 
-            newY >= HOOP_Y && newY <= HOOP_Y + 25 &&
-            ballCenterX >= hoopLeft + 5 && ballCenterX <= hoopRight - 5 &&
-            prev.vy > 0) {
+        // Ball scores if it passes through the hoop opening from above
+        // Check: ball center is within hoop horizontally, passing through vertically, moving downward
+        const isInHoopHorizontally = ballCenterX >= hoopLeft + 3 && ballCenterX <= hoopRight - 3;
+        const isAtHoopLevel = prev.y <= HOOP_Y + 10 && newY >= HOOP_Y;
+        const isMovingDown = prev.vy > 0;
+        
+        if (!prev.scored && isInHoopHorizontally && isAtHoopLevel && isMovingDown) {
           setScore(s => s + 1);
           scoreRef.current += 1;
-          return { ...prev, y: newY, x: newX, vy: newVy, scored: true };
+          // Let ball continue through the net
+          return { ...prev, y: newY, x: newX, vy: newVy * 0.7, scored: true };
+        }
+        
+        // Rim collision - ball bounces off rim if it hits the edge
+        const hitLeftRim = !prev.scored && ballCenterX >= hoopLeft - ballRadius && ballCenterX <= hoopLeft + 5 && newY >= HOOP_Y - 5 && newY <= HOOP_Y + 15;
+        const hitRightRim = !prev.scored && ballCenterX >= hoopRight - 5 && ballCenterX <= hoopRight + ballRadius && newY >= HOOP_Y - 5 && newY <= HOOP_Y + 15;
+        
+        if (hitLeftRim) {
+          return { ...prev, x: hoopLeft - ballRadius - 2, y: newY, vx: -Math.abs(prev.vx) * 0.5 - 1, vy: newVy * 0.6 };
+        }
+        if (hitRightRim) {
+          return { ...prev, x: hoopRight + ballRadius + 2, y: newY, vx: Math.abs(prev.vx) * 0.5 + 1, vy: newVy * 0.6 };
         }
         
         // Ball goes off screen or hits ground
@@ -255,7 +272,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     // Calculate velocity based on drag (swipe up and towards hoop)
     const dx = dragStart.x - dragEnd.x;
     const dy = dragStart.y - dragEnd.y;
-    const power = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.12, 12);
+    const power = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.14, 14);
     
     // Only shoot if swiped upward with enough power
     if (power > 2 && dy > 10) {
@@ -263,11 +280,14 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
       const vx = Math.cos(angle) * power;
       const vy = Math.sin(angle) * power;
       
+      // Better arc for more satisfying shots - aim towards hoop
+      const aimAdjustment = (hoopX - BALL_START_X) * 0.015;
+      
       setBall({
         x: BALL_START_X,
         y: BALL_START_Y,
-        vx: -vx * 0.7,
-        vy: -Math.abs(vy) * 1.1,
+        vx: -vx * 0.6 + aimAdjustment,
+        vy: -Math.abs(vy) * 1.25, // Higher arc
         visible: true,
         scored: false,
       });
