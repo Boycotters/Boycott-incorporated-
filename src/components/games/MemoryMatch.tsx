@@ -71,20 +71,25 @@ export function MemoryMatch({ playsRemaining, onComplete, isPlaying, setIsPlayin
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points based on performance
+    // Calculate points based on performance - BALANCED (max ~30 pts per play)
+    // Target: 4 games × K1.20 (12 pts) = K4.80 (48 pts) daily from games
+    // So each game play should average ~12 pts
     let points = 0;
     if (won) {
       // Base points for winning
-      points = 50;
-      // Bonus for time remaining
-      points += Math.floor(timeLeft / 2);
+      points = 15;
+      // Bonus for time remaining (max 10 pts)
+      points += Math.min(Math.floor(timeLeft / 6), 10);
       // Bonus for fewer moves (par is 16 moves for 8 pairs)
-      if (moves <= 16) points += 30;
-      else if (moves <= 20) points += 15;
+      if (moves <= 14) points += 5;
+      else if (moves <= 18) points += 3;
     } else {
-      // Partial points based on matched pairs
-      points = matchedPairs * 5;
+      // Partial points based on matched pairs (max 7 pts for 7 pairs)
+      points = Math.min(matchedPairs, 7);
     }
+    
+    // Cap at 30 points max per game
+    points = Math.min(points, 30);
     
     setEarnedPoints(points);
     if (points > 0) {

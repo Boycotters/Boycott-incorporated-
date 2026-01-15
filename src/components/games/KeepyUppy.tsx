@@ -37,12 +37,13 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
   const lastTapRef = useRef(0);
   const hasCompletedRef = useRef(false);
 
-  const GRAVITY = 0.35;
-  const BOUNCE_POWER = -9;
+  const GRAVITY = 0.55; // Heavier ball - more realistic
+  const BOUNCE_POWER = -11; // Stronger kick needed
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
-  const BALL_SIZE = 50;
+  const BALL_SIZE = 55;
   const BALL_RADIUS = BALL_SIZE / 2;
+  const AIR_RESISTANCE = 0.992; // Slight air drag
 
   // Keep scoreRef in sync
   useEffect(() => {
@@ -80,14 +81,15 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points based on score - challenging thresholds
+    // Calculate points - BALANCED (max 30 pts, average ~12 pts)
+    // Target: 4 games × K1.20 (12 pts) = K4.80 (48 pts) daily
     let points = 0;
-    if (finalScore >= 50) points = 100;
-    else if (finalScore >= 35) points = 75;
-    else if (finalScore >= 25) points = 50;
-    else if (finalScore >= 15) points = 30;
-    else if (finalScore >= 8) points = 15;
-    else if (finalScore >= 3) points = 5;
+    if (finalScore >= 30) points = 30;
+    else if (finalScore >= 22) points = 22;
+    else if (finalScore >= 15) points = 15;
+    else if (finalScore >= 10) points = 10;
+    else if (finalScore >= 6) points = 6;
+    else if (finalScore >= 3) points = 3;
     else points = 0;
     
     setEarnedPoints(points);
@@ -147,16 +149,25 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
         let newVy = prev.vy + GRAVITY;
         let newY = prev.y + newVy;
         let newX = prev.x + prev.vx;
-        let newVx = prev.vx * 0.995; // Slight air resistance
-        let newRotation = prev.rotation + prev.vx * 3;
+        let newVx = prev.vx * AIR_RESISTANCE; // Air resistance
+        let newRotation = prev.rotation + prev.vx * 4;
         
-        // Bounce off walls
+        // Apply air resistance to vertical velocity too (subtle)
+        newVy *= 0.998;
+        
+        // Bounce off walls with energy loss
         if (newX < BALL_RADIUS) {
           newX = BALL_RADIUS;
-          newVx = Math.abs(newVx) * 0.8;
+          newVx = Math.abs(newVx) * 0.7;
         } else if (newX > CONTAINER_WIDTH - BALL_RADIUS) {
           newX = CONTAINER_WIDTH - BALL_RADIUS;
-          newVx = -Math.abs(newVx) * 0.8;
+          newVx = -Math.abs(newVx) * 0.7;
+        }
+        
+        // Ceiling bounce
+        if (newY < BALL_RADIUS + 10) {
+          newY = BALL_RADIUS + 10;
+          newVy = Math.abs(newVy) * 0.5;
         }
         
         // Check if ball hit the ground - flag for next frame (not during render!)
@@ -217,15 +228,18 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     const distance = Math.sqrt(dx * dx + dy * dy);
     
     // STRICT: Must tap within actual ball radius + small tolerance
-    const hitboxRadius = BALL_RADIUS + 10;
+    const hitboxRadius = BALL_RADIUS + 12;
     
-    // Ball must be falling (vy > 0) or at least visible, and not too high
-    if (distance <= hitboxRadius && currentBall.y > 40) {
-      // Apply upward force
+    // Ball must be falling (vy > 0) or moving, and not too high
+    if (distance <= hitboxRadius && currentBall.y > 35) {
+      // Apply upward force - kick direction based on tap position
+      const kickAngle = (tapX - currentBall.x) * 0.04;
+      const kickPower = BOUNCE_POWER - (Math.random() * 2);
+      
       setBall(prev => ({
         ...prev,
-        vy: BOUNCE_POWER + (Math.random() * 1.5 - 0.75),
-        vx: prev.vx + (tapX - prev.x) * 0.03,
+        vy: kickPower,
+        vx: prev.vx * 0.5 + kickAngle + (Math.random() - 0.5) * 0.8,
       }));
       
       // Increment score ONCE

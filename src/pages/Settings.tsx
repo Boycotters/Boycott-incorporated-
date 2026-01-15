@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save } from "lucide-react";
+import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { PhoneVerification } from "@/components/auth/PhoneVerification";
+import { Badge } from "@/components/ui/badge";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ export default function Settings() {
   const [fullName, setFullName] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
 
   const { data: userData } = useQuery({
     queryKey: ['user-settings', user?.id],
@@ -93,6 +96,12 @@ export default function Settings() {
     navigate('/auth');
   };
 
+  const handlePhoneVerified = (phoneNumber: string) => {
+    setShowPhoneVerification(false);
+    queryClient.invalidateQueries({ queryKey: ['user-settings'] });
+    toast.success('Phone number verified successfully!');
+  };
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       <div className="max-w-md mx-auto space-y-6">
@@ -148,6 +157,59 @@ export default function Settings() {
               {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
+        </Card>
+
+        {/* Phone Verification Section */}
+        <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-secondary p-2 rounded-xl">
+              <Phone className="w-5 h-5 text-secondary-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg">Phone Verification</h3>
+          </div>
+          
+          {showPhoneVerification ? (
+            <div className="space-y-4">
+              <PhoneVerification
+                userId={user?.id}
+                onVerified={handlePhoneVerified}
+                onSkip={() => setShowPhoneVerification(false)}
+                showSkip={true}
+              />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
+                <div className="flex items-center gap-3">
+                  {userData?.phone_verified ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  )}
+                  <div>
+                    <p className="font-medium">
+                      {userData?.phone || 'No phone number'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {userData?.phone_verified ? 'Verified' : 'Not verified'}
+                    </p>
+                  </div>
+                </div>
+                <Badge variant={userData?.phone_verified ? "default" : "secondary"}>
+                  {userData?.phone_verified ? '✓ Verified' : 'Unverified'}
+                </Badge>
+              </div>
+              
+              <Button 
+                onClick={() => setShowPhoneVerification(true)}
+                variant={userData?.phone_verified ? "outline" : "default"}
+                className="w-full rounded-xl"
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                {userData?.phone_verified ? 'Update Phone Number' : 'Verify Phone Number'}
+              </Button>
+            </div>
+          )}
         </Card>
 
         {/* Preferences */}
