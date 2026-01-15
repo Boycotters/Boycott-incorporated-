@@ -31,7 +31,7 @@ const PROVIDERS = [
 ];
 
 const MIN_WITHDRAWAL = 500;
-const FEE_PERCENTAGE = 0.05;
+const FEE_PERCENTAGE = 0.10;
 
 export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligibility }: WithdrawalFormProps) {
   const navigate = useNavigate();
@@ -242,7 +242,7 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
             <span className="font-medium">{amountNum.toLocaleString()} pts</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Fee (5%)</span>
+            <span className="text-muted-foreground">Fee (10%)</span>
             <span className="font-medium text-destructive">-{fee.toLocaleString()} pts</span>
           </div>
           <div className="border-t border-border pt-2">
