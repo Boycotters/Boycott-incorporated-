@@ -1547,15 +1547,25 @@ export type Database = {
         Args: { p_reward_id: string; p_user_id: string }
         Returns: Json
       }
-      request_withdrawal: {
-        Args: {
-          p_amount: number
-          p_phone_number: string
-          p_provider: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
+      request_withdrawal:
+        | {
+            Args: {
+              p_amount: number
+              p_phone_number: string
+              p_provider: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_phone_number: string
+              p_provider: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       secure_complete_task: {
         Args: {
           p_task_id: string
