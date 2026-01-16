@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Zap, ArrowLeft, Gift, Eye, EyeOff, Check, X, Loader2 } from "lucide-react";
+import { Zap, ArrowLeft, Gift, Eye, EyeOff, Check, X, Loader2, Phone, Mail } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneVerification } from "@/components/auth/PhoneVerification";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 // Validation schemas
 const loginSchema = z.object({
@@ -34,6 +35,9 @@ const forgotPasswordSchema = z.object({
   email: z.string().trim().email({ message: "Please enter a valid email address" }),
 });
 
+type AuthMethod = "email" | "phone";
+type PhoneAuthStep = "phone" | "otp";
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -43,6 +47,16 @@ const Auth = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
+  
+  // Auth method toggle
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
+  
+  // Phone login state
+  const [phoneAuthStep, setPhoneAuthStep] = useState<PhoneAuthStep>("phone");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginOtp, setLoginOtp] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
   
   // Get referral code from URL
   const referralCode = searchParams.get('ref');
@@ -56,6 +70,7 @@ const Auth = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
   const [signupErrors, setSignupErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -75,12 +90,142 @@ const Auth = () => {
   };
   const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
 
+  // Countdown timer for resend
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/");
     }
   }, [user, navigate]);
+
+  const formatPhoneNumber = (value: string) => {
+    return value.replace(/[^\d+]/g, "");
+  };
+
+  const validatePhone = (phoneNumber: string) => {
+    const cleaned = phoneNumber.replace(/\D/g, "");
+    if (cleaned.length < 10) {
+      return "Phone number must be at least 10 digits";
+    }
+    if (cleaned.length > 15) {
+      return "Phone number is too long";
+    }
+    return null;
+  };
+
+  const handleSendPhoneOtp = async () => {
+    setPhoneError(null);
+    
+    const error = validatePhone(loginPhone);
+    if (error) {
+      setPhoneError(error);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-sms-otp", {
+        body: { phone_number: loginPhone },
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to send verification code");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Code sent!",
+        description: "Check your phone for the verification code.",
+      });
+      
+      setPhoneAuthStep("otp");
+      setCountdown(60);
+    } catch (err: any) {
+      toast({
+        title: "Failed to send code",
+        description: err.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyPhoneLogin = async () => {
+    if (loginOtp.length !== 6) {
+      toast({
+        title: "Invalid code",
+        description: "Please enter the 6-digit code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-sms-otp", {
+        body: { phone_number: loginPhone, otp_code: loginOtp },
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Verification failed");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      // Phone verified - now check if user exists with this phone
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('phone', loginPhone)
+        .eq('phone_verified', true)
+        .single();
+
+      if (userData) {
+        // User exists - they need to login with email/password
+        toast({
+          title: "Phone verified!",
+          description: "Please use your email and password to sign in.",
+        });
+        setAuthMethod("email");
+        setPhoneAuthStep("phone");
+        setLoginOtp("");
+      } else {
+        toast({
+          title: "No account found",
+          description: "Please sign up first with your email, then verify your phone.",
+          variant: "destructive",
+        });
+        setPhoneAuthStep("phone");
+        setLoginOtp("");
+      }
+    } catch (err: any) {
+      toast({
+        title: "Verification failed",
+        description: err.message || "Invalid code. Please try again.",
+        variant: "destructive",
+      });
+      setLoginOtp("");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +373,7 @@ const Auth = () => {
     navigate("/");
   };
 
-  // Phone verification screen
+  // Phone verification screen after signup
   if (showPhoneVerification) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background p-4">
@@ -330,63 +475,203 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                    className={loginErrors.email ? "border-destructive" : ""}
-                  />
-                  {loginErrors.email && (
-                    <p className="text-sm text-destructive">{loginErrors.email}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="login-password"
-                      type={showLoginPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      required
-                      className={`pr-10 ${loginErrors.password ? "border-destructive" : ""}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowLoginPassword(!showLoginPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {loginErrors.password && (
-                    <p className="text-sm text-destructive">{loginErrors.password}</p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : "Sign In"}
-                </Button>
-                <Button
+              {/* Auth Method Toggle */}
+              <div className="flex gap-2 mb-4 p-1 bg-secondary/50 rounded-lg">
+                <button
                   type="button"
-                  variant="link"
-                  className="w-full text-sm"
-                  onClick={() => setShowForgotPassword(true)}
+                  onClick={() => {
+                    setAuthMethod("email");
+                    setPhoneAuthStep("phone");
+                    setLoginOtp("");
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMethod === "email" 
+                      ? "bg-background shadow-sm" 
+                      : "hover:bg-background/50"
+                  }`}
                 >
-                  Forgot your password?
-                </Button>
-              </form>
+                  <Mail className="w-4 h-4" />
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMethod("phone")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                    authMethod === "phone" 
+                      ? "bg-background shadow-sm" 
+                      : "hover:bg-background/50"
+                  }`}
+                >
+                  <Phone className="w-4 h-4" />
+                  Phone
+                </button>
+              </div>
+
+              {authMethod === "email" ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                      className={loginErrors.email ? "border-destructive" : ""}
+                    />
+                    {loginErrors.email && (
+                      <p className="text-sm text-destructive">{loginErrors.email}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="login-password"
+                        type={showLoginPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                        className={`pr-10 ${loginErrors.password ? "border-destructive" : ""}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {loginErrors.password && (
+                      <p className="text-sm text-destructive">{loginErrors.password}</p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : "Sign In"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-sm"
+                    onClick={() => setShowForgotPassword(true)}
+                  >
+                    Forgot your password?
+                  </Button>
+                </form>
+              ) : (
+                <div className="space-y-4">
+                  {phoneAuthStep === "phone" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-phone">Phone Number</Label>
+                        <Input
+                          id="login-phone"
+                          type="tel"
+                          placeholder="+260 XXX XXX XXX"
+                          value={loginPhone}
+                          onChange={(e) => {
+                            setLoginPhone(formatPhoneNumber(e.target.value));
+                            setPhoneError(null);
+                          }}
+                          className={phoneError ? "border-destructive" : ""}
+                          disabled={isLoading}
+                        />
+                        {phoneError && (
+                          <p className="text-sm text-destructive">{phoneError}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Include country code (e.g., +260 for Zambia)
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={handleSendPhoneOtp} 
+                        className="w-full" 
+                        disabled={isLoading || !loginPhone}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Sending code...
+                          </>
+                        ) : (
+                          "Send Verification Code"
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          We sent a 6-digit code to {loginPhone}
+                        </p>
+                      </div>
+                      <div className="flex justify-center">
+                        <InputOTP
+                          maxLength={6}
+                          value={loginOtp}
+                          onChange={setLoginOtp}
+                          disabled={isLoading}
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
+                      <Button 
+                        onClick={handleVerifyPhoneLogin} 
+                        className="w-full" 
+                        disabled={isLoading || loginOtp.length !== 6}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Verify
+                          </>
+                        )}
+                      </Button>
+                      <div className="flex items-center justify-between text-sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPhoneAuthStep("phone");
+                            setLoginOtp("");
+                          }}
+                          disabled={isLoading}
+                        >
+                          <ArrowLeft className="w-4 h-4 mr-1" />
+                          Change number
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSendPhoneOtp}
+                          disabled={isLoading || countdown > 0}
+                        >
+                          {countdown > 0 ? `Resend in ${countdown}s` : "Resend code"}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="signup">
@@ -422,6 +707,19 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone Number (Optional)</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    placeholder="+260 XXX XXX XXX"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(formatPhoneNumber(e.target.value))}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You'll verify this after signing up
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <div className="relative">
                     <Input
@@ -454,39 +752,42 @@ const Auth = () => {
                             key={level}
                             className={`h-1 flex-1 rounded-full transition-colors ${
                               passwordStrength >= level
-                                ? passwordStrength <= 2 ? 'bg-red-500' : passwordStrength === 3 ? 'bg-yellow-500' : 'bg-green-500'
-                                : 'bg-muted'
+                                ? level <= 2
+                                  ? "bg-destructive"
+                                  : level === 3
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500"
+                                : "bg-muted"
                             }`}
                           />
                         ))}
                       </div>
-                      <div className="grid grid-cols-2 gap-1 text-xs">
-                        <div className={`flex items-center gap-1 ${passwordChecks.minLength ? 'text-green-500' : 'text-muted-foreground'}`}>
-                          {passwordChecks.minLength ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                          8+ characters
-                        </div>
-                        <div className={`flex items-center gap-1 ${passwordChecks.hasLowercase ? 'text-green-500' : 'text-muted-foreground'}`}>
-                          {passwordChecks.hasLowercase ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                          Lowercase
-                        </div>
-                        <div className={`flex items-center gap-1 ${passwordChecks.hasUppercase ? 'text-green-500' : 'text-muted-foreground'}`}>
-                          {passwordChecks.hasUppercase ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                          Uppercase
-                        </div>
-                        <div className={`flex items-center gap-1 ${passwordChecks.hasNumber ? 'text-green-500' : 'text-muted-foreground'}`}>
-                          {passwordChecks.hasNumber ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                          Number
-                        </div>
+                      <div className="space-y-1 text-xs">
+                        {Object.entries(passwordChecks).map(([key, valid]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            {valid ? (
+                              <Check className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <X className="w-3 h-3 text-muted-foreground" />
+                            )}
+                            <span className={valid ? "text-green-600" : "text-muted-foreground"}>
+                              {key === "minLength" && "At least 8 characters"}
+                              {key === "hasLowercase" && "One lowercase letter"}
+                              {key === "hasUppercase" && "One uppercase letter"}
+                              {key === "hasNumber" && "One number"}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
-                
-                {/* Terms agreement */}
+
+                {/* Terms checkbox */}
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
-                    <Checkbox 
-                      id="terms" 
+                    <Checkbox
+                      id="terms"
                       checked={agreedToTerms}
                       onCheckedChange={(checked) => {
                         setAgreedToTerms(checked === true);
@@ -494,15 +795,18 @@ const Auth = () => {
                       }}
                       className={termsError ? "border-destructive" : ""}
                     />
-                    <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                    <label
+                      htmlFor="terms"
+                      className="text-sm text-muted-foreground leading-none cursor-pointer"
+                    >
                       I agree to the Terms of Service and Privacy Policy
                     </label>
                   </div>
                   {termsError && (
-                    <p className="text-sm text-destructive">You must agree to the terms to continue</p>
+                    <p className="text-sm text-destructive">You must agree to continue</p>
                   )}
                 </div>
-                
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <>

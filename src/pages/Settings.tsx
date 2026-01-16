@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,15 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PhoneVerification } from "@/components/auth/PhoneVerification";
 import { Badge } from "@/components/ui/badge";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -22,6 +31,9 @@ export default function Settings() {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [showAdminCodeDialog, setShowAdminCodeDialog] = useState(false);
+  const [adminCode, setAdminCode] = useState('');
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
   const { data: userData } = useQuery({
     queryKey: ['user-settings', user?.id],
@@ -35,6 +47,20 @@ export default function Settings() {
       
       if (error) throw error;
       return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ['is-admin', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return !!data;
     },
     enabled: !!user?.id,
   });
@@ -100,6 +126,38 @@ export default function Settings() {
     setShowPhoneVerification(false);
     queryClient.invalidateQueries({ queryKey: ['user-settings'] });
     toast.success('Phone number verified successfully!');
+  };
+
+  const handleVerifyAdminCode = async () => {
+    if (adminCode.length !== 6) {
+      toast.error('Please enter a 6-digit code');
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      const { data, error } = await supabase.rpc('verify_admin_access_code', {
+        p_user_id: user?.id,
+        p_code: adminCode,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; message: string };
+      
+      if (result.success) {
+        toast.success(result.message);
+        queryClient.invalidateQueries({ queryKey: ['is-admin'] });
+        setShowAdminCodeDialog(false);
+        setAdminCode('');
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to verify code');
+    } finally {
+      setIsVerifyingCode(false);
+    }
   };
 
   return (
@@ -249,18 +307,92 @@ export default function Settings() {
         <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
           <h3 className="font-semibold text-lg mb-4">Security</h3>
           
-          <button 
-            onClick={() => navigate('/reset-password')}
-            className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-secondary p-2 rounded-xl">
-                <Shield className="w-5 h-5 text-secondary-foreground" />
+          <div className="space-y-2">
+            <button 
+              onClick={() => navigate('/reset-password')}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-secondary p-2 rounded-xl">
+                  <Shield className="w-5 h-5 text-secondary-foreground" />
+                </div>
+                <span className="font-medium">Change Password</span>
               </div>
-              <span className="font-medium">Change Password</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </button>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            {/* Admin Access */}
+            {isAdmin ? (
+              <button 
+                onClick={() => navigate('/admin')}
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-xl">
+                    <Key className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-medium">Admin Dashboard</span>
+                    <p className="text-xs text-muted-foreground">You have admin access</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            ) : (
+              <Dialog open={showAdminCodeDialog} onOpenChange={setShowAdminCodeDialog}>
+                <DialogTrigger asChild>
+                  <button 
+                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-secondary p-2 rounded-xl">
+                        <Lock className="w-5 h-5 text-secondary-foreground" />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-medium">Admin Access</span>
+                        <p className="text-xs text-muted-foreground">Enter access code</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Enter Admin Access Code</DialogTitle>
+                    <DialogDescription>
+                      Enter the 6-digit admin access code to unlock the admin dashboard.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={adminCode}
+                        onChange={setAdminCode}
+                        disabled={isVerifyingCode}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    <Button 
+                      onClick={handleVerifyAdminCode}
+                      disabled={isVerifyingCode || adminCode.length !== 6}
+                      className="w-full"
+                    >
+                      {isVerifyingCode ? 'Verifying...' : 'Unlock Admin Access'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </Card>
 
         {/* Sign Out */}
