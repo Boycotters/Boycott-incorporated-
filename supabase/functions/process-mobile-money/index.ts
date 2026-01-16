@@ -10,16 +10,9 @@ const corsHeaders = {
  * Mobile Money Processing Edge Function
  * 
  * This function handles mobile money withdrawals for Zambian providers:
- * - Airtel Money
+ * - Airtel Money (with API integration)
  * - MTN Mobile Money
  * - Zamtel Kwacha
- * 
- * In production, you would integrate with actual mobile money APIs:
- * - Airtel: https://developers.airtel.africa/
- * - MTN: https://momodeveloper.mtn.com/
- * - Zamtel: Contact Zamtel for API access
- * 
- * Current implementation is a placeholder that marks transactions for manual processing
  */
 
 interface WithdrawalRequest {
@@ -29,8 +22,30 @@ interface WithdrawalRequest {
   amount_zmw: number;
 }
 
-// Conversion rate: 100 points = 1 ZMW (configurable)
-const POINTS_TO_ZMW_RATE = 100;
+interface AirtelTokenResponse {
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
+interface AirtelDisbursementResponse {
+  data: {
+    transaction: {
+      id: string;
+      status: string;
+      message?: string;
+    };
+  };
+  status: {
+    code: string;
+    message: string;
+    result_code: string;
+    success: boolean;
+  };
+}
+
+// Cache for Airtel token
+let airtelTokenCache: { token: string; expiresAt: number } | null = null;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -98,8 +113,7 @@ serve(async (req) => {
       );
     }
 
-    // In production, you would call the actual mobile money API here
-    // For now, we simulate the process and mark for manual processing
+    // Process with the appropriate provider
     const result = await processWithProvider(provider, phone_number, amount_zmw, mmTransaction.id);
 
     // Update transaction status based on result
@@ -111,6 +125,7 @@ serve(async (req) => {
         provider_response: result.response,
         processed_at: new Date().toISOString(),
         completed_at: result.success ? new Date().toISOString() : null,
+        error_message: result.error || null,
       })
       .eq("id", mmTransaction.id);
 
@@ -128,10 +143,10 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: result.success,
         message: result.success 
           ? "Withdrawal processed successfully" 
-          : "Withdrawal submitted for processing (24-48 hours)",
+          : result.error || "Withdrawal submitted for processing (24-48 hours)",
         transaction_id: result.transaction_id,
         estimated_time: result.success ? "Instant" : "24-48 hours",
       }),
@@ -153,9 +168,9 @@ function validatePhoneNumber(phone: string, provider: string): { valid: boolean;
   
   // Zambian phone number patterns
   const patterns: Record<string, RegExp> = {
-    airtel: /^(0|260)?(97|77)\d{7}$/,  // 097x or 077x
-    mtn: /^(0|260)?(96|76)\d{7}$/,      // 096x or 076x  
-    zamtel: /^(0|260)?(95|55)\d{7}$/,   // 095x or 055x
+    airtel: /^(0|260|\+260)?(97|77)\d{7}$/,  // 097x or 077x
+    mtn: /^(0|260|\+260)?(96|76)\d{7}$/,      // 096x or 076x  
+    zamtel: /^(0|260|\+260)?(95|55)\d{7}$/,   // 095x or 055x
   };
 
   const pattern = patterns[provider];
@@ -173,28 +188,163 @@ function validatePhoneNumber(phone: string, provider: string): { valid: boolean;
   return { valid: true };
 }
 
+function formatPhoneForAirtel(phone: string): string {
+  // Remove all non-digits
+  let cleaned = phone.replace(/\D/g, "");
+  
+  // Remove leading 0 or 260
+  if (cleaned.startsWith("260")) {
+    cleaned = cleaned.substring(3);
+  } else if (cleaned.startsWith("0")) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // Return with country code
+  return `260${cleaned}`;
+}
+
+async function getAirtelAccessToken(): Promise<string | null> {
+  // Check cache first
+  if (airtelTokenCache && airtelTokenCache.expiresAt > Date.now()) {
+    return airtelTokenCache.token;
+  }
+
+  const clientId = Deno.env.get("AIRTEL_CLIENT_ID");
+  const clientSecret = Deno.env.get("AIRTEL_CLIENT_SECRET");
+
+  if (!clientId || !clientSecret) {
+    console.error("Airtel API credentials not configured");
+    return null;
+  }
+
+  // Use production URL - change to openapiuat.airtel.africa for sandbox
+  const baseUrl = "https://openapi.airtel.africa";
+
+  try {
+    const response = await fetch(`${baseUrl}/auth/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "client_credentials",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Airtel auth failed:", response.status, errorText);
+      return null;
+    }
+
+    const data: AirtelTokenResponse = await response.json();
+    
+    // Cache the token (expires 1 minute before actual expiry)
+    airtelTokenCache = {
+      token: data.access_token,
+      expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+    };
+
+    return data.access_token;
+  } catch (error) {
+    console.error("Error getting Airtel token:", error);
+    return null;
+  }
+}
+
+async function processAirtelDisbursement(
+  phone: string,
+  amount: number,
+  transactionId: string
+): Promise<{ success: boolean; transaction_id: string; response: any; error?: string }> {
+  const accessToken = await getAirtelAccessToken();
+  
+  if (!accessToken) {
+    return {
+      success: false,
+      transaction_id: `AIRTEL-PENDING-${transactionId}`,
+      response: { status: "api_not_configured" },
+      error: "Airtel API not configured. Transaction queued for manual processing.",
+    };
+  }
+
+  const formattedPhone = formatPhoneForAirtel(phone);
+  const baseUrl = "https://openapi.airtel.africa";
+  const externalId = `CASH-${transactionId}-${Date.now()}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/standard/v1/disbursements/`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Country": "ZM",
+        "X-Currency": "ZMW",
+      },
+      body: JSON.stringify({
+        payee: {
+          msisdn: formattedPhone,
+        },
+        reference: externalId,
+        pin: Deno.env.get("AIRTEL_PIN") || "", // Encrypted PIN if required
+        transaction: {
+          amount: amount,
+          id: externalId,
+        },
+      }),
+    });
+
+    const data: AirtelDisbursementResponse = await response.json();
+    console.log("Airtel disbursement response:", JSON.stringify(data));
+
+    if (data.status?.success || data.status?.code === "200") {
+      return {
+        success: true,
+        transaction_id: data.data?.transaction?.id || externalId,
+        response: data,
+      };
+    } else {
+      return {
+        success: false,
+        transaction_id: externalId,
+        response: data,
+        error: data.status?.message || "Disbursement failed",
+      };
+    }
+  } catch (error) {
+    console.error("Airtel disbursement error:", error);
+    return {
+      success: false,
+      transaction_id: `AIRTEL-ERROR-${transactionId}`,
+      response: { error: error instanceof Error ? error.message : "Unknown error" },
+      error: "Failed to process Airtel disbursement",
+    };
+  }
+}
+
 async function processWithProvider(
   provider: string, 
   phone: string, 
   amount: number,
   transactionId: string
-): Promise<{ success: boolean; transaction_id: string; response: any }> {
-  // Placeholder for actual API integration
-  // In production, replace with actual mobile money API calls
-  
+): Promise<{ success: boolean; transaction_id: string; response: any; error?: string }> {
   console.log(`[${provider.toUpperCase()}] Processing ZMW ${amount} to ${phone}`);
-  
-  // Simulate API response
-  // For actual integration:
-  // - Airtel: Use Airtel Africa API (https://developers.airtel.africa/)
-  // - MTN: Use MTN MoMo API (https://momodeveloper.mtn.com/)
-  // - Zamtel: Contact Zamtel directly for API access
 
+  // Use Airtel API for Airtel Money
+  if (provider === "airtel") {
+    return await processAirtelDisbursement(phone, amount, transactionId);
+  }
+
+  // For MTN and Zamtel, queue for manual processing
+  // TODO: Integrate MTN MoMo API (https://momodeveloper.mtn.com/)
+  // TODO: Contact Zamtel for API access
+  
   const mockTransactionId = `${provider.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
-  // Return processing status (manual processing required for now)
   return {
-    success: false, // Set to true when actual API integration is complete
+    success: false,
     transaction_id: mockTransactionId,
     response: {
       status: "queued_for_manual_processing",

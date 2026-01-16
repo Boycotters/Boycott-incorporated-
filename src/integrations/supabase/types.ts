@@ -53,6 +53,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_access_codes: {
+        Row: {
+          code_hash: string
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          uses_count: number | null
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          uses_count?: number | null
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          uses_count?: number | null
+        }
+        Relationships: []
+      }
       admin_activity_logs: {
         Row: {
           action: string
@@ -356,6 +386,7 @@ export type Database = {
           expires_at: string
           id: string
           otp_code: string
+          otp_hash: string | null
           phone_number: string
           user_id: string | null
           verified: boolean | null
@@ -366,6 +397,7 @@ export type Database = {
           expires_at: string
           id?: string
           otp_code: string
+          otp_hash?: string | null
           phone_number: string
           user_id?: string | null
           verified?: boolean | null
@@ -376,6 +408,7 @@ export type Database = {
           expires_at?: string
           id?: string
           otp_code?: string
+          otp_hash?: string | null
           phone_number?: string
           user_id?: string | null
           verified?: boolean | null
@@ -1479,6 +1512,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_admin_access_code: {
+        Args: { p_code: string; p_expires_days?: number }
+        Returns: Json
+      }
       create_transaction: {
         Args: {
           p_description: string
@@ -1581,6 +1618,10 @@ export type Database = {
       update_user_points: {
         Args: { points_to_add: number; user_id: string }
         Returns: undefined
+      }
+      verify_admin_access_code: {
+        Args: { p_code: string; p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {
