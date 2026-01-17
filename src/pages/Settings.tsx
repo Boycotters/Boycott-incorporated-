@@ -150,6 +150,8 @@ export default function Settings() {
         queryClient.invalidateQueries({ queryKey: ['is-admin'] });
         setShowAdminCodeDialog(false);
         setAdminCode('');
+        // Navigate to admin dashboard after successful verification
+        navigate('/admin');
       } else {
         toast.error(result.message);
       }

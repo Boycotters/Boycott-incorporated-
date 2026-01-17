@@ -50,15 +50,32 @@ export default function Referrals() {
 
   const referralCode = userData?.referral_code || 'Loading...';
   const referralLink = `${window.location.origin}/auth?ref=${referralCode}`;
+  const shareMessage = `🎉 Join JoyCards and start earning real money! Use my referral code: ${referralCode}\n\n✅ Complete tasks\n✅ Play games\n✅ Watch videos\n✅ Cash out to Mobile Money\n\nSign up here: ${referralLink}`;
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, isShareMessage = false) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success('Copied to clipboard!');
+      toast.success(isShareMessage ? 'Invite message copied!' : 'Copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Failed to copy');
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join JoyCards',
+          text: shareMessage,
+          url: referralLink,
+        });
+      } catch {
+        copyToClipboard(shareMessage, true);
+      }
+    } else {
+      copyToClipboard(shareMessage, true);
     }
   };
 
@@ -109,13 +126,22 @@ export default function Referrals() {
             </div>
           </div>
 
-          <Button
-            className="w-full bg-white text-primary hover:bg-white/90 font-bold rounded-xl"
-            onClick={() => copyToClipboard(referralLink)}
-          >
-            <Copy className="w-4 h-4 mr-2" />
-            Copy Invite Link
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 bg-white text-primary hover:bg-white/90 font-bold rounded-xl"
+              onClick={() => copyToClipboard(referralLink)}
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Link
+            </Button>
+            <Button
+              className="flex-1 bg-white/20 hover:bg-white/30 text-white font-bold rounded-xl"
+              onClick={handleShare}
+            >
+              <Gift className="w-4 h-4 mr-2" />
+              Share Invite
+            </Button>
+          </div>
         </Card>
 
         {/* Stats */}
