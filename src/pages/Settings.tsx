@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock } from "lucide-react";
+import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PhoneVerification } from "@/components/auth/PhoneVerification";
 import { Badge } from "@/components/ui/badge";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,13 @@ export default function Settings() {
   const [showAdminCodeDialog, setShowAdminCodeDialog] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  
+  // Personal info state
+  const [nrcNumber, setNrcNumber] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState('');
+  const [city, setCity] = useState('');
+  const [occupation, setOccupation] = useState('');
 
   const { data: userData } = useQuery({
     queryKey: ['user-settings', user?.id],
@@ -68,6 +76,11 @@ export default function Settings() {
   useEffect(() => {
     if (userData) {
       setFullName(userData.full_name || '');
+      setNrcNumber((userData as any).nrc_number || '');
+      setDateOfBirth((userData as any).date_of_birth || '');
+      setGender((userData as any).gender || '');
+      setCity((userData as any).city || '');
+      setOccupation((userData as any).occupation || '');
     }
   }, [userData]);
 
@@ -78,12 +91,19 @@ export default function Settings() {
   }, []);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (newName: string) => {
+    mutationFn: async (updates: {
+      full_name?: string;
+      nrc_number?: string;
+      date_of_birth?: string;
+      gender?: string;
+      city?: string;
+      occupation?: string;
+    }) => {
       if (!user?.id) throw new Error('Not authenticated');
       
       const { error } = await supabase
         .from('users')
-        .update({ full_name: newName })
+        .update(updates)
         .eq('id', user.id);
       
       if (error) throw error;
@@ -101,7 +121,14 @@ export default function Settings() {
 
   const handleSaveProfile = () => {
     if (fullName.trim()) {
-      updateProfileMutation.mutate(fullName.trim());
+      updateProfileMutation.mutate({
+        full_name: fullName.trim(),
+        nrc_number: nrcNumber.trim() || undefined,
+        date_of_birth: dateOfBirth || undefined,
+        gender: gender || undefined,
+        city: city.trim() || undefined,
+        occupation: occupation.trim() || undefined,
+      });
     }
   };
 
@@ -207,14 +234,89 @@ export default function Settings() {
               />
               <p className="text-xs text-muted-foreground">Email cannot be changed</p>
             </div>
+          </div>
+        </Card>
+
+        {/* Personal Information Section */}
+        <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-secondary p-2 rounded-xl">
+              <CreditCard className="w-5 h-5 text-secondary-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg">Personal Information</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nrc">NRC Number</Label>
+              <Input
+                id="nrc"
+                value={nrcNumber}
+                onChange={(e) => setNrcNumber(e.target.value)}
+                placeholder="e.g., 123456/10/1"
+                className="rounded-xl"
+              />
+              <p className="text-xs text-muted-foreground">Required for withdrawals over K500</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="dob">Date of Birth</Label>
+                <Input
+                  id="dob"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={gender} onValueChange={setGender}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="city">City/Town</Label>
+                <Input
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="e.g., Lusaka"
+                  className="rounded-xl"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="occupation">Occupation</Label>
+                <Input
+                  id="occupation"
+                  value={occupation}
+                  onChange={(e) => setOccupation(e.target.value)}
+                  placeholder="e.g., Student"
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
 
             <Button 
               onClick={handleSaveProfile}
-              disabled={updateProfileMutation.isPending || fullName === userData?.full_name}
+              disabled={updateProfileMutation.isPending}
               className="w-full rounded-xl"
             >
               <Save className="w-4 h-4 mr-2" />
-              {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+              {updateProfileMutation.isPending ? 'Saving...' : 'Save All Changes'}
             </Button>
           </div>
         </Card>
