@@ -78,6 +78,26 @@ export default function Profile() {
     enabled: !!user?.id,
   });
 
+  // Fetch equipped items
+  const { data: equippedItems } = useQuery({
+    queryKey: ['equipped-items', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { frame: null, badge: null };
+      const { data, error } = await supabase
+        .from('user_inventory')
+        .select('*, rewards(id, name, image, category)')
+        .eq('user_id', user.id)
+        .eq('is_equipped', true);
+      
+      if (error) throw error;
+      
+      const frame = data?.find(i => i.item_type === 'avatar_frame');
+      const badge = data?.find(i => i.item_type === 'badge');
+      return { frame, badge };
+    },
+    enabled: !!user?.id,
+  });
+
   // Fetch VIP tier info
   const { data: vipTier } = useQuery({
     queryKey: ['profile-vip-tier', userData?.vip_tier],
@@ -308,11 +328,26 @@ export default function Profile() {
           <div className="relative z-10">
             <div className="flex items-start gap-3 mb-3">
               <div className="relative">
-                <Avatar className="w-16 h-16 border-3 border-white/30">
-                  <AvatarFallback className="bg-white/20 text-white text-xl font-bold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                {equippedItems?.frame?.rewards?.image ? (
+                  <div className="relative w-20 h-20 flex items-center justify-center">
+                    <img 
+                      src={equippedItems.frame.rewards.image} 
+                      alt="Avatar frame" 
+                      className="absolute inset-0 w-full h-full object-contain z-10"
+                    />
+                    <Avatar className="w-14 h-14 border-2 border-white/30">
+                      <AvatarFallback className="bg-white/20 text-white text-lg font-bold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                ) : (
+                  <Avatar className="w-16 h-16 border-3 border-white/30">
+                    <AvatarFallback className="bg-white/20 text-white text-xl font-bold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                   <span className="text-sm">{vipTier?.icon || '🥉'}</span>
                 </div>
@@ -338,6 +373,13 @@ export default function Profile() {
                   {userData?.is_verified && (
                     <Badge className="bg-green-500/80 text-white border-0 text-[10px] h-5">
                       <Check className="w-2.5 h-2.5 mr-0.5" /> Verified
+                    </Badge>
+                  )}
+                  {equippedItems?.badge?.rewards && (
+                    <Badge className="bg-yellow-500/80 text-white border-0 text-[10px] h-5">
+                      {equippedItems.badge.rewards.image ? (
+                        <img src={equippedItems.badge.rewards.image} alt="" className="w-3 h-3 mr-0.5" />
+                      ) : '🏅'} {equippedItems.badge.rewards.name}
                     </Badge>
                   )}
                 </div>
