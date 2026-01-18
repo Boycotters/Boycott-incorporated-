@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Smartphone, AlertCircle, Check, Users, Mail, Lock } from "lucide-react";
+import { Loader2, Smartphone, AlertCircle, Check, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface WithdrawalEligibility {
@@ -74,63 +74,43 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
       <Card className="p-6 rounded-2xl border-2 border-amber-500/20 bg-amber-500/5">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
-            {eligibility.reason === 'email_not_verified' ? (
-              <Mail className="w-8 h-8 text-amber-500" />
-            ) : (
-              <Lock className="w-8 h-8 text-amber-500" />
-            )}
+            <Users className="w-8 h-8 text-amber-500" />
           </div>
           
           <div>
             <h3 className="text-lg font-bold mb-2">Unlock Withdrawals</h3>
-            <p className="text-muted-foreground text-sm">{eligibility.message}</p>
+            <p className="text-muted-foreground text-sm">
+              Invite 3 friends to unlock your first withdrawal
+            </p>
           </div>
 
-          {eligibility.reason === 'insufficient_referrals' && (
-            <div className="bg-background rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                <span className="font-semibold">
-                  {eligibility.referral_count || 0} / {eligibility.required_referrals || 3} Referrals
-                </span>
-              </div>
-              
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-primary rounded-full h-2 transition-all"
-                  style={{ width: `${((eligibility.referral_count || 0) / (eligibility.required_referrals || 3)) * 100}%` }}
-                />
-              </div>
-              
-              <p className="text-xs text-muted-foreground">
-                Invite {eligibility.remaining_referrals} more friend{eligibility.remaining_referrals !== 1 ? 's' : ''} to unlock withdrawals
-              </p>
-              
-              <Button 
-                onClick={() => navigate('/referrals')} 
-                className="w-full"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Invite Friends
-              </Button>
+          <div className="bg-background rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              <span className="font-semibold">
+                {eligibility.referral_count || 0} / {eligibility.required_referrals || 3} Referrals
+              </span>
             </div>
-          )}
-
-          {eligibility.reason === 'email_not_verified' && (
-            <div className="bg-background rounded-xl p-4 space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Check your inbox for the verification email we sent when you signed up.
-              </p>
-              <Button 
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                I've Verified My Email
-              </Button>
+            
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className="bg-primary rounded-full h-2 transition-all"
+                style={{ width: `${((eligibility.referral_count || 0) / (eligibility.required_referrals || 3)) * 100}%` }}
+              />
             </div>
-          )}
+            
+            <p className="text-xs text-muted-foreground">
+              Invite {eligibility.remaining_referrals || (3 - (eligibility.referral_count || 0))} more friend{(eligibility.remaining_referrals || 1) !== 1 ? 's' : ''} to unlock withdrawals
+            </p>
+            
+            <Button 
+              onClick={() => navigate('/referrals')} 
+              className="w-full"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Invite Friends
+            </Button>
+          </div>
         </div>
       </Card>
     );

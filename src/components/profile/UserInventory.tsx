@@ -64,6 +64,7 @@ export function UserInventory() {
         toast.success(data.message);
         queryClient.invalidateQueries({ queryKey: ['user-inventory'] });
         queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+        queryClient.invalidateQueries({ queryKey: ['equipped-items'] });
       } else {
         toast.error(data.message);
       }

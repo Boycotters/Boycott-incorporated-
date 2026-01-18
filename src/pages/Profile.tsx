@@ -320,34 +320,50 @@ export default function Profile() {
           </Button>
         </div>
 
-        {/* Profile Card with VIP Badge */}
-        <Card className={`bg-gradient-to-br ${getTierGradient(vipTier?.slug || 'bronze')} p-4 rounded-2xl shadow-hover border-0 relative overflow-hidden`}>
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+        {/* Profile Card with VIP Badge and Equipped Frame as Background */}
+        <Card className={`relative rounded-2xl shadow-hover border-0 overflow-hidden`}>
+          {/* Frame as background layer */}
+          {equippedItems?.frame?.rewards?.image && (
+            <div className="absolute inset-0 z-0">
+              <img 
+                src={equippedItems.frame.rewards.image} 
+                alt="Avatar frame background" 
+                className="w-full h-full object-cover opacity-40"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/40" />
+            </div>
+          )}
           
-          <div className="relative z-10">
+          {/* Fallback gradient if no frame */}
+          {!equippedItems?.frame?.rewards?.image && (
+            <div className={`absolute inset-0 z-0 bg-gradient-to-br ${getTierGradient(vipTier?.slug || 'bronze')}`} />
+          )}
+          
+          {/* Equipped Badge at top right */}
+          {equippedItems?.badge?.rewards && (
+            <div className="absolute top-2 right-2 z-20">
+              <div className="bg-yellow-500/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1.5 shadow-lg">
+                {equippedItems.badge.rewards.image ? (
+                  <img src={equippedItems.badge.rewards.image} alt="" className="w-5 h-5 rounded-sm object-cover" />
+                ) : (
+                  <span className="text-sm">🏅</span>
+                )}
+                <span className="text-white text-xs font-medium">{equippedItems.badge.rewards.name}</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 z-0" />
+          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 z-0" />
+          
+          <div className="relative z-10 p-4">
             <div className="flex items-start gap-3 mb-3">
               <div className="relative">
-                {equippedItems?.frame?.rewards?.image ? (
-                  <div className="relative w-20 h-20 flex items-center justify-center">
-                    <img 
-                      src={equippedItems.frame.rewards.image} 
-                      alt="Avatar frame" 
-                      className="absolute inset-0 w-full h-full object-contain z-10"
-                    />
-                    <Avatar className="w-14 h-14 border-2 border-white/30">
-                      <AvatarFallback className="bg-white/20 text-white text-lg font-bold">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                ) : (
-                  <Avatar className="w-16 h-16 border-3 border-white/30">
-                    <AvatarFallback className="bg-white/20 text-white text-xl font-bold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+                <Avatar className="w-16 h-16 border-3 border-white/30">
+                  <AvatarFallback className="bg-white/20 text-white text-xl font-bold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                   <span className="text-sm">{vipTier?.icon || '🥉'}</span>
                 </div>
@@ -366,20 +382,13 @@ export default function Profile() {
                     <Edit3 className="w-3 h-3" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">
                     {vipTier?.name || 'Bronze'}
                   </Badge>
                   {userData?.is_verified && (
                     <Badge className="bg-green-500/80 text-white border-0 text-[10px] h-5">
                       <Check className="w-2.5 h-2.5 mr-0.5" /> Verified
-                    </Badge>
-                  )}
-                  {equippedItems?.badge?.rewards && (
-                    <Badge className="bg-yellow-500/80 text-white border-0 text-[10px] h-5">
-                      {equippedItems.badge.rewards.image ? (
-                        <img src={equippedItems.badge.rewards.image} alt="" className="w-3 h-3 mr-0.5" />
-                      ) : '🏅'} {equippedItems.badge.rewards.name}
                     </Badge>
                   )}
                 </div>

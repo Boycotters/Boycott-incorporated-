@@ -188,6 +188,44 @@ export type Database = {
         }
         Relationships: []
       }
+      flash_sales: {
+        Row: {
+          created_at: string | null
+          discount_percentage: number
+          ends_at: string
+          id: string
+          is_active: boolean | null
+          reward_id: string | null
+          starts_at: string
+        }
+        Insert: {
+          created_at?: string | null
+          discount_percentage?: number
+          ends_at: string
+          id?: string
+          is_active?: boolean | null
+          reward_id?: string | null
+          starts_at: string
+        }
+        Update: {
+          created_at?: string | null
+          discount_percentage?: number
+          ends_at?: string
+          id?: string
+          is_active?: boolean | null
+          reward_id?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_sales_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_achievements: {
         Row: {
           created_at: string | null
@@ -1531,6 +1569,7 @@ export type Database = {
         Returns: Json
       }
       export_survey_data: { Args: { p_mark_exported?: boolean }; Returns: Json }
+      get_active_flash_sales: { Args: never; Returns: Json }
       get_game_leaderboard: {
         Args: { p_game_type?: string; p_period?: string }
         Returns: {
