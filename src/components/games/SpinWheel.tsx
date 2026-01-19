@@ -9,17 +9,14 @@ interface SpinWheelProps {
   isSpinning: boolean;
 }
 
-// Balanced wheel segments - target average ~12 pts per spin (K1.20)
-// Daily cap: 4 games × K1.20 = K4.80 (48 pts)
+// Balanced wheel segments - Max 10 pts per spin
+// Target: 4 games × 10 pts = 40 pts daily for games
 const WHEEL_SEGMENTS = [
-  { points: 3, color: "hsl(var(--muted))", label: "3", weight: 25 },
-  { points: 5, color: "hsl(var(--secondary))", label: "5", weight: 22 },
-  { points: 8, color: "hsl(var(--primary))", label: "8", weight: 20 },
-  { points: 10, color: "hsl(var(--accent))", label: "10", weight: 15 },
-  { points: 15, color: "hsl(160 84% 39%)", label: "15", weight: 10 },
-  { points: 20, color: "hsl(280 65% 60%)", label: "20", weight: 5 },
-  { points: 25, color: "hsl(340 82% 52%)", label: "25", weight: 2.5 },
-  { points: 30, color: "hsl(48 96% 53%)", label: "🎯30", weight: 0.5 },
+  { points: 2, color: "hsl(var(--muted))", label: "2", weight: 25 },
+  { points: 4, color: "hsl(var(--secondary))", label: "4", weight: 25 },
+  { points: 6, color: "hsl(var(--primary))", label: "6", weight: 20 },
+  { points: 8, color: "hsl(var(--accent))", label: "8", weight: 15 },
+  { points: 10, color: "hsl(160 84% 39%)", label: "🎯10", weight: 15 },
 ];
 
 // Weighted random selection - harder to get big prizes

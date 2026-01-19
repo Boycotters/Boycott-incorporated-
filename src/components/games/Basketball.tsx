@@ -45,9 +45,9 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
   const BALL_SIZE = 40;
-  const HOOP_WIDTH = 55;
-  const HOOP_Y = 70;
-  const GRAVITY = 0.55; // Heavier gravity for more realistic arc
+  const HOOP_WIDTH = 60; // Slightly wider hoop for easier scoring
+  const HOOP_Y = 80; // Slightly lower hoop
+  const GRAVITY = 0.45; // Lighter gravity for better arcs
   const BALL_START_X = 150;
   const BALL_START_Y = 280;
 
@@ -82,15 +82,14 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points - BALANCED (max 30 pts, average ~12 pts)
-    // Target: 4 games × K1.20 (12 pts) = K4.80 (48 pts) daily
+    // Calculate points - Max 10 pts per game, average ~8 pts
+    // Target: 4 games × 10 pts = 40 pts daily for games
     let points = 0;
-    if (finalScore >= 8) points = 30;
-    else if (finalScore >= 6) points = 22;
-    else if (finalScore >= 4) points = 15;
-    else if (finalScore >= 3) points = 10;
-    else if (finalScore >= 2) points = 6;
-    else if (finalScore >= 1) points = 3;
+    if (finalScore >= 6) points = 10;
+    else if (finalScore >= 4) points = 8;
+    else if (finalScore >= 3) points = 6;
+    else if (finalScore >= 2) points = 4;
+    else if (finalScore >= 1) points = 2;
     else points = 0;
     
     setEarnedPoints(points);
@@ -172,9 +171,10 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         const ballRadius = BALL_SIZE / 2;
         
         // Ball scores if it passes through the hoop opening from above
-        // Check: ball center is within hoop horizontally, passing through vertically, moving downward
-        const isInHoopHorizontally = ballCenterX >= hoopLeft + 3 && ballCenterX <= hoopRight - 3;
-        const isAtHoopLevel = prev.y <= HOOP_Y + 10 && newY >= HOOP_Y;
+        // More generous scoring zone for better gameplay
+        const scoringMargin = 8; // pixels of margin on each side
+        const isInHoopHorizontally = ballCenterX >= hoopLeft + scoringMargin && ballCenterX <= hoopRight - scoringMargin;
+        const isAtHoopLevel = prev.y <= HOOP_Y + 15 && newY >= HOOP_Y - 5;
         const isMovingDown = prev.vy > 0;
         
         if (!prev.scored && isInHoopHorizontally && isAtHoopLevel && isMovingDown) {
@@ -184,15 +184,37 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
           return { ...prev, y: newY, x: newX, vy: newVy * 0.7, scored: true };
         }
         
-        // Rim collision - ball bounces off rim if it hits the edge
-        const hitLeftRim = !prev.scored && ballCenterX >= hoopLeft - ballRadius && ballCenterX <= hoopLeft + 5 && newY >= HOOP_Y - 5 && newY <= HOOP_Y + 15;
-        const hitRightRim = !prev.scored && ballCenterX >= hoopRight - 5 && ballCenterX <= hoopRight + ballRadius && newY >= HOOP_Y - 5 && newY <= HOOP_Y + 15;
+        // Rim collision - ball bounces off rim if it hits the edge (smaller collision zone)
+        const rimWidth = 6;
+        const hitLeftRim = !prev.scored && 
+          ballCenterX >= hoopLeft - ballRadius && 
+          ballCenterX <= hoopLeft + rimWidth && 
+          newY >= HOOP_Y - 8 && 
+          newY <= HOOP_Y + 12;
+        const hitRightRim = !prev.scored && 
+          ballCenterX >= hoopRight - rimWidth && 
+          ballCenterX <= hoopRight + ballRadius && 
+          newY >= HOOP_Y - 8 && 
+          newY <= HOOP_Y + 12;
         
         if (hitLeftRim) {
-          return { ...prev, x: hoopLeft - ballRadius - 2, y: newY, vx: -Math.abs(prev.vx) * 0.5 - 1, vy: newVy * 0.6 };
+          // Chance to go in on rim hit
+          const goIn = Math.random() > 0.6;
+          if (goIn && ballCenterX > hoopLeft) {
+            setScore(s => s + 1);
+            scoreRef.current += 1;
+            return { ...prev, y: newY + 10, x: hoopX, vy: 3, vx: 0, scored: true };
+          }
+          return { ...prev, x: hoopLeft - ballRadius - 2, y: newY, vx: -Math.abs(prev.vx) * 0.4 - 0.5, vy: newVy * 0.5 };
         }
         if (hitRightRim) {
-          return { ...prev, x: hoopRight + ballRadius + 2, y: newY, vx: Math.abs(prev.vx) * 0.5 + 1, vy: newVy * 0.6 };
+          const goIn = Math.random() > 0.6;
+          if (goIn && ballCenterX < hoopRight) {
+            setScore(s => s + 1);
+            scoreRef.current += 1;
+            return { ...prev, y: newY + 10, x: hoopX, vy: 3, vx: 0, scored: true };
+          }
+          return { ...prev, x: hoopRight + ballRadius + 2, y: newY, vx: Math.abs(prev.vx) * 0.4 + 0.5, vy: newVy * 0.5 };
         }
         
         // Ball goes off screen or hits ground

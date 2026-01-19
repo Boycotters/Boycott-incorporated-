@@ -81,15 +81,14 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points - BALANCED (max 30 pts, average ~12 pts)
-    // Target: 4 games × K1.20 (12 pts) = K4.80 (48 pts) daily
+    // Calculate points - Max 10 pts per game
+    // Target: 4 games × 10 pts = 40 pts daily for games
     let points = 0;
-    if (finalScore >= 30) points = 30;
-    else if (finalScore >= 22) points = 22;
-    else if (finalScore >= 15) points = 15;
-    else if (finalScore >= 10) points = 10;
-    else if (finalScore >= 6) points = 6;
-    else if (finalScore >= 3) points = 3;
+    if (finalScore >= 20) points = 10;
+    else if (finalScore >= 15) points = 8;
+    else if (finalScore >= 10) points = 6;
+    else if (finalScore >= 5) points = 4;
+    else if (finalScore >= 2) points = 2;
     else points = 0;
     
     setEarnedPoints(points);
