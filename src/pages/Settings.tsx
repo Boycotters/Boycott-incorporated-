@@ -256,7 +256,6 @@ export default function Settings() {
                 placeholder="e.g., 123456/10/1"
                 className="rounded-xl"
               />
-              <p className="text-xs text-muted-foreground">Required for withdrawals over K500</p>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
@@ -425,77 +424,61 @@ export default function Settings() {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </button>
 
-            {/* Admin Access */}
-            {isAdmin ? (
-              <button 
-                onClick={() => navigate('/admin')}
-                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2 rounded-xl">
-                    <Key className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <span className="font-medium">Admin Dashboard</span>
-                    <p className="text-xs text-muted-foreground">You have admin access</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
-            ) : (
-              <Dialog open={showAdminCodeDialog} onOpenChange={setShowAdminCodeDialog}>
-                <DialogTrigger asChild>
-                  <button 
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="bg-secondary p-2 rounded-xl">
-                        <Lock className="w-5 h-5 text-secondary-foreground" />
-                      </div>
-                      <div className="text-left">
-                        <span className="font-medium">Admin Access</span>
-                        <p className="text-xs text-muted-foreground">Enter access code</p>
-                      </div>
+            {/* Admin Access - Always requires PIN */}
+            <Dialog open={showAdminCodeDialog} onOpenChange={setShowAdminCodeDialog}>
+              <DialogTrigger asChild>
+                <button 
+                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`${isAdmin ? 'bg-primary/10' : 'bg-secondary'} p-2 rounded-xl`}>
+                      {isAdmin ? <Key className="w-5 h-5 text-primary" /> : <Lock className="w-5 h-5 text-secondary-foreground" />}
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Enter Admin Access Code</DialogTitle>
-                    <DialogDescription>
-                      Enter the 6-digit admin access code to unlock the admin dashboard.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="flex justify-center">
-                      <InputOTP
-                        maxLength={6}
-                        value={adminCode}
-                        onChange={setAdminCode}
-                        disabled={isVerifyingCode}
-                      >
-                        <InputOTPGroup>
-                          <InputOTPSlot index={0} />
-                          <InputOTPSlot index={1} />
-                          <InputOTPSlot index={2} />
-                          <InputOTPSlot index={3} />
-                          <InputOTPSlot index={4} />
-                          <InputOTPSlot index={5} />
-                        </InputOTPGroup>
-                      </InputOTP>
+                    <div className="text-left">
+                      <span className="font-medium">Admin Dashboard</span>
+                      <p className="text-xs text-muted-foreground">
+                        {isAdmin ? 'Enter PIN to access' : 'Enter access code'}
+                      </p>
                     </div>
-                    <Button 
-                      onClick={handleVerifyAdminCode}
-                      disabled={isVerifyingCode || adminCode.length !== 6}
-                      className="w-full"
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Enter Admin PIN</DialogTitle>
+                  <DialogDescription>
+                    Enter your 6-digit admin PIN to access the dashboard.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="flex justify-center">
+                    <InputOTP
+                      maxLength={6}
+                      value={adminCode}
+                      onChange={setAdminCode}
+                      disabled={isVerifyingCode}
                     >
-                      {isVerifyingCode ? 'Verifying...' : 'Unlock Admin Access'}
-                    </Button>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
                   </div>
-                </DialogContent>
-              </Dialog>
-            )}
+                  <Button 
+                    onClick={handleVerifyAdminCode}
+                    disabled={isVerifyingCode || adminCode.length !== 6}
+                    className="w-full"
+                  >
+                    {isVerifyingCode ? 'Verifying...' : 'Unlock Admin Dashboard'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </Card>
 
