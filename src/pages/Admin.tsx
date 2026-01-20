@@ -634,11 +634,11 @@ export default function Admin() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="mt-4 space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
+                    <Activity className="w-5 h-5 text-primary" />
                     Today's Activity
                   </CardTitle>
                 </CardHeader>
@@ -667,9 +667,9 @@ export default function Admin() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
+                    <DollarSign className="w-5 h-5 text-green-500" />
                     Financial Overview
                   </CardTitle>
                 </CardHeader>
@@ -686,13 +686,17 @@ export default function Admin() {
                     <span className="text-muted-foreground">Total Paid Out</span>
                     <span className="font-semibold text-green-600">{platformStats?.approved_withdrawals_total?.toLocaleString() || 0} pts</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Avg Points/User</span>
+                    <span className="font-semibold">{Math.round(platformStats?.avg_user_points || 0)}</span>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Database className="w-5 h-5" />
+                    <Database className="w-5 h-5 text-purple-500" />
                     Data Monetization
                   </CardTitle>
                 </CardHeader>
@@ -704,6 +708,10 @@ export default function Admin() {
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Unexported Data</span>
                     <span className="font-semibold text-purple-600">{platformStats?.survey_responses_unexported || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Revenue Potential</span>
+                    <span className="font-semibold text-green-600">K{Math.round(platformStats?.revenue_potential_zmw || 0)}</span>
                   </div>
                   {unexportedSurveys.length > 0 && (
                     <Button 
@@ -719,9 +727,9 @@ export default function Admin() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Gamepad2 className="w-5 h-5" />
+                    <Gamepad2 className="w-5 h-5 text-orange-500" />
                     Platform Content
                   </CardTitle>
                 </CardHeader>
@@ -738,9 +746,89 @@ export default function Admin() {
                     <span className="text-muted-foreground">Total Transactions</span>
                     <span className="font-semibold">{platformStats?.total_transactions?.toLocaleString() || 0}</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Total Referrals</span>
+                    <span className="font-semibold">{platformStats?.total_referrals || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-blue-500" />
+                    User Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Phone Verified</span>
+                    <span className="font-semibold">{platformStats?.users_with_phone_verified || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Total Redemptions</span>
+                    <span className="font-semibold">{platformStats?.total_redemptions || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Max Points (User)</span>
+                    <span className="font-semibold">{platformStats?.max_user_points?.toLocaleString() || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-cyan-500" />
+                    VIP Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {platformStats?.users_by_tier && Object.entries(platformStats.users_by_tier).map(([tier, count]) => (
+                    <div key={tier} className="flex justify-between items-center">
+                      <Badge variant="outline" className="capitalize">{tier}</Badge>
+                      <span className="font-semibold">{String(count)}</span>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>
+
+            {/* Top Earners Section */}
+            {platformStats?.top_earners && Array.isArray(platformStats.top_earners) && platformStats.top_earners.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Top 10 Earners
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>#</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right">Points</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {platformStats.top_earners.map((earner: any, index: number) => (
+                        <TableRow key={earner.id}>
+                          <TableCell className="font-bold">{index + 1}</TableCell>
+                          <TableCell className="font-medium">{earner.full_name || 'No name'}</TableCell>
+                          <TableCell className="text-muted-foreground">{earner.email}</TableCell>
+                          <TableCell className="text-right font-semibold text-primary">
+                            {earner.total_points?.toLocaleString() || 0}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Withdrawals Tab */}
