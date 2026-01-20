@@ -1553,6 +1553,7 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_otps: { Args: never; Returns: undefined }
+      cleanup_old_tasks: { Args: never; Returns: undefined }
       complete_ai_partner_task: {
         Args: {
           p_points_amount: number
