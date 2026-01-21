@@ -45,9 +45,9 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
   const BALL_SIZE = 40;
-  const HOOP_WIDTH = 60; // Slightly wider hoop for easier scoring
-  const HOOP_Y = 80; // Slightly lower hoop
-  const GRAVITY = 0.45; // Lighter gravity for better arcs
+  const HOOP_WIDTH = 70; // Wider hoop for much easier scoring
+  const HOOP_Y = 85; // Slightly lower hoop
+  const GRAVITY = 0.4; // Lighter gravity for better arcs
   const BALL_START_X = 150;
   const BALL_START_Y = 280;
 
@@ -164,17 +164,17 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         let newY = prev.y + newVy;
         let newX = prev.x + prev.vx;
         
-        // Improved hoop collision detection - larger scoring zone
+        // Improved hoop collision detection - very generous scoring zone
         const hoopLeft = hoopX - HOOP_WIDTH / 2;
         const hoopRight = hoopX + HOOP_WIDTH / 2;
         const ballCenterX = newX;
         const ballRadius = BALL_SIZE / 2;
         
         // Ball scores if it passes through the hoop opening from above
-        // More generous scoring zone for better gameplay
-        const scoringMargin = 8; // pixels of margin on each side
+        // Very generous scoring zone for satisfying gameplay
+        const scoringMargin = 5; // smaller margin = larger scoring area
         const isInHoopHorizontally = ballCenterX >= hoopLeft + scoringMargin && ballCenterX <= hoopRight - scoringMargin;
-        const isAtHoopLevel = prev.y <= HOOP_Y + 15 && newY >= HOOP_Y - 5;
+        const isAtHoopLevel = prev.y <= HOOP_Y + 20 && newY >= HOOP_Y - 10;
         const isMovingDown = prev.vy > 0;
         
         if (!prev.scored && isInHoopHorizontally && isAtHoopLevel && isMovingDown) {
@@ -184,37 +184,37 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
           return { ...prev, y: newY, x: newX, vy: newVy * 0.7, scored: true };
         }
         
-        // Rim collision - ball bounces off rim if it hits the edge (smaller collision zone)
-        const rimWidth = 6;
+        // Rim collision - much smaller rim for fewer bounces
+        const rimWidth = 3; // Very thin rim
         const hitLeftRim = !prev.scored && 
           ballCenterX >= hoopLeft - ballRadius && 
           ballCenterX <= hoopLeft + rimWidth && 
-          newY >= HOOP_Y - 8 && 
-          newY <= HOOP_Y + 12;
+          newY >= HOOP_Y - 5 && 
+          newY <= HOOP_Y + 8;
         const hitRightRim = !prev.scored && 
           ballCenterX >= hoopRight - rimWidth && 
           ballCenterX <= hoopRight + ballRadius && 
-          newY >= HOOP_Y - 8 && 
-          newY <= HOOP_Y + 12;
+          newY >= HOOP_Y - 5 && 
+          newY <= HOOP_Y + 8;
         
         if (hitLeftRim) {
-          // Chance to go in on rim hit
-          const goIn = Math.random() > 0.6;
-          if (goIn && ballCenterX > hoopLeft) {
+          // High chance to go in on rim hit (80%)
+          const goIn = Math.random() > 0.2;
+          if (goIn) {
             setScore(s => s + 1);
             scoreRef.current += 1;
             return { ...prev, y: newY + 10, x: hoopX, vy: 3, vx: 0, scored: true };
           }
-          return { ...prev, x: hoopLeft - ballRadius - 2, y: newY, vx: -Math.abs(prev.vx) * 0.4 - 0.5, vy: newVy * 0.5 };
+          return { ...prev, x: hoopLeft - ballRadius - 2, y: newY, vx: -Math.abs(prev.vx) * 0.3 - 0.3, vy: newVy * 0.4 };
         }
         if (hitRightRim) {
-          const goIn = Math.random() > 0.6;
-          if (goIn && ballCenterX < hoopRight) {
+          const goIn = Math.random() > 0.2;
+          if (goIn) {
             setScore(s => s + 1);
             scoreRef.current += 1;
             return { ...prev, y: newY + 10, x: hoopX, vy: 3, vx: 0, scored: true };
           }
-          return { ...prev, x: hoopRight + ballRadius + 2, y: newY, vx: Math.abs(prev.vx) * 0.4 + 0.5, vy: newVy * 0.5 };
+          return { ...prev, x: hoopRight + ballRadius + 2, y: newY, vx: Math.abs(prev.vx) * 0.3 + 0.3, vy: newVy * 0.4 };
         }
         
         // Ball goes off screen or hits ground
