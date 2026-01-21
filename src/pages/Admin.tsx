@@ -27,9 +27,8 @@ import {
   FileText,
   RefreshCw,
   Search,
-  ChevronRight,
-  Ban,
-  UserCheck
+  UserCheck,
+  Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,6 +138,10 @@ export default function Admin() {
   const [addVideoOpen, setAddVideoOpen] = useState(false);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [changePinOpen, setChangePinOpen] = useState(false);
+  const [oldPin, setOldPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [newVideo, setNewVideo] = useState({
     title: '',
     description: '',
@@ -484,6 +487,44 @@ export default function Admin() {
     },
   });
 
+  // Change PIN mutation
+  const changePinMutation = useMutation({
+    mutationFn: async ({ oldPin, newPin }: { oldPin: string; newPin: string }) => {
+      const { data, error } = await supabase.rpc('update_admin_pin', {
+        p_old_pin: oldPin,
+        p_new_pin: newPin,
+      });
+      if (error) throw error;
+      return data as { success: boolean; message: string };
+    },
+    onSuccess: (result) => {
+      if (result?.success) {
+        toast.success(result.message);
+        setChangePinOpen(false);
+        setOldPin('');
+        setNewPin('');
+        setConfirmPin('');
+      } else {
+        toast.error(result?.message || 'Failed to update PIN');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleChangePin = () => {
+    if (oldPin.length !== 6 || newPin.length !== 6) {
+      toast.error('PIN must be exactly 6 digits');
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast.error('New PIN and confirmation do not match');
+      return;
+    }
+    changePinMutation.mutate({ oldPin, newPin });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-500/10 text-yellow-600';
@@ -533,6 +574,66 @@ export default function Admin() {
             <h1 className="text-xl font-bold">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground">Full platform control</p>
           </div>
+          
+          {/* Change PIN Button */}
+          <Dialog open={changePinOpen} onOpenChange={setChangePinOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-xl">
+                <Key className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Change Admin PIN</DialogTitle>
+                <DialogDescription>
+                  Update your admin access PIN. Make sure to remember the new PIN.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="oldPin">Current PIN</Label>
+                  <Input
+                    id="oldPin"
+                    type="password"
+                    maxLength={6}
+                    placeholder="Enter current 6-digit PIN"
+                    value={oldPin}
+                    onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPin">New PIN</Label>
+                  <Input
+                    id="newPin"
+                    type="password"
+                    maxLength={6}
+                    placeholder="Enter new 6-digit PIN"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPin">Confirm New PIN</Label>
+                  <Input
+                    id="confirmPin"
+                    type="password"
+                    maxLength={6}
+                    placeholder="Confirm new 6-digit PIN"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  />
+                </div>
+                <Button 
+                  onClick={handleChangePin}
+                  disabled={changePinMutation.isPending || oldPin.length !== 6 || newPin.length !== 6 || confirmPin.length !== 6}
+                  className="w-full"
+                >
+                  {changePinMutation.isPending ? 'Updating...' : 'Update PIN'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
           <Button
             variant="outline"
             size="icon"

@@ -1683,6 +1683,10 @@ export type Database = {
         Args: { p_score: number; p_tournament_id: string; p_user_id: string }
         Returns: Json
       }
+      update_admin_pin: {
+        Args: { p_new_pin: string; p_old_pin: string }
+        Returns: Json
+      }
       update_user_points: {
         Args: { points_to_add: number; user_id: string }
         Returns: undefined

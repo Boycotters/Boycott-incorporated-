@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { 
-  TrendingUp, Target, Trophy, Sparkles, Clock, Users, 
+  Target, Trophy, Sparkles, Clock, 
   Flame, Zap, Crown, Star, ChevronRight, Play, Gift, Rocket,
   Timer, Eye, Heart, Share2, RefreshCw
 } from "lucide-react";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { TaskRecommendations } from "@/components/ai/TaskRecommendations";
@@ -22,7 +22,6 @@ import { formatTimeAgo } from "@/lib/utils";
 export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
 
   // Flash deal countdown - resets at midnight
@@ -199,42 +198,82 @@ export default function Discover() {
   const challenges = useMemo(() => [
     {
       id: 1,
-      title: "Task Master",
-      description: "Complete 20 tasks this month",
-      reward: 500,
-      progress: completionStats?.completed || 0,
-      total: 20,
+      title: "Daily Hustler",
+      description: "Complete 3 tasks today",
+      reward: 30,
+      progress: completionStats?.completedToday || 0,
+      total: 3,
       icon: Target,
       color: "primary",
     },
     {
       id: 2,
-      title: "Daily Grinder",
-      description: "Complete 5 tasks today",
-      reward: 100,
-      progress: completionStats?.completedToday || 0,
-      total: 5,
-      icon: Flame,
+      title: "Video Star",
+      description: "Watch 4 videos today",
+      reward: 25,
+      progress: Math.min(videoStats?.videosWatched || 0, 4),
+      total: 4,
+      icon: Play,
       color: "accent",
     },
     {
       id: 3,
-      title: "Streak Legend",
-      description: `${userProfile?.current_streak || 0} day streak`,
-      reward: 300,
+      title: "Streak Builder",
+      description: "Login 7 days in a row",
+      reward: 50,
       progress: userProfile?.current_streak || 0,
       total: 7,
-      icon: Zap,
+      icon: Flame,
       color: "primary",
     },
     {
       id: 4,
-      title: "Video Watcher",
-      description: "Watch 10 videos this week",
-      reward: 200,
-      progress: videoStats?.videosWatched || 0,
+      title: "Survey Champion",
+      description: "Complete 3 surveys this week",
+      reward: 35,
+      progress: Math.min(completionStats?.completed || 0, 3),
+      total: 3,
+      icon: Star,
+      color: "accent",
+    },
+    {
+      id: 5,
+      title: "Game Master",
+      description: "Play all 4 games today",
+      reward: 40,
+      progress: 0,
+      total: 4,
+      icon: Trophy,
+      color: "primary",
+    },
+    {
+      id: 6,
+      title: "Social Butterfly",
+      description: "Share app with 2 friends",
+      reward: 30,
+      progress: 0,
+      total: 2,
+      icon: Zap,
+      color: "accent",
+    },
+    {
+      id: 7,
+      title: "Task Marathon",
+      description: "Complete 10 tasks this week",
+      reward: 60,
+      progress: completionStats?.completed || 0,
       total: 10,
-      icon: Play,
+      icon: Rocket,
+      color: "primary",
+    },
+    {
+      id: 8,
+      title: "Early Bird",
+      description: "Complete a task before 9 AM",
+      reward: 20,
+      progress: 0,
+      total: 1,
+      icon: Clock,
       color: "accent",
     },
   ], [completionStats, userProfile, videoStats]);

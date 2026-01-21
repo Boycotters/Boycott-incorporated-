@@ -12,7 +12,6 @@ import { useConfetti } from "@/hooks/useConfetti";
 import { SpinWheel, MemoryMatch, Basketball, KeepyUppy } from "@/components/games";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Progress } from "@/components/ui/progress";
 import { format, formatDistanceToNow } from "date-fns";
 
 interface PlaysRemaining {
@@ -328,24 +327,51 @@ export default function Games() {
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="spin" className="w-full">
+            <Tabs defaultValue="spin" className="w-full" onValueChange={(value) => {
+              // Prevent switching tabs while a game is in progress
+              const anyGamePlaying = isSpinning || isPlayingMemory || isPlayingBasketball || isPlayingKeepy;
+              if (anyGamePlaying) {
+                toast({ 
+                  title: "Game in Progress", 
+                  description: "Please finish your current game first!", 
+                  variant: "destructive" 
+                });
+                return;
+              }
+            }}>
               <TabsList className="grid w-full grid-cols-4 h-auto p-1">
-                <TabsTrigger value="spin" className="flex flex-col py-2 gap-1">
+                <TabsTrigger 
+                  value="spin" 
+                  className="flex flex-col py-2 gap-1"
+                  disabled={isPlayingMemory || isPlayingBasketball || isPlayingKeepy}
+                >
                   <span className="text-lg">🎡</span>
                   <span className="text-xs">Spin</span>
                   {playsRemaining && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{playsRemaining.spin_wheel}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="memory" className="flex flex-col py-2 gap-1">
+                <TabsTrigger 
+                  value="memory" 
+                  className="flex flex-col py-2 gap-1"
+                  disabled={isSpinning || isPlayingBasketball || isPlayingKeepy}
+                >
                   <span className="text-lg">🧠</span>
                   <span className="text-xs">Memory</span>
                   {playsRemaining && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{playsRemaining.memory_match}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="basketball" className="flex flex-col py-2 gap-1">
+                <TabsTrigger 
+                  value="basketball" 
+                  className="flex flex-col py-2 gap-1"
+                  disabled={isSpinning || isPlayingMemory || isPlayingKeepy}
+                >
                   <span className="text-lg">🏀</span>
                   <span className="text-xs">Hoops</span>
                   {playsRemaining && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{playsRemaining.basketball}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="keepy" className="flex flex-col py-2 gap-1">
+                <TabsTrigger 
+                  value="keepy" 
+                  className="flex flex-col py-2 gap-1"
+                  disabled={isSpinning || isPlayingMemory || isPlayingBasketball}
+                >
                   <span className="text-lg">⚽</span>
                   <span className="text-xs">Keepy</span>
                   {playsRemaining && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{playsRemaining.keepy_uppy}</Badge>}
