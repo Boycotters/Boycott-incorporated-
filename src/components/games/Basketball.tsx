@@ -37,7 +37,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
   const [hoopX, setHoopX] = useState(150);
   const [hoopDirection, setHoopDirection] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
   const scoreRef = useRef(0);
   const gameOverRef = useRef(false);
   const hasCompletedRef = useRef(false);
@@ -45,9 +45,9 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
   const BALL_SIZE = 40;
-  const HOOP_WIDTH = 70; // Wider hoop for much easier scoring
-  const HOOP_Y = 85; // Slightly lower hoop
-  const GRAVITY = 0.4; // Lighter gravity for better arcs
+  const HOOP_WIDTH = 80; // Very wide hoop for easy scoring
+  const HOOP_Y = 90; // Position of hoop
+  const GRAVITY = 0.35; // Light gravity for nice arcs
   const BALL_START_X = 150;
   const BALL_START_Y = 280;
 
@@ -82,8 +82,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     setGameOver(true);
     setIsPlaying(false);
     
-    // Calculate points - Max 10 pts per game, average ~8 pts
-    // Target: 4 games × 10 pts = 40 pts daily for games
+    // Calculate points - Max 10 pts per game
     let points = 0;
     if (finalScore >= 6) points = 10;
     else if (finalScore >= 4) points = 8;
@@ -134,7 +133,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     
     const moveHoop = setInterval(() => {
       setHoopX(prev => {
-        const speed = 1.5;
+        const speed = 1.2; // Slower movement
         let newX = prev + (speed * hoopDirection);
         
         if (newX >= CONTAINER_WIDTH - 60) {
@@ -152,7 +151,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     return () => clearInterval(moveHoop);
   }, [isPlaying, gameOver, hoopDirection]);
 
-  // Ball physics with improved scoring detection
+  // Ball physics with much more forgiving scoring
   useEffect(() => {
     if (!ball.visible || gameOver) return;
 
@@ -164,57 +163,55 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         let newY = prev.y + newVy;
         let newX = prev.x + prev.vx;
         
-        // Improved hoop collision detection - very generous scoring zone
+        // Very generous hoop collision detection
         const hoopLeft = hoopX - HOOP_WIDTH / 2;
         const hoopRight = hoopX + HOOP_WIDTH / 2;
         const ballCenterX = newX;
-        const ballRadius = BALL_SIZE / 2;
         
         // Ball scores if it passes through the hoop opening from above
-        // Very generous scoring zone for satisfying gameplay
-        const scoringMargin = 5; // smaller margin = larger scoring area
-        const isInHoopHorizontally = ballCenterX >= hoopLeft + scoringMargin && ballCenterX <= hoopRight - scoringMargin;
-        const isAtHoopLevel = prev.y <= HOOP_Y + 20 && newY >= HOOP_Y - 10;
+        // Extra generous scoring zone
+        const scoringZoneLeft = hoopLeft + 5;
+        const scoringZoneRight = hoopRight - 5;
+        const isInHoopHorizontally = ballCenterX >= scoringZoneLeft && ballCenterX <= scoringZoneRight;
+        const isAtHoopLevel = prev.y <= HOOP_Y + 25 && newY >= HOOP_Y - 15;
         const isMovingDown = prev.vy > 0;
         
         if (!prev.scored && isInHoopHorizontally && isAtHoopLevel && isMovingDown) {
           setScore(s => s + 1);
           scoreRef.current += 1;
-          // Let ball continue through the net
-          return { ...prev, y: newY, x: newX, vy: newVy * 0.7, scored: true };
+          return { ...prev, y: newY, x: newX, vy: newVy * 0.6, scored: true };
         }
         
-        // Rim collision - much smaller rim for fewer bounces
-        const rimWidth = 3; // Very thin rim
+        // Minimal rim - almost always go in if close
+        const rimWidth = 2;
+        const ballRadius = BALL_SIZE / 2;
         const hitLeftRim = !prev.scored && 
           ballCenterX >= hoopLeft - ballRadius && 
           ballCenterX <= hoopLeft + rimWidth && 
-          newY >= HOOP_Y - 5 && 
-          newY <= HOOP_Y + 8;
+          newY >= HOOP_Y - 8 && 
+          newY <= HOOP_Y + 12;
         const hitRightRim = !prev.scored && 
           ballCenterX >= hoopRight - rimWidth && 
           ballCenterX <= hoopRight + ballRadius && 
-          newY >= HOOP_Y - 5 && 
-          newY <= HOOP_Y + 8;
+          newY >= HOOP_Y - 8 && 
+          newY <= HOOP_Y + 12;
         
-        if (hitLeftRim) {
-          // High chance to go in on rim hit (80%)
-          const goIn = Math.random() > 0.2;
+        // 90% chance to go in on rim hit
+        if (hitLeftRim || hitRightRim) {
+          const goIn = Math.random() < 0.9;
           if (goIn) {
             setScore(s => s + 1);
             scoreRef.current += 1;
-            return { ...prev, y: newY + 10, x: hoopX, vy: 3, vx: 0, scored: true };
+            return { ...prev, y: newY + 15, x: hoopX, vy: 4, vx: 0, scored: true };
           }
-          return { ...prev, x: hoopLeft - ballRadius - 2, y: newY, vx: -Math.abs(prev.vx) * 0.3 - 0.3, vy: newVy * 0.4 };
-        }
-        if (hitRightRim) {
-          const goIn = Math.random() > 0.2;
-          if (goIn) {
-            setScore(s => s + 1);
-            scoreRef.current += 1;
-            return { ...prev, y: newY + 10, x: hoopX, vy: 3, vx: 0, scored: true };
-          }
-          return { ...prev, x: hoopRight + ballRadius + 2, y: newY, vx: Math.abs(prev.vx) * 0.3 + 0.3, vy: newVy * 0.4 };
+          // Bounce off gently
+          return { 
+            ...prev, 
+            x: hitLeftRim ? hoopLeft - ballRadius - 3 : hoopRight + ballRadius + 3, 
+            y: newY, 
+            vx: hitLeftRim ? -Math.abs(prev.vx) * 0.2 : Math.abs(prev.vx) * 0.2, 
+            vy: newVy * 0.3 
+          };
         }
         
         // Ball goes off screen or hits ground
@@ -256,7 +253,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     
     // Only allow drag from ball area
     const distToBall = Math.sqrt(Math.pow(x - BALL_START_X, 2) + Math.pow(y - BALL_START_Y, 2));
-    if (distToBall > 60) return;
+    if (distToBall > 70) return;
     
     setDragStart({ x, y });
     setDragEnd({ x, y });
@@ -294,22 +291,22 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     // Calculate velocity based on drag (swipe up and towards hoop)
     const dx = dragStart.x - dragEnd.x;
     const dy = dragStart.y - dragEnd.y;
-    const power = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.14, 14);
+    const power = Math.min(Math.sqrt(dx * dx + dy * dy) * 0.13, 13);
     
     // Only shoot if swiped upward with enough power
-    if (power > 2 && dy > 10) {
+    if (power > 1.5 && dy > 8) {
       const angle = Math.atan2(dy, dx);
       const vx = Math.cos(angle) * power;
       const vy = Math.sin(angle) * power;
       
-      // Better arc for more satisfying shots - aim towards hoop
-      const aimAdjustment = (hoopX - BALL_START_X) * 0.015;
+      // Auto-aim towards hoop for more success
+      const aimAdjustment = (hoopX - BALL_START_X) * 0.02;
       
       setBall({
         x: BALL_START_X,
         y: BALL_START_Y,
-        vx: -vx * 0.6 + aimAdjustment,
-        vy: -Math.abs(vy) * 1.25, // Higher arc
+        vx: -vx * 0.5 + aimAdjustment,
+        vy: -Math.abs(vy) * 1.3, // Higher arc
         visible: true,
         scored: false,
       });
@@ -374,14 +371,14 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             <div 
               className="absolute bg-white border-4 border-gray-400 rounded transition-all duration-100"
               style={{
-                left: hoopX - 35,
-                top: 40,
-                width: 70,
+                left: hoopX - 40,
+                top: 45,
+                width: 80,
                 height: 50,
               }}
             />
             
-            {/* Hoop */}
+            {/* Hoop - wider for easier scoring */}
             <div 
               className="absolute transition-all duration-100"
               style={{
@@ -390,10 +387,10 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
               }}
             >
               <div className="relative">
-                <div className="w-[50px] h-3 border-4 border-orange-500 border-t-0 rounded-b-lg" />
+                <div className="h-3 border-4 border-orange-500 border-t-0 rounded-b-lg" style={{ width: HOOP_WIDTH - 20 }} />
                 {/* Net */}
-                <div className="absolute top-3 left-1 w-[46px] h-8 border-l-2 border-r-2 border-b-2 border-orange-300/50 rounded-b-lg" 
-                     style={{ borderStyle: 'dashed' }} />
+                <div className="absolute top-3 left-1 h-8 border-l-2 border-r-2 border-b-2 border-orange-300/50 rounded-b-lg" 
+                     style={{ width: HOOP_WIDTH - 24, borderStyle: 'dashed' }} />
               </div>
             </div>
             
@@ -479,7 +476,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             <p className="text-muted-foreground text-center px-4">
               Drag from the ball and swipe up to shoot!<br/>
               You have 30 seconds.<br/>
-              <span className="text-xs mt-2 block">Score 10+ for max points!</span>
+              <span className="text-xs mt-2 block">Score 6+ baskets for max points!</span>
             </p>
           </div>
         )}

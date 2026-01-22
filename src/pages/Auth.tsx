@@ -36,6 +36,7 @@ const forgotPasswordSchema = z.object({
 });
 
 type AuthMethod = "email" | "phone";
+type ForgotPasswordMethod = "email" | "phone";
 type PhoneAuthStep = "phone" | "otp";
 
 const Auth = () => {
@@ -80,6 +81,10 @@ const Auth = () => {
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotEmailError, setForgotEmailError] = useState<string | null>(null);
+  const [forgotPasswordMethod, setForgotPasswordMethod] = useState<ForgotPasswordMethod>("email");
+  const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotPhoneOtp, setForgotPhoneOtp] = useState("");
+  const [forgotPhoneStep, setForgotPhoneStep] = useState<"phone" | "otp">("phone");
 
   // Password strength indicators
   const passwordChecks = {
