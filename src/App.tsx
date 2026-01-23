@@ -25,12 +25,16 @@ import Surveys from "./pages/Surveys";
 import Videos from "./pages/Videos";
 import Admin from "./pages/Admin";
 import Games from "./pages/Games";
+import FAQ from "./pages/FAQ";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys', '/videos', '/admin', '/games'];
+  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys', '/videos', '/admin', '/games', '/faq', '/terms', '/privacy', '/about'];
   const showNav = !hideNavRoutes.includes(location.pathname);
 
   return (
@@ -55,6 +59,10 @@ const AppContent = () => {
         <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
+        <Route path="/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+        <Route path="/terms" element={<ProtectedRoute><Terms /></ProtectedRoute>} />
+        <Route path="/privacy" element={<ProtectedRoute><Privacy /></ProtectedRoute>} />
+        <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

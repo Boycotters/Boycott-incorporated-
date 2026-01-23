@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard } from "lucide-react";
+import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard, HelpCircle, FileText, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -479,6 +479,65 @@ export default function Settings() {
                 </div>
               </DialogContent>
             </Dialog>
+          </div>
+        </Card>
+
+        {/* Help & Legal */}
+        <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
+          <h3 className="font-semibold text-lg mb-4">Help & Legal</h3>
+          
+          <div className="space-y-2">
+            <button 
+              onClick={() => navigate('/faq')}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-secondary p-2 rounded-xl">
+                  <HelpCircle className="w-5 h-5 text-secondary-foreground" />
+                </div>
+                <span className="font-medium">FAQ</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            <button 
+              onClick={() => navigate('/terms')}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-secondary p-2 rounded-xl">
+                  <FileText className="w-5 h-5 text-secondary-foreground" />
+                </div>
+                <span className="font-medium">Terms & Conditions</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            <button 
+              onClick={() => navigate('/privacy')}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-secondary p-2 rounded-xl">
+                  <Shield className="w-5 h-5 text-secondary-foreground" />
+                </div>
+                <span className="font-medium">Privacy Policy</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            <button 
+              onClick={() => navigate('/about')}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-secondary p-2 rounded-xl">
+                  <Info className="w-5 h-5 text-secondary-foreground" />
+                </div>
+                <span className="font-medium">About Us</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
           </div>
         </Card>
 
