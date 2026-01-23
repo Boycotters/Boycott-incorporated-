@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, addDays, subDays, isToday } from "date-fns";
 import { LiveWalletCard } from "@/components/wallet";
-
+import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
 interface StreakResult {
   claimed: boolean;
   already_claimed_today: boolean;
@@ -393,6 +393,9 @@ export default function Home() {
             </div>
           </Card>
         </div>
+
+        {/* Daily Limits Progress */}
+        <DailyLimitsProgress />
 
         {/* Daily Streak Card */}
         <Card className="bg-gradient-to-br from-orange-500 to-red-600 p-3 rounded-2xl shadow-hover border-0 overflow-hidden relative">

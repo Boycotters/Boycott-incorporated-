@@ -158,6 +158,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_activity_limits: {
+        Row: {
+          activity_date: string
+          ai_tasks_completed: number | null
+          created_at: string | null
+          games_played: number | null
+          id: string
+          regular_tasks_completed: number | null
+          surveys_completed: number | null
+          total_points_earned: number | null
+          updated_at: string | null
+          user_id: string
+          videos_watched: number | null
+        }
+        Insert: {
+          activity_date?: string
+          ai_tasks_completed?: number | null
+          created_at?: string | null
+          games_played?: number | null
+          id?: string
+          regular_tasks_completed?: number | null
+          surveys_completed?: number | null
+          total_points_earned?: number | null
+          updated_at?: string | null
+          user_id: string
+          videos_watched?: number | null
+        }
+        Update: {
+          activity_date?: string
+          ai_tasks_completed?: number | null
+          created_at?: string | null
+          games_played?: number | null
+          id?: string
+          regular_tasks_completed?: number | null
+          surveys_completed?: number | null
+          total_points_earned?: number | null
+          updated_at?: string | null
+          user_id?: string
+          videos_watched?: number | null
+        }
+        Relationships: []
+      }
       earning_algorithms: {
         Row: {
           config: Json
@@ -1019,6 +1061,7 @@ export type Database = {
         Row: {
           created_at: string | null
           equipped_at: string | null
+          expires_at: string | null
           id: string
           is_equipped: boolean | null
           item_type: string
@@ -1029,6 +1072,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           equipped_at?: string | null
+          expires_at?: string | null
           id?: string
           is_equipped?: boolean | null
           item_type: string
@@ -1039,6 +1083,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           equipped_at?: string | null
+          expires_at?: string | null
           id?: string
           is_equipped?: boolean | null
           item_type?: string
@@ -1205,11 +1250,15 @@ export type Database = {
       }
       users: {
         Row: {
+          ban_reason: string | null
+          banned_at: string | null
+          banned_by: string | null
           created_at: string | null
           current_streak: number | null
           email: string
           full_name: string | null
           id: string
+          is_banned: boolean | null
           is_verified: boolean | null
           last_login_date: string | null
           level: number | null
@@ -1221,11 +1270,15 @@ export type Database = {
           vip_tier: string | null
         }
         Insert: {
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           created_at?: string | null
           current_streak?: number | null
           email: string
           full_name?: string | null
           id?: string
+          is_banned?: boolean | null
           is_verified?: boolean | null
           last_login_date?: string | null
           level?: number | null
@@ -1237,11 +1290,15 @@ export type Database = {
           vip_tier?: string | null
         }
         Update: {
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           created_at?: string | null
           current_streak?: number | null
           email?: string
           full_name?: string | null
           id?: string
+          is_banned?: boolean | null
           is_verified?: boolean | null
           last_login_date?: string | null
           level?: number | null
@@ -1516,6 +1573,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_ban_user: {
+        Args: {
+          p_ban_reason?: string
+          p_is_banned?: boolean
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_update_withdrawal: {
         Args: {
           p_admin_notes?: string
@@ -1543,6 +1608,14 @@ export type Database = {
       }
       check_comprehensive_daily_limits: {
         Args: { p_user_id: string }
+        Returns: Json
+      }
+      check_daily_activity_limit: {
+        Args: {
+          p_activity_type: string
+          p_points_amount?: number
+          p_user_id: string
+        }
         Returns: Json
       }
       check_daily_earning_cap: { Args: { p_user_id: string }; Returns: Json }
@@ -1592,6 +1665,7 @@ export type Database = {
       }
       export_survey_data: { Args: { p_mark_exported?: boolean }; Returns: Json }
       get_active_flash_sales: { Args: never; Returns: Json }
+      get_daily_activity_status: { Args: { p_user_id: string }; Returns: Json }
       get_game_leaderboard: {
         Args: { p_game_type?: string; p_period?: string }
         Returns: {
@@ -1612,6 +1686,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_daily_activity: {
+        Args: {
+          p_activity_type: string
+          p_points_amount?: number
+          p_user_id: string
+        }
+        Returns: undefined
       }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
       join_tournament: {
