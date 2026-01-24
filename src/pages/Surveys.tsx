@@ -16,6 +16,8 @@ import { useConfetti } from "@/hooks/useConfetti";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
 
 interface GeneratedSurvey {
   title: string;
@@ -49,6 +51,7 @@ export default function Surveys() {
   const { fireConfetti } = useConfetti();
   const queryClient = useQueryClient();
   const { generateSurvey, loading: aiLoading } = useAI();
+  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
 
   const [activeTab, setActiveTab] = useState<"available" | "active">("available");
   const [activeSurvey, setActiveSurvey] = useState<GeneratedSurvey | null>(null);
@@ -386,6 +389,27 @@ export default function Surveys() {
               )}
             </Button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show weekend break message if surveys are blocked
+  if (isWeekendBlocked) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-border px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold">Surveys</h1>
+            </div>
+          </div>
+        </header>
+        <div className="p-4">
+          <WeekendBreakMessage />
         </div>
       </div>
     );

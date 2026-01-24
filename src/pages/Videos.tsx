@@ -22,6 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
 
 interface Video {
   id: string;
@@ -56,6 +58,7 @@ export default function Videos() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -256,6 +259,25 @@ export default function Videos() {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show weekend break message if videos are blocked
+  if (isWeekendBlocked) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center p-4">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="absolute top-4 left-4"
+          onClick={() => navigate('/earn')}
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </Button>
+        <div className="max-w-md w-full">
+          <WeekendBreakMessage />
+        </div>
       </div>
     );
   }
