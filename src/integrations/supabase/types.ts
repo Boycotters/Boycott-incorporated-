@@ -1773,6 +1773,10 @@ export type Database = {
         Args: { points_to_add: number; user_id: string }
         Returns: undefined
       }
+      upsert_daily_activity: {
+        Args: { p_activity_date?: string; p_user_id: string }
+        Returns: undefined
+      }
       verify_admin_access_code: {
         Args: { p_code: string; p_user_id: string }
         Returns: Json

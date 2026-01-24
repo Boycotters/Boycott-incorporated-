@@ -3,12 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 interface DailyActivityStatus {
-  ai_tasks: { completed: number; max: number; remaining: number };
+  partnered_tasks: { completed: number; max: number; remaining: number };
+  regular_tasks: { completed: number; max: number; remaining: number };
   surveys: { completed: number; max: number; remaining: number };
   videos: { completed: number; max: number; remaining: number };
   games: { completed: number; max: number; remaining: number };
-  regular_tasks: { completed: number; max: number; remaining: number };
   total_points: { earned: number; max: number; remaining: number };
+  is_weekend: boolean;
+  has_campaign: boolean;
 }
 
 export function useDailyLimits() {
@@ -30,18 +32,24 @@ export function useDailyLimits() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  const canDoActivity = (type: keyof Omit<DailyActivityStatus, 'total_points'>) => {
+  const canDoActivity = (type: 'partnered_tasks' | 'regular_tasks' | 'surveys' | 'videos' | 'games') => {
     if (!data) return true;
+    
+    // Block on weekends without campaign
+    if (data.is_weekend && !data.has_campaign) return false;
+    
     return data[type].remaining > 0 && data.total_points.remaining > 0;
   };
 
-  const getRemainingForActivity = (type: keyof Omit<DailyActivityStatus, 'total_points'>) => {
+  const getRemainingForActivity = (type: 'partnered_tasks' | 'regular_tasks' | 'surveys' | 'videos' | 'games') => {
     if (!data) return { count: 0, points: 0 };
     return {
       count: data[type].remaining,
       points: data.total_points.remaining
     };
   };
+
+  const isWeekendBlocked = data ? (data.is_weekend && !data.has_campaign) : false;
 
   return {
     data,
@@ -53,5 +61,8 @@ export function useDailyLimits() {
     totalPointsEarned: data?.total_points.earned ?? 0,
     totalPointsRemaining: data?.total_points.remaining ?? 180,
     maxDailyPoints: 180,
+    isWeekend: data?.is_weekend ?? false,
+    hasCampaign: data?.has_campaign ?? false,
+    isWeekendBlocked,
   };
 }

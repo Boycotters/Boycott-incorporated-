@@ -134,7 +134,7 @@ export function UserInventory() {
                 key={item.id} 
                 className={`p-3 rounded-xl transition-all ${
                   item.is_equipped 
-                    ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/20' 
+                    ? 'bg-gradient-to-r from-primary/20 via-accent/15 to-primary/20 border-primary/40 ring-2 ring-primary/30 shadow-lg shadow-primary/20' 
                     : 'bg-gradient-card border-border'
                 }`}
               >
@@ -155,7 +155,7 @@ export function UserInventory() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate">{item.rewards.name}</p>
                       {item.is_equipped && (
-                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-primary/20 text-primary">
+                        <Badge className="text-[10px] h-4 px-1.5 bg-gradient-to-r from-primary to-accent text-white border-0 animate-pulse">
                           <Check className="w-2.5 h-2.5 mr-0.5" />
                           Active
                         </Badge>
