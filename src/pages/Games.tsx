@@ -13,6 +13,8 @@ import { SpinWheel, MemoryMatch, Basketball, KeepyUppy } from "@/components/game
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, formatDistanceToNow } from "date-fns";
+import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
 
 interface PlaysRemaining {
   spin_wheel: number;
@@ -69,6 +71,7 @@ export default function Games() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { fireConfetti } = useConfetti();
+  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
   
   const [mainTab, setMainTab] = useState("play");
   const [isSpinning, setIsSpinning] = useState(false);
@@ -256,6 +259,28 @@ export default function Games() {
     return (
       <div className="min-h-screen flex items-center justify-center pb-24">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show weekend break message if games are blocked
+  if (isWeekendBlocked) {
+    return (
+      <div className="min-h-screen pb-24 px-4 pt-6">
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/earn')}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Gamepad2 className="w-6 h-6 text-primary" />
+                Play & Earn
+              </h1>
+            </div>
+          </div>
+          <WeekendBreakMessage />
+        </div>
       </div>
     );
   }
