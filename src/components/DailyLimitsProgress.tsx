@@ -3,7 +3,7 @@ import { useDailyLimits } from "@/hooks/useDailyLimits";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Zap, FileText, Video, Gamepad2, Target, CheckCircle2, Lock } from "lucide-react";
+import { Zap, FileText, Video, Gamepad2, Target, CheckCircle2, Lock, Handshake, Calendar } from "lucide-react";
 
 interface DailyLimitsProgressProps {
   variant?: "compact" | "full";
@@ -12,7 +12,7 @@ interface DailyLimitsProgressProps {
 
 export function DailyLimitsProgress({ variant = "full", className = "" }: DailyLimitsProgressProps) {
   const { user } = useAuth();
-  const { data, isLoading, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
+  const { data, isLoading, hasReachedDailyCap, totalPointsEarned, maxDailyPoints, isWeekendBlocked } = useDailyLimits();
 
   if (isLoading || !user || !data) {
     return null;
@@ -41,11 +41,18 @@ export function DailyLimitsProgress({ variant = "full", className = "" }: DailyL
 
   const activities = [
     { 
-      key: 'ai_tasks', 
-      label: 'AI Tasks', 
-      icon: Target, 
-      data: data.ai_tasks,
+      key: 'partnered_tasks', 
+      label: 'Partnered', 
+      icon: Handshake, 
+      data: data.partnered_tasks,
       color: 'text-purple-500 bg-purple-500/10'
+    },
+    { 
+      key: 'regular_tasks', 
+      label: 'Tasks', 
+      icon: Target, 
+      data: data.regular_tasks,
+      color: 'text-yellow-500 bg-yellow-500/10'
     },
     { 
       key: 'surveys', 
@@ -56,7 +63,7 @@ export function DailyLimitsProgress({ variant = "full", className = "" }: DailyL
     },
     { 
       key: 'videos', 
-      label: 'Videos', 
+      label: 'Ads', 
       icon: Video, 
       data: data.videos,
       color: 'text-green-500 bg-green-500/10'
@@ -68,22 +75,23 @@ export function DailyLimitsProgress({ variant = "full", className = "" }: DailyL
       data: data.games,
       color: 'text-orange-500 bg-orange-500/10'
     },
-    { 
-      key: 'regular_tasks', 
-      label: 'Tasks', 
-      icon: Zap, 
-      data: data.regular_tasks,
-      color: 'text-yellow-500 bg-yellow-500/10'
-    },
   ];
 
   return (
     <Card className={`bg-gradient-card p-4 rounded-2xl shadow-card border border-border ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-sm">Daily Progress</h3>
-        <Badge variant={hasReachedDailyCap ? "default" : "secondary"} className="text-xs">
-          {totalPointsEarned}/{maxDailyPoints} pts
-        </Badge>
+        <div className="flex items-center gap-2">
+          {data.has_campaign && (
+            <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-accent text-accent">
+              <Calendar className="w-3 h-3 mr-0.5" />
+              Campaign
+            </Badge>
+          )}
+          <Badge variant={hasReachedDailyCap ? "default" : "secondary"} className="text-xs">
+            {totalPointsEarned}/{maxDailyPoints} pts
+          </Badge>
+        </div>
       </div>
       
       <Progress value={progressPercent} className="h-2.5 mb-4" />
@@ -112,7 +120,14 @@ export function DailyLimitsProgress({ variant = "full", className = "" }: DailyL
         })}
       </div>
 
-      {hasReachedDailyCap && (
+      {isWeekendBlocked && (
+        <div className="mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-orange-500/10">
+          <Calendar className="w-4 h-4 text-orange-500" />
+          <span className="text-xs text-orange-600 font-medium">Weekend Break! Tasks resume Monday.</span>
+        </div>
+      )}
+
+      {hasReachedDailyCap && !isWeekendBlocked && (
         <div className="mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary/10">
           <Lock className="w-4 h-4 text-primary" />
           <span className="text-xs text-primary font-medium">Daily limit reached! Come back tomorrow.</span>
