@@ -139,7 +139,7 @@ const VIP = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {currentTier?.benefits.map((benefit, index) => (
+            {(currentTier?.benefits || []).map((benefit, index) => (
               <div key={index} className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
                 <span className="text-sm">{benefit}</span>
@@ -202,7 +202,7 @@ const VIP = () => {
                   {/* Benefits preview */}
                   <div className="mt-3 pt-3 border-t border-border/50">
                     <div className="grid grid-cols-2 gap-1">
-                      {tier.benefits.slice(0, 4).map((benefit, i) => (
+                      {(tier.benefits || []).slice(0, 4).map((benefit, i) => (
                         <div key={i} className="flex items-center gap-1 text-xs text-muted-foreground">
                           {isUnlocked ? (
                             <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
@@ -213,9 +213,9 @@ const VIP = () => {
                         </div>
                       ))}
                     </div>
-                    {tier.benefits.length > 4 && (
+                    {(tier.benefits || []).length > 4 && (
                       <p className="text-xs text-primary mt-1">
-                        +{tier.benefits.length - 4} more benefits
+                        +{(tier.benefits || []).length - 4} more benefits
                       </p>
                     )}
                   </div>
