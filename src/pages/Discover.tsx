@@ -135,7 +135,7 @@ export default function Discover() {
         .limit(4);
       
       if (error) throw error;
-      return data?.map((user, i) => ({
+      return (data || []).map((user, i) => ({
         name: user.full_name || 'Anonymous',
         points: user.total_points || 0,
         rank: i + 1,
@@ -535,7 +535,7 @@ export default function Discover() {
 
             {/* Trending Tasks Grid */}
             <div className="space-y-3">
-              {trendingTasks?.map((task, index) => (
+              {(trendingTasks || []).map((task, index) => (
                 <Card
                   key={task.id}
                   className="bg-card rounded-2xl border hover:shadow-hover transition-all duration-300 overflow-hidden cursor-pointer"
@@ -641,7 +641,7 @@ export default function Discover() {
                   <h3 className="font-semibold">Top Earners This Week</h3>
                 </div>
                 <div className="space-y-3">
-                  {topEarners?.map((earner, index) => (
+                  {(topEarners || []).map((earner, index) => (
                     <div 
                       key={index}
                       className={`flex items-center gap-3 p-2 rounded-xl ${
