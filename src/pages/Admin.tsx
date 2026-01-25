@@ -885,7 +885,7 @@ export default function Admin() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {platformStats?.users_by_tier && Object.entries(platformStats.users_by_tier).map(([tier, count]) => (
+                  {Object.entries(platformStats?.users_by_tier || {}).map(([tier, count]) => (
                     <div key={tier} className="flex justify-between items-center">
                       <Badge variant="outline" className="capitalize">{tier}</Badge>
                       <span className="font-semibold">{String(count)}</span>
@@ -1022,7 +1022,7 @@ export default function Admin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u) => (
+                  {(users || []).map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
                         <div>
@@ -1163,7 +1163,7 @@ export default function Admin() {
               </DialogContent>
             </Dialog>
 
-            {tasks.map((task) => (
+            {(tasks || []).map((task) => (
               <Card key={task.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">

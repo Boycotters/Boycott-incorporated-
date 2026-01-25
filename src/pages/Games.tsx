@@ -475,8 +475,8 @@ export default function Games() {
                 {/* Leaderboard List */}
                 <ScrollArea className="h-[300px]">
                   <div className="space-y-2">
-                    {leaderboard && leaderboard.length > 0 ? (
-                      leaderboard.map((entry, index) => (
+                    {(leaderboard || []).length > 0 ? (
+                      (leaderboard || []).map((entry, index) => (
                         <div
                           key={entry.user_id}
                           className={`flex items-center gap-3 p-3 rounded-xl ${
@@ -528,13 +528,13 @@ export default function Games() {
                   Game Achievements
                 </CardTitle>
                 <CardDescription>
-                  {achievements?.filter(a => a.earned).length || 0} / {achievements?.length || 0} unlocked
+                  {(achievements || []).filter(a => a.earned).length} / {(achievements || []).length} unlocked
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-3">
-                    {achievements?.map(achievement => (
+                    {(achievements || []).map(achievement => (
                       <div
                         key={achievement.id}
                         className={`p-3 rounded-xl border ${

@@ -479,7 +479,7 @@ export default function Home() {
             </Button>
           </div>
           <div className="space-y-1.5">
-            {leaderboard?.map((leader, index) => {
+            {(leaderboard || []).map((leader, index) => {
               const position = getLeaderboardPosition(index);
               const isCurrentUser = leader.id === user?.id;
               

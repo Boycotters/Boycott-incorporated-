@@ -549,9 +549,9 @@ export default function Surveys() {
                 </CardContent>
               </Card>
             ) : (
-              surveyTasks
+              (surveyTasks || [])
                 .filter(t => t.source === 'partner')
-                .filter(t => !completedSurveys?.includes(t.id))
+                .filter(t => !(completedSurveys || []).includes(t.id))
                 .map((task) => (
                   <Card key={task.id} className="hover:border-primary/50 transition-colors">
                     <CardHeader className="pb-2">

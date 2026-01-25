@@ -882,7 +882,7 @@ export default function Earn() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Available Tasks</h2>
           
-          {tasks?.map((task) => {
+          {(tasks || []).map((task) => {
             const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
             const VerifyIcon = verificationIcons[task.verification_type || 'instant'] || Zap;
             const completed = isTaskCompleted(task.id);
