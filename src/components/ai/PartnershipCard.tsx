@@ -265,7 +265,7 @@ export function PartnershipCard({
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Requirements:</p>
             <ul className="space-y-1">
-              {partnership.requirements.slice(0, 3).map((req, i) => (
+              {(partnership.requirements || []).slice(0, 3).map((req, i) => (
                 <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                   {req}
@@ -319,7 +319,7 @@ export function PartnershipCard({
             <div className="bg-muted/50 p-3 rounded-lg">
               <p className="text-xs font-medium mb-2">Requirements:</p>
               <ul className="space-y-1">
-                {partnership.requirements.map((req, i) => (
+                {(partnership.requirements || []).map((req, i) => (
                   <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
                     <CheckCircle className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
                     {req}

@@ -231,7 +231,7 @@ export function TimerVerification({
               Pro Tips for Earning More
             </h4>
             <div className="space-y-2">
-              {taskContent.contentData?.tips.map((tip: string, i: number) => (
+              {(taskContent.contentData?.tips || []).map((tip: string, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
                   <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
                   <p className="text-muted-foreground">{tip}</p>
@@ -244,8 +244,8 @@ export function TimerVerification({
       case "reading":
         return (
           <Card className="p-4 max-h-52 overflow-y-auto space-y-3 bg-muted/30">
-            <h4 className="font-semibold">{taskContent.contentData?.article.title}</h4>
-            {taskContent.contentData?.article.content.map((point: string, i: number) => (
+            <h4 className="font-semibold">{taskContent.contentData?.article?.title}</h4>
+            {(taskContent.contentData?.article?.content || []).map((point: string, i: number) => (
               <p key={i} className="text-sm text-muted-foreground">
                 <strong>{i + 1}.</strong> {point}
               </p>

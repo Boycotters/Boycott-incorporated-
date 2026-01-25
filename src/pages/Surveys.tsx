@@ -173,12 +173,35 @@ export default function Surveys() {
   };
 
   const completeSurveyMutation = useMutation({
-    mutationFn: async (points: number) => {
-      // Use the secure server-side function to award survey points
+    mutationFn: async ({ points, survey, surveyAnswers }: { 
+      points: number; 
+      survey: GeneratedSurvey; 
+      surveyAnswers: Record<string, string>;
+    }) => {
+      // Format questions and responses for storage
+      const formattedQuestions = survey.questions.map(q => ({
+        id: q.id,
+        question: q.question,
+        type: q.type,
+        options: q.options || null,
+        required: q.required
+      }));
+      
+      const formattedResponses = survey.questions.map(q => ({
+        question_id: q.id,
+        question: q.question,
+        answer: surveyAnswers[q.id] || ''
+      }));
+
+      // Use the secure server-side function to award survey points and store data
       const { data, error } = await supabase.rpc('award_survey_points', {
         p_user_id: user?.id,
         p_points: points,
-        p_survey_title: activeSurvey?.title || 'AI Survey',
+        p_survey_title: survey.title,
+        p_survey_id: `ai_${survey.category}_${Date.now()}`,
+        p_questions: formattedQuestions,
+        p_responses: formattedResponses,
+        p_completion_time: survey.estimatedMinutes * 60
       });
 
       if (error) throw error;
@@ -199,6 +222,7 @@ export default function Surveys() {
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
     },
     onError: (error: any) => {
       toast({
@@ -214,7 +238,11 @@ export default function Surveys() {
     setSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCompleted(true);
-    completeSurveyMutation.mutate(activeSurvey.points_reward);
+    completeSurveyMutation.mutate({ 
+      points: activeSurvey.points_reward, 
+      survey: activeSurvey,
+      surveyAnswers: answers 
+    });
   };
 
   const handleExitSurvey = () => {
