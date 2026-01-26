@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Handshake, Sparkles, ExternalLink, Clock, Coins, RefreshCw, CheckCircle, Camera, FileText } from "lucide-react";
+import { Handshake, Sparkles, ExternalLink, Clock, Coins, RefreshCw, CheckCircle, Camera, FileText, AlertCircle } from "lucide-react";
 import { useAI, PartnershipTask } from "@/hooks/useAI";
 import { cn } from "@/lib/utils";
 import { UrlVerification } from "@/components/task-verification/UrlVerification";
@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConfetti } from "@/hooks/useConfetti";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
 
 interface PartnershipCardProps {
   brandCategory?: string;
@@ -61,6 +62,7 @@ export function PartnershipCard({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { fireConfetti } = useConfetti();
+  const { canDoActivity, isWeekendBlocked, refetch: refetchLimits } = useDailyLimits();
 
   const loadPartnership = async () => {
     // Add randomness for variety on each refresh
@@ -80,6 +82,15 @@ export function PartnershipCard({
   }, []);
 
   const handleStartTask = () => {
+    // Check if user can do partnered tasks
+    if (!canDoActivity('partnered_tasks')) {
+      toast({
+        title: "Daily Limit Reached",
+        description: isWeekendBlocked ? "Tasks resume on Monday!" : "You've reached your daily partner task limit.",
+        variant: "destructive"
+      });
+      return;
+    }
     if (partnership) {
       setIsModalOpen(true);
     }
@@ -117,6 +128,8 @@ export function PartnershipCard({
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
+      refetchLimits();
       
       setIsModalOpen(false);
       

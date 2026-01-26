@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Target, RefreshCw, Zap, Clock, Trophy, CheckCircle, Coins } from "lucide-react";
+import { Sparkles, Target, RefreshCw, Zap, Clock, Trophy, CheckCircle, Coins, AlertCircle } from "lucide-react";
 import { useAI, RecommendationsResult, TaskRecommendation } from "@/hooks/useAI";
 import { cn } from "@/lib/utils";
 import { TimerVerification } from "@/components/task-verification/TimerVerification";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useConfetti } from "@/hooks/useConfetti";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
 
 interface TaskRecommendationsProps {
   userLevel: number;
@@ -60,6 +61,7 @@ export function TaskRecommendations({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { fireConfetti } = useConfetti();
+  const { canDoActivity, isWeekendBlocked, data: dailyLimits, refetch: refetchLimits } = useDailyLimits();
 
   const loadRecommendations = async () => {
     // Add randomness to interests for variety
@@ -82,6 +84,15 @@ export function TaskRecommendations({
   };
 
   const handleTaskClick = (rec: TaskRecommendation) => {
+    // Check if user can do partnered tasks
+    if (!canDoActivity('partnered_tasks')) {
+      toast({
+        title: "Daily Limit Reached",
+        description: isWeekendBlocked ? "Tasks resume on Monday!" : "You've reached your daily task limit.",
+        variant: "destructive"
+      });
+      return;
+    }
     setSelectedTask(rec);
     setIsModalOpen(true);
   };
@@ -120,6 +131,8 @@ export function TaskRecommendations({
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
+      refetchLimits();
       
       setIsModalOpen(false);
       setSelectedTask(null);

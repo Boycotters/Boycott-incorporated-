@@ -95,6 +95,8 @@ interface User {
   current_streak: number | null;
   created_at: string | null;
   is_verified: boolean | null;
+  is_banned: boolean | null;
+  ban_reason: string | null;
 }
 
 interface Task {
@@ -481,6 +483,30 @@ export default function Admin() {
     onSuccess: () => {
       toast.success('Algorithm updated');
       queryClient.invalidateQueries({ queryKey: ['admin-algorithms'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Ban user mutation
+  const banUserMutation = useMutation({
+    mutationFn: async ({ userId, isBanned, reason }: { userId: string; isBanned: boolean; reason: string }) => {
+      const { data, error } = await supabase.rpc('admin_ban_user', {
+        p_user_id: userId,
+        p_is_banned: isBanned,
+        p_ban_reason: reason,
+      });
+      if (error) throw error;
+      return data as { success: boolean; message: string };
+    },
+    onSuccess: (result) => {
+      if (result?.success) {
+        toast.success(result.message);
+        queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      } else {
+        toast.error(result?.message || 'Failed to update user');
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -1019,6 +1045,7 @@ export default function Admin() {
                     <TableHead>VIP</TableHead>
                     <TableHead>Streak</TableHead>
                     <TableHead>Joined</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1038,6 +1065,20 @@ export default function Admin() {
                       <TableCell>{u.current_streak || 0} days</TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant={(u as any).is_banned ? "outline" : "destructive"}
+                          onClick={() => banUserMutation.mutate({ 
+                            userId: u.id, 
+                            isBanned: !(u as any).is_banned,
+                            reason: (u as any).is_banned ? '' : 'Banned by admin'
+                          })}
+                          disabled={banUserMutation.isPending}
+                        >
+                          {(u as any).is_banned ? 'Unban' : 'Ban'}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1356,6 +1397,38 @@ export default function Admin() {
 
           {/* Survey Data Tab */}
           <TabsContent value="surveys" className="mt-4 space-y-4">
+            {/* Survey Stats Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card className="bg-purple-500/10 border-purple-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-purple-600">{surveyResponses.length}</p>
+                  <p className="text-xs text-muted-foreground">Total Responses</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-green-500/10 border-green-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-green-600">{unexportedSurveys.length}</p>
+                  <p className="text-xs text-muted-foreground">Ready to Export</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-blue-500/10 border-blue-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {surveyResponses.reduce((acc, s) => acc + (Array.isArray(s.questions) ? s.questions.length : 0), 0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Total Questions</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-amber-500/10 border-amber-500/20">
+                <CardContent className="p-4 text-center">
+                  <p className="text-2xl font-bold text-amber-600">
+                    K{Math.round(surveyResponses.length * 0.5)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Est. Data Value</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -1373,18 +1446,23 @@ export default function Admin() {
                   </Button>
                 </CardTitle>
                 <CardDescription>
-                  Collected survey responses for data monetization. Export to JSON for analysis or selling.
+                  Collected survey responses for data monetization. Export to JSON for analysis or selling to market research companies.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {surveyResponses.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No survey responses collected yet</p>
+                  <div className="text-center py-12">
+                    <Database className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">No survey responses collected yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Survey data will appear here as users complete surveys</p>
+                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Survey</TableHead>
                         <TableHead>Questions</TableHead>
+                        <TableHead>Responses</TableHead>
                         <TableHead>Time</TableHead>
                         <TableHead>Points</TableHead>
                         <TableHead>Status</TableHead>
@@ -1394,12 +1472,13 @@ export default function Admin() {
                     <TableBody>
                       {surveyResponses.map((survey) => (
                         <TableRow key={survey.id}>
-                          <TableCell className="font-medium">{survey.survey_title}</TableCell>
+                          <TableCell className="font-medium max-w-[200px] truncate">{survey.survey_title}</TableCell>
                           <TableCell>{Array.isArray(survey.questions) ? survey.questions.length : 0}</TableCell>
+                          <TableCell>{Array.isArray(survey.responses) ? survey.responses.length : 0}</TableCell>
                           <TableCell>{survey.completion_time_seconds ? `${survey.completion_time_seconds}s` : 'N/A'}</TableCell>
-                          <TableCell>{survey.points_awarded}</TableCell>
+                          <TableCell className="text-primary font-medium">{survey.points_awarded}</TableCell>
                           <TableCell>
-                            <Badge variant={survey.is_exported ? "secondary" : "default"}>
+                            <Badge variant={survey.is_exported ? "secondary" : "default"} className={!survey.is_exported ? "bg-green-500" : ""}>
                               {survey.is_exported ? 'Exported' : 'New'}
                             </Badge>
                           </TableCell>

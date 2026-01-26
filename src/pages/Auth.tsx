@@ -323,16 +323,20 @@ const Auth = () => {
     }
 
     setIsLoading(true);
-    const { error, data } = await signUp(result.data.email, result.data.password, result.data.fullName);
     
-    if (error) {
-      setIsLoading(false);
-      toast({
-        title: "Signup failed",
-        description: error.message || "Could not create account",
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const { error, data } = await signUp(result.data.email, result.data.password, result.data.fullName);
+      
+      if (error) {
+        toast({
+          title: "Signup failed",
+          description: error.message || "Could not create account",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Process referral if code exists and user was created
       if (referralCode && data?.user?.id) {
         try {
@@ -345,12 +349,38 @@ const Auth = () => {
         }
       }
       
-      setIsLoading(false);
-      
-      // Show phone verification step
+      // After signup, try to auto-login the user immediately
       if (data?.user?.id) {
-        setNewUserId(data.user.id);
-        setShowPhoneVerification(true);
+        // If email confirmation is not required, the session should be active
+        // Check if we have an active session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData?.session) {
+          // User is logged in, show phone verification or go to home
+          setNewUserId(data.user.id);
+          setShowPhoneVerification(true);
+        } else {
+          // Session not active - might need email confirmation
+          // Try to sign in with the credentials we just used
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: result.data.email,
+            password: result.data.password,
+          });
+          
+          if (signInError) {
+            // Email confirmation might be required
+            toast({
+              title: "Account created!",
+              description: "Please check your email to verify your account, then login.",
+            });
+            setIsLoading(false);
+            return;
+          }
+          
+          // Successfully signed in
+          setNewUserId(data.user.id);
+          setShowPhoneVerification(true);
+        }
       } else {
         // Fallback: go to home
         toast({
@@ -359,6 +389,14 @@ const Auth = () => {
         });
         navigate("/");
       }
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
