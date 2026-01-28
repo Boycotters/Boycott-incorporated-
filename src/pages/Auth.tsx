@@ -349,43 +349,35 @@ const Auth = () => {
         }
       }
       
-      // After signup, try to auto-login the user immediately
+      // Skip email verification - go directly to home page
+      // Try to auto-login the user immediately
       if (data?.user?.id) {
-        // If email confirmation is not required, the session should be active
-        // Check if we have an active session
-        const { data: sessionData } = await supabase.auth.getSession();
+        // Try to sign in with the credentials we just used
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: result.data.email,
+          password: result.data.password,
+        });
         
-        if (sessionData?.session) {
-          // User is logged in, show phone verification or go to home
-          setNewUserId(data.user.id);
-          setShowPhoneVerification(true);
-        } else {
-          // Session not active - might need email confirmation
-          // Try to sign in with the credentials we just used
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: result.data.email,
-            password: result.data.password,
+        if (signInError) {
+          // If auto-login fails, still navigate to home with a message
+          toast({
+            title: "Account created!",
+            description: "Welcome to Boycott Incorporated! Verify your phone in Settings to enable withdrawals.",
           });
-          
-          if (signInError) {
-            // Email confirmation might be required
-            toast({
-              title: "Account created!",
-              description: "Please check your email to verify your account, then login.",
-            });
-            setIsLoading(false);
-            return;
-          }
-          
-          // Successfully signed in
-          setNewUserId(data.user.id);
-          setShowPhoneVerification(true);
+        } else {
+          toast({
+            title: "Welcome!",
+            description: "Your account is ready. Verify your phone in Settings to unlock withdrawals.",
+          });
         }
+        
+        // Always navigate to home - skip phone verification screen
+        navigate("/");
       } else {
         // Fallback: go to home
         toast({
           title: "Account created!",
-          description: "Welcome to the app!",
+          description: "Welcome to Boycott Incorporated!",
         });
         navigate("/");
       }
@@ -498,7 +490,7 @@ const Auth = () => {
           <div className="mx-auto w-12 h-12 bg-primary rounded-full flex items-center justify-center mb-2">
             <Zap className="w-6 h-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">Welcome</CardTitle>
+          <CardTitle className="text-2xl">Boycott Incorporated</CardTitle>
           <CardDescription>
             Sign in to your account or create a new one
           </CardDescription>
