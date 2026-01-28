@@ -225,6 +225,7 @@ export default function Surveys() {
       queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
     },
     onError: (error: any) => {
+      setSubmitting(false);
       toast({
         title: "Error",
         description: error.message,
@@ -236,13 +237,17 @@ export default function Surveys() {
   const handleSubmit = async () => {
     if (!activeSurvey) return;
     setSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setCompleted(true);
-    completeSurveyMutation.mutate({ 
-      points: activeSurvey.points_reward, 
-      survey: activeSurvey,
-      surveyAnswers: answers 
-    });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCompleted(true);
+      completeSurveyMutation.mutate({ 
+        points: activeSurvey.points_reward, 
+        survey: activeSurvey,
+        surveyAnswers: answers 
+      });
+    } catch (error) {
+      setSubmitting(false);
+    }
   };
 
   const handleExitSurvey = () => {

@@ -168,12 +168,12 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         const ballCenterX = newX;
         const ballRadius = BALL_SIZE / 2;
         
-        // STRICT scoring: Ball must pass through the CENTER of the hoop while falling
-        const scoringZoneLeft = hoopLeft + 12;
-        const scoringZoneRight = hoopRight - 12;
+        // MORE FORGIVING scoring: Ball passes through hoop area while falling
+        const scoringZoneLeft = hoopLeft + 5; // More forgiving zone (was 12)
+        const scoringZoneRight = hoopRight - 5; // More forgiving zone (was 12)
         const isInScoringZone = ballCenterX >= scoringZoneLeft && ballCenterX <= scoringZoneRight;
-        const isAtHoopLevel = prev.y <= HOOP_Y + 10 && newY >= HOOP_Y - 5;
-        const isMovingDown = prev.vy > 1.5; // Must be falling at decent speed
+        const isAtHoopLevel = prev.y <= HOOP_Y + 15 && newY >= HOOP_Y - 10; // Larger window
+        const isMovingDown = prev.vy > 0.5; // Less strict falling speed (was 1.5)
         
         if (!prev.scored && isInScoringZone && isAtHoopLevel && isMovingDown) {
           setScore(s => s + 1);
@@ -181,41 +181,52 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
           return { ...prev, y: newY, x: newX, vy: newVy * 0.6, scored: true };
         }
         
-        // Rim collision - ball bounces off if it hits the rim edges
+        // Rim collision - softer bounces, ball can roll in
         const rimTopY = HOOP_Y - 5;
         const rimBottomY = HOOP_Y + 12;
         
-        // Left rim collision
+        // Left rim collision - check if hitting the very edge only
         const hitLeftRim = !prev.scored &&
-          ballCenterX + ballRadius >= hoopLeft - 3 &&
-          ballCenterX - ballRadius <= hoopLeft + 8 &&
+          ballCenterX + ballRadius >= hoopLeft - 2 &&
+          ballCenterX <= hoopLeft + 3 && // Only the edge, not the middle
           newY >= rimTopY && 
           newY <= rimBottomY;
           
-        // Right rim collision
+        // Right rim collision - check if hitting the very edge only
         const hitRightRim = !prev.scored &&
-          ballCenterX + ballRadius >= hoopRight - 8 &&
-          ballCenterX - ballRadius <= hoopRight + 3 &&
+          ballCenterX >= hoopRight - 3 && // Only the edge, not the middle
+          ballCenterX - ballRadius <= hoopRight + 2 &&
           newY >= rimTopY && 
           newY <= rimBottomY;
         
+        // Softer rim bounces - ball can still go in sometimes (30% chance)
         if (hitLeftRim) {
+          // 30% chance ball rolls into the hoop instead of bouncing
+          if (Math.random() < 0.3 && prev.vy > 0) {
+            // Ball rolls in - slight nudge towards center
+            return { ...prev, x: newX + 3, y: newY, vx: prev.vx * 0.3 + 1, vy: newVy * 0.9 };
+          }
           return { 
             ...prev, 
-            x: hoopLeft - ballRadius - 5, 
+            x: hoopLeft - ballRadius - 3, 
             y: newY, 
-            vx: -Math.abs(prev.vx) * 0.6 - 1.5, 
-            vy: newVy * 0.4 
+            vx: -Math.abs(prev.vx) * 0.5 - 1, // Softer bounce
+            vy: newVy * 0.5 
           };
         }
         
         if (hitRightRim) {
+          // 30% chance ball rolls into the hoop instead of bouncing
+          if (Math.random() < 0.3 && prev.vy > 0) {
+            // Ball rolls in - slight nudge towards center
+            return { ...prev, x: newX - 3, y: newY, vx: prev.vx * 0.3 - 1, vy: newVy * 0.9 };
+          }
           return { 
             ...prev, 
-            x: hoopRight + ballRadius + 5, 
+            x: hoopRight + ballRadius + 3, 
             y: newY, 
-            vx: Math.abs(prev.vx) * 0.6 + 1.5, 
-            vy: newVy * 0.4 
+            vx: Math.abs(prev.vx) * 0.5 + 1, // Softer bounce
+            vy: newVy * 0.5 
           };
         }
         
