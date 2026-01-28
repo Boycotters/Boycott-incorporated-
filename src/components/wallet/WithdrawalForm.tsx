@@ -80,7 +80,7 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
           <div>
             <h3 className="text-lg font-bold mb-2">Unlock Withdrawals</h3>
             <p className="text-muted-foreground text-sm">
-              Invite 3 friends to unlock your first withdrawal
+              Invite 2 friends to unlock your first withdrawal
             </p>
           </div>
 
@@ -88,19 +88,19 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
             <div className="flex items-center justify-center gap-2">
               <Users className="w-5 h-5 text-primary" />
               <span className="font-semibold">
-                {eligibility.referral_count || 0} / {eligibility.required_referrals || 3} Referrals
+                {eligibility.referral_count || 0} / {eligibility.required_referrals || 2} Referrals
               </span>
             </div>
             
             <div className="w-full bg-muted rounded-full h-2">
               <div 
                 className="bg-primary rounded-full h-2 transition-all"
-                style={{ width: `${((eligibility.referral_count || 0) / (eligibility.required_referrals || 3)) * 100}%` }}
+                style={{ width: `${((eligibility.referral_count || 0) / (eligibility.required_referrals || 2)) * 100}%` }}
               />
             </div>
             
             <p className="text-xs text-muted-foreground">
-              Invite {eligibility.remaining_referrals || (3 - (eligibility.referral_count || 0))} more friend{(eligibility.remaining_referrals || 1) !== 1 ? 's' : ''} to unlock withdrawals
+              Invite {eligibility.remaining_referrals ?? (2 - (eligibility.referral_count || 0))} more friend{(eligibility.remaining_referrals ?? 1) !== 1 ? 's' : ''} to unlock withdrawals
             </p>
             
             <Button 
