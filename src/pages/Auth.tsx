@@ -325,56 +325,100 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
-      const { error, data } = await signUp(result.data.email, result.data.password, result.data.fullName);
+      // Use Supabase directly for signup
+      const redirectUrl = `${window.location.origin}/`;
       
+      // Use AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: result.data.email,
+        password: result.data.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: result.data.fullName,
+          }
+        }
+      });
+      
+      clearTimeout(timeoutId);
+
       if (error) {
-        toast({
-          title: "Signup failed",
-          description: error.message || "Could not create account",
-          variant: "destructive",
-        });
+        // Handle specific error cases
+        const errorMsg = error.message?.toLowerCase() || '';
+        if (errorMsg.includes('timeout') || errorMsg.includes('504') || errorMsg.includes('gateway') || errorMsg.includes('deadline')) {
+          toast({
+            title: "Email service busy",
+            description: "Please try again in a moment, or contact support if this persists.",
+            variant: "destructive",
+          });
+        } else if (errorMsg.includes('already registered') || errorMsg.includes('already exists')) {
+          toast({
+            title: "Account exists",
+            description: "This email is already registered. Please login instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Signup failed",
+            description: error.message || "Could not create account",
+            variant: "destructive",
+          });
+        }
         setIsLoading(false);
         return;
       }
-      
+
+      // Check if user was created and session exists (auto-confirmed)
+      const hasSession = !!data?.session;
+      const userId = data?.user?.id;
+
       // Process referral if code exists and user was created
-      if (referralCode && data?.user?.id) {
+      if (referralCode && userId) {
         try {
           await supabase.rpc('process_referral', {
             referrer_code: referralCode,
-            new_user_id: data.user.id
+            new_user_id: userId
           });
         } catch (refError) {
           console.error('Referral processing failed:', refError);
         }
       }
-      
-      // Skip email verification - go directly to home page
-      // Try to auto-login the user immediately
-      if (data?.user?.id) {
-        // Try to sign in with the credentials we just used
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: result.data.email,
-          password: result.data.password,
+
+      if (hasSession) {
+        // User is auto-confirmed and logged in - go to home
+        toast({
+          title: "Welcome!",
+          description: "Your account is ready. Verify your phone in Settings to unlock withdrawals.",
         });
-        
-        if (signInError) {
-          // If auto-login fails, still navigate to home with a message
-          toast({
-            title: "Account created!",
-            description: "Welcome to Boycott Incorporated! Verify your phone in Settings to enable withdrawals.",
-          });
-        } else {
-          toast({
-            title: "Welcome!",
-            description: "Your account is ready. Verify your phone in Settings to unlock withdrawals.",
-          });
-        }
-        
-        // Always navigate to home - skip phone verification screen
         navigate("/");
+      } else if (userId) {
+        // User created but needs email confirmation OR try auto-login
+        try {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: result.data.email,
+            password: result.data.password,
+          });
+
+          if (!signInError) {
+            toast({
+              title: "Welcome!",
+              description: "Your account is ready. Verify your phone in Settings to unlock withdrawals.",
+            });
+            navigate("/");
+            return;
+          }
+        } catch {
+          // Auto-login failed, show email verification message
+        }
+
+        toast({
+          title: "Check your email",
+          description: "Please verify your email to complete signup, then log in.",
+        });
       } else {
-        // Fallback: go to home
         toast({
           title: "Account created!",
           description: "Welcome to Boycott Incorporated!",
@@ -382,11 +426,20 @@ const Auth = () => {
         navigate("/");
       }
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Something went wrong",
-        variant: "destructive",
-      });
+      const errorMessage = err?.message?.toLowerCase() || "something went wrong";
+      if (err.name === 'AbortError' || errorMessage.includes('timeout') || errorMessage.includes('504') || errorMessage.includes('gateway') || errorMessage.includes('aborted')) {
+        toast({
+          title: "Request timed out",
+          description: "The server is taking too long. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: err?.message || "Something went wrong",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
