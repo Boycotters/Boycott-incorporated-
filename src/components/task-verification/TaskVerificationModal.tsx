@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -151,6 +152,7 @@ export function TaskVerificationModal({
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center">{task.title}</DialogTitle>
+          <DialogDescription className="sr-only">Complete the task verification</DialogDescription>
         </DialogHeader>
         {renderVerification()}
       </DialogContent>
