@@ -214,6 +214,7 @@ export default function Surveys() {
       return result.points_awarded;
     },
     onSuccess: (points) => {
+      setSubmitting(false);
       fireConfetti();
       toast({
         title: "Survey Complete! 🎉",
@@ -235,15 +236,18 @@ export default function Surveys() {
   });
 
   const handleSubmit = async () => {
-    if (!activeSurvey) return;
+    if (!activeSurvey || submitting) return;
     setSubmitting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setCompleted(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
       completeSurveyMutation.mutate({ 
         points: activeSurvey.points_reward, 
         survey: activeSurvey,
         surveyAnswers: answers 
+      }, {
+        onSuccess: () => {
+          setCompleted(true);
+        }
       });
     } catch (error) {
       setSubmitting(false);
