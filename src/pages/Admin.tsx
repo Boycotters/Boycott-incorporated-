@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +28,10 @@ import {
   RefreshCw,
   Search,
   UserCheck,
-  Key
+  Key,
+  Upload,
+  Link as LinkIcon,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +59,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Withdrawal {
   id: string;
@@ -122,6 +130,9 @@ interface SurveyResponse {
   points_awarded: number;
   is_exported: boolean;
   created_at: string;
+  user_id: string | null;
+  user_email?: string | null;
+  user_name?: string | null;
 }
 
 interface EarningAlgorithm {
@@ -144,6 +155,11 @@ export default function Admin() {
   const [oldPin, setOldPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [videoUploadType, setVideoUploadType] = useState<'url' | 'file'>('url');
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+  const [expandedSurvey, setExpandedSurvey] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [newVideo, setNewVideo] = useState({
     title: '',
     description: '',
@@ -313,13 +329,45 @@ export default function Admin() {
     },
   });
 
-  // Add video mutation
+  // Upload video file to storage
+  const uploadVideoFile = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `videos/${fileName}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('entertainment-videos')
+      .upload(filePath, file);
+    
+    if (uploadError) throw uploadError;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('entertainment-videos')
+      .getPublicUrl(filePath);
+    
+    return publicUrl;
+  };
+
+  // Add video mutation with file upload support
   const addVideoMutation = useMutation({
-    mutationFn: async (video: typeof newVideo) => {
+    mutationFn: async ({ video, file }: { video: typeof newVideo; file?: File | null }) => {
+      let videoUrl = video.video_url;
+      
+      // If a file is provided, upload it first
+      if (file) {
+        setUploadingVideo(true);
+        try {
+          videoUrl = await uploadVideoFile(file);
+        } finally {
+          setUploadingVideo(false);
+        }
+      }
+      
       const { data, error } = await supabase
         .from('videos')
         .insert({
           ...video,
+          video_url: videoUrl,
           created_by: user?.id,
           partner_name: video.partner_name || null,
         })
@@ -333,6 +381,8 @@ export default function Admin() {
       toast.success('Video added successfully');
       queryClient.invalidateQueries({ queryKey: ['admin-videos'] });
       setAddVideoOpen(false);
+      setSelectedVideoFile(null);
+      setVideoUploadType('url');
       setNewVideo({
         title: '',
         description: '',
@@ -1242,7 +1292,7 @@ export default function Admin() {
                 <DialogHeader>
                   <DialogTitle>Add New Video</DialogTitle>
                   <DialogDescription>
-                    Add a video for users to watch and earn points.
+                    Add a video for users to watch and earn points. You can upload a file or paste a URL.
                   </DialogDescription>
                 </DialogHeader>
                 
@@ -1267,15 +1317,100 @@ export default function Admin() {
                     />
                   </div>
                   
+                  {/* Video Source Toggle */}
                   <div className="space-y-2">
-                    <Label htmlFor="video_url">Video URL</Label>
-                    <Input
-                      id="video_url"
-                      value={newVideo.video_url}
-                      onChange={(e) => setNewVideo(prev => ({ ...prev, video_url: e.target.value }))}
-                      placeholder="https://..."
-                    />
+                    <Label>Video Source</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={videoUploadType === 'url' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setVideoUploadType('url')}
+                        className="flex-1 gap-2"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                        URL
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={videoUploadType === 'file' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setVideoUploadType('file')}
+                        className="flex-1 gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Upload File
+                      </Button>
+                    </div>
                   </div>
+
+                  {videoUploadType === 'url' ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="video_url">Video URL</Label>
+                      <Input
+                        id="video_url"
+                        value={newVideo.video_url}
+                        onChange={(e) => setNewVideo(prev => ({ ...prev, video_url: e.target.value }))}
+                        placeholder="https://youtube.com/... or direct video link"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Upload Video File</Label>
+                      <input
+                        ref={videoInputRef}
+                        type="file"
+                        accept="video/mp4,video/webm,video/mov,video/quicktime"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setSelectedVideoFile(file);
+                            // Auto-fill title from filename if empty
+                            if (!newVideo.title) {
+                              setNewVideo(prev => ({ 
+                                ...prev, 
+                                title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') 
+                              }));
+                            }
+                          }
+                        }}
+                      />
+                      <div 
+                        className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => videoInputRef.current?.click()}
+                      >
+                        {selectedVideoFile ? (
+                          <div className="space-y-2">
+                            <Video className="w-10 h-10 mx-auto text-primary" />
+                            <p className="font-medium">{selectedVideoFile.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {(selectedVideoFile.size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedVideoFile(null);
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
+                            <p className="font-medium">Click to upload video</p>
+                            <p className="text-sm text-muted-foreground">
+                              MP4, WebM, MOV up to 100MB
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1346,82 +1481,98 @@ export default function Admin() {
 
                   <Button 
                     className="w-full" 
-                    onClick={() => addVideoMutation.mutate(newVideo)}
-                    disabled={addVideoMutation.isPending || !newVideo.title || !newVideo.video_url}
+                    onClick={() => addVideoMutation.mutate({ video: newVideo, file: selectedVideoFile })}
+                    disabled={addVideoMutation.isPending || uploadingVideo || !newVideo.title || (videoUploadType === 'url' ? !newVideo.video_url : !selectedVideoFile)}
                   >
-                    Add Video
+                    {uploadingVideo ? 'Uploading...' : addVideoMutation.isPending ? 'Adding...' : 'Add Video'}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
 
-            {videos.map((video) => (
-              <Card key={video.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold line-clamp-1">{video.title}</p>
-                        <Badge variant="outline">{video.category}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {video.duration_seconds}s • {video.view_count} views • +{video.points_reward} pts
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => window.open(video.video_url, '_blank')}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Switch
-                        checked={video.is_active}
-                        onCheckedChange={(checked) => toggleVideoMutation.mutate({ videoId: video.id, isActive: checked })}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => deleteVideoMutation.mutate(video.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {videos.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Video className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">No videos added yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Add entertainment videos for users to watch and earn</p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              videos.map((video) => (
+                <Card key={video.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold line-clamp-1">{video.title}</p>
+                          <Badge variant="outline">{video.category}</Badge>
+                          {video.source === 'admin' && (
+                            <Badge variant="secondary" className="text-xs">Uploaded</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {video.duration_seconds}s • {video.view_count} views • +{video.points_reward} pts
+                        </p>
+                        {video.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{video.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(video.video_url, '_blank')}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Switch
+                          checked={video.is_active}
+                          onCheckedChange={(checked) => toggleVideoMutation.mutate({ videoId: video.id, isActive: checked })}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => deleteVideoMutation.mutate(video.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           {/* Survey Data Tab */}
           <TabsContent value="surveys" className="mt-4 space-y-4">
             {/* Survey Stats Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card className="bg-purple-500/10 border-purple-500/20">
+              <Card className="bg-primary/10 border-primary/20">
                 <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-purple-600">{surveyResponses.length}</p>
+                  <p className="text-2xl font-bold text-primary">{surveyResponses.length}</p>
                   <p className="text-xs text-muted-foreground">Total Responses</p>
                 </CardContent>
               </Card>
-              <Card className="bg-green-500/10 border-green-500/20">
+              <Card className="bg-accent/10 border-accent/20">
                 <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-green-600">{unexportedSurveys.length}</p>
+                  <p className="text-2xl font-bold text-accent">{unexportedSurveys.length}</p>
                   <p className="text-xs text-muted-foreground">Ready to Export</p>
                 </CardContent>
               </Card>
-              <Card className="bg-blue-500/10 border-blue-500/20">
+              <Card className="bg-secondary/50 border-secondary">
                 <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-secondary-foreground">
                     {surveyResponses.reduce((acc, s) => acc + (Array.isArray(s.questions) ? s.questions.length : 0), 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Total Questions</p>
                 </CardContent>
               </Card>
-              <Card className="bg-amber-500/10 border-amber-500/20">
+              <Card className="bg-muted border-muted">
                 <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-amber-600">
+                  <p className="text-2xl font-bold text-foreground">
                     K{Math.round(surveyResponses.length * 0.5)}
                   </p>
                   <p className="text-xs text-muted-foreground">Est. Data Value</p>
@@ -1446,7 +1597,7 @@ export default function Admin() {
                   </Button>
                 </CardTitle>
                 <CardDescription>
-                  Collected survey responses for data monetization. Export to JSON for analysis or selling to market research companies.
+                  Collected survey responses with user info. Click a row to see full response details.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1457,38 +1608,104 @@ export default function Admin() {
                     <p className="text-sm text-muted-foreground mt-1">Survey data will appear here as users complete surveys</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Survey</TableHead>
-                        <TableHead>Questions</TableHead>
-                        <TableHead>Responses</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Points</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {surveyResponses.map((survey) => (
-                        <TableRow key={survey.id}>
-                          <TableCell className="font-medium max-w-[200px] truncate">{survey.survey_title}</TableCell>
-                          <TableCell>{Array.isArray(survey.questions) ? survey.questions.length : 0}</TableCell>
-                          <TableCell>{Array.isArray(survey.responses) ? survey.responses.length : 0}</TableCell>
-                          <TableCell>{survey.completion_time_seconds ? `${survey.completion_time_seconds}s` : 'N/A'}</TableCell>
-                          <TableCell className="text-primary font-medium">{survey.points_awarded}</TableCell>
-                          <TableCell>
-                            <Badge variant={survey.is_exported ? "secondary" : "default"} className={!survey.is_exported ? "bg-green-500" : ""}>
-                              {survey.is_exported ? 'Exported' : 'New'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {new Date(survey.created_at).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="space-y-2">
+                    {surveyResponses.map((survey) => (
+                      <Collapsible
+                        key={survey.id}
+                        open={expandedSurvey === survey.id}
+                        onOpenChange={(open) => setExpandedSurvey(open ? survey.id : null)}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                    <User className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-medium truncate">{survey.survey_title}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {survey.user_name || survey.user_email || 'Anonymous'} • {new Date(survey.created_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="shrink-0">
+                                    {Array.isArray(survey.questions) ? survey.questions.length : 0} Q
+                                  </Badge>
+                                  <Badge variant="secondary" className="shrink-0">
+                                    +{survey.points_awarded} pts
+                                  </Badge>
+                                  <Badge 
+                                    variant={survey.is_exported ? "secondary" : "default"} 
+                                    className={!survey.is_exported ? "bg-accent text-accent-foreground" : ""}
+                                  >
+                                    {survey.is_exported ? 'Exported' : 'New'}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <Card className="mt-1 border-primary/20 bg-muted/30">
+                            <CardContent className="p-4 space-y-4">
+                              {/* User Info */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <p className="text-muted-foreground text-xs">User</p>
+                                  <p className="font-medium">{survey.user_name || 'No name'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Email</p>
+                                  <p className="font-medium truncate">{survey.user_email || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Completion Time</p>
+                                  <p className="font-medium">{survey.completion_time_seconds ? `${survey.completion_time_seconds}s` : 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Survey ID</p>
+                                  <p className="font-medium text-xs truncate">{survey.survey_id}</p>
+                                </div>
+                              </div>
+
+                              {/* Questions & Answers */}
+                              <div className="border-t pt-4">
+                                <p className="font-medium text-sm mb-3">Questions & Responses</p>
+                                <div className="space-y-3">
+                                  {Array.isArray(survey.questions) && survey.questions.map((q: any, idx: number) => (
+                                    <div key={idx} className="bg-background rounded-lg p-3">
+                                      <p className="text-sm font-medium text-muted-foreground mb-1">
+                                        Q{idx + 1}: {q.question || q.text || 'Question'}
+                                      </p>
+                                      <p className="text-sm">
+                                        <span className="text-primary font-medium">Answer: </span>
+                                        {Array.isArray(survey.responses) && survey.responses[idx] !== undefined
+                                          ? String(survey.responses[idx].answer || survey.responses[idx])
+                                          : 'No response'}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Device Info */}
+                              {survey.device_info && Object.keys(survey.device_info).length > 0 && (
+                                <div className="border-t pt-4">
+                                  <p className="font-medium text-sm mb-2">Device Info</p>
+                                  <pre className="text-xs bg-background p-2 rounded overflow-auto max-h-24">
+                                    {JSON.stringify(survey.device_info, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>

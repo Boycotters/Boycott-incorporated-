@@ -751,7 +751,9 @@ export type Database = {
           survey_id: string
           survey_title: string
           updated_at: string | null
+          user_email: string | null
           user_id: string | null
+          user_name: string | null
         }
         Insert: {
           completion_time_seconds?: number | null
@@ -767,7 +769,9 @@ export type Database = {
           survey_id: string
           survey_title: string
           updated_at?: string | null
+          user_email?: string | null
           user_id?: string | null
+          user_name?: string | null
         }
         Update: {
           completion_time_seconds?: number | null
@@ -783,7 +787,9 @@ export type Database = {
           survey_id?: string
           survey_title?: string
           updated_at?: string | null
+          user_email?: string | null
           user_id?: string | null
+          user_name?: string | null
         }
         Relationships: []
       }
