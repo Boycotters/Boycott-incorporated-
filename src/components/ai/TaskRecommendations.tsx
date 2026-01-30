@@ -43,6 +43,22 @@ const INTEREST_POOLS = [
   ['challenge', 'quick'],
 ];
 
+// Fallback task content with real, actionable tasks
+const FALLBACK_TASKS: { taskType: string; category: string; reason: string; difficulty: 'easy' | 'medium' | 'hard' }[] = [
+  { taskType: "Share App with Friends", category: "social", reason: "Invite 2 friends via WhatsApp and earn bonus when they sign up", difficulty: "easy" },
+  { taskType: "Complete Quick Survey", category: "survey", reason: "Answer 5 questions about your shopping preferences", difficulty: "easy" },
+  { taskType: "Watch Partner Video", category: "video_ad", reason: "Watch a 30-second ad from our partner and earn points", difficulty: "easy" },
+  { taskType: "Daily Check-in Streak", category: "quick", reason: "Maintain your login streak for 7 days to unlock bonus rewards", difficulty: "medium" },
+  { taskType: "Product Feedback Review", category: "lifestyle", reason: "Try a product and share your honest review with photos", difficulty: "medium" },
+  { taskType: "App Install Challenge", category: "app_install", reason: "Download a partner app and complete the tutorial", difficulty: "medium" },
+  { taskType: "Social Media Follow", category: "social", reason: "Follow our brand partners on social media for instant points", difficulty: "easy" },
+  { taskType: "Market Research Quiz", category: "learning", reason: "Test your knowledge on current trends and consumer habits", difficulty: "hard" },
+  { taskType: "Local Business Review", category: "challenge", reason: "Visit a local store and leave a genuine review", difficulty: "hard" },
+  { taskType: "Referral Champion", category: "social", reason: "Get 5 friends to sign up and reach Silver VIP status", difficulty: "hard" },
+  { taskType: "Brand Awareness Task", category: "lifestyle", reason: "Engage with a brand campaign and share your experience", difficulty: "medium" },
+  { taskType: "Gaming Achievement", category: "gaming", reason: "Score 100+ points in a mini-game to unlock rewards", difficulty: "medium" },
+];
+
 export function TaskRecommendations({
   userLevel,
   completedCategories,
@@ -68,10 +84,58 @@ export function TaskRecommendations({
     const randomInterests = INTEREST_POOLS[Math.floor(Math.random() * INTEREST_POOLS.length)];
     const combinedInterests = [...new Set([...interests, ...randomInterests])];
     
-    const result = await recommendTasks(userLevel, completedCategories, combinedInterests, vipTier);
-    if (result) {
-      setRecommendations(result);
+    try {
+      const result = await recommendTasks(userLevel, completedCategories, combinedInterests, vipTier);
+      if (result && result.recommendations && result.recommendations.length > 0) {
+        // Ensure all recommendations have proper content
+        const enrichedRecommendations = result.recommendations.map((rec, idx) => {
+          // If AI returned empty or placeholder content, use fallback
+          if (!rec.taskType || rec.taskType.length < 3 || !rec.reason || rec.reason.length < 10) {
+            const fallback = FALLBACK_TASKS[(idx + Math.floor(Math.random() * FALLBACK_TASKS.length)) % FALLBACK_TASKS.length];
+            return {
+              ...rec,
+              taskType: fallback.taskType,
+              reason: fallback.reason,
+              category: fallback.category,
+              difficulty: fallback.difficulty,
+            };
+          }
+          return rec;
+        });
+        setRecommendations({
+          ...result,
+          recommendations: enrichedRecommendations,
+        });
+      } else {
+        // Use fallback tasks if AI fails
+        generateFallbackRecommendations();
+      }
+    } catch (err) {
+      console.error('AI recommendations failed, using fallback:', err);
+      generateFallbackRecommendations();
     }
+  };
+
+  const generateFallbackRecommendations = () => {
+    // Shuffle and pick 4 random fallback tasks
+    const shuffled = [...FALLBACK_TASKS].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 4);
+    
+    const dailyFocusOptions = [
+      "Complete quick tasks to build momentum today",
+      "Focus on surveys for maximum earnings",
+      "Try social tasks to boost your network",
+      "Challenge yourself with harder tasks for bigger rewards",
+      "Mix easy and medium tasks for steady progress",
+    ];
+    
+    setRecommendations({
+      recommendations: selected.map((t, i) => ({
+        ...t,
+        pointsRange: `${difficultyConfig[t.difficulty].points} pts`
+      })),
+      dailyFocus: dailyFocusOptions[Math.floor(Math.random() * dailyFocusOptions.length)],
+    });
   };
 
   useEffect(() => {
