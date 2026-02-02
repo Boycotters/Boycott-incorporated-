@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Target, RefreshCw, Zap, Clock, Trophy, CheckCircle, Coins, AlertCircle } from "lucide-react";
+import { Sparkles, Target, RefreshCw, Zap, Clock, Trophy, CheckCircle, Coins, AlertCircle, BookOpen, Video, Share2, Download, MessageSquare } from "lucide-react";
 import { useAI, RecommendationsResult, TaskRecommendation } from "@/hooks/useAI";
 import { cn } from "@/lib/utils";
 import { TimerVerification } from "@/components/task-verification/TimerVerification";
 import { SurveyVerification } from "@/components/task-verification/SurveyVerification";
 import { UrlVerification } from "@/components/task-verification/UrlVerification";
+import { QuizVerification } from "@/components/task-verification/QuizVerification";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,20 +44,48 @@ const INTEREST_POOLS = [
   ['challenge', 'quick'],
 ];
 
-// Fallback task content with real, actionable tasks
-const FALLBACK_TASKS: { taskType: string; category: string; reason: string; difficulty: 'easy' | 'medium' | 'hard' }[] = [
-  { taskType: "Share App with Friends", category: "social", reason: "Invite 2 friends via WhatsApp and earn bonus when they sign up", difficulty: "easy" },
-  { taskType: "Complete Quick Survey", category: "survey", reason: "Answer 5 questions about your shopping preferences", difficulty: "easy" },
-  { taskType: "Watch Partner Video", category: "video_ad", reason: "Watch a 30-second ad from our partner and earn points", difficulty: "easy" },
-  { taskType: "Daily Check-in Streak", category: "quick", reason: "Maintain your login streak for 7 days to unlock bonus rewards", difficulty: "medium" },
-  { taskType: "Product Feedback Review", category: "lifestyle", reason: "Try a product and share your honest review with photos", difficulty: "medium" },
-  { taskType: "App Install Challenge", category: "app_install", reason: "Download a partner app and complete the tutorial", difficulty: "medium" },
-  { taskType: "Social Media Follow", category: "social", reason: "Follow our brand partners on social media for instant points", difficulty: "easy" },
-  { taskType: "Market Research Quiz", category: "learning", reason: "Test your knowledge on current trends and consumer habits", difficulty: "hard" },
-  { taskType: "Local Business Review", category: "challenge", reason: "Visit a local store and leave a genuine review", difficulty: "hard" },
-  { taskType: "Referral Champion", category: "social", reason: "Get 5 friends to sign up and reach Silver VIP status", difficulty: "hard" },
+// Comprehensive fallback task content with real, actionable tasks
+const FALLBACK_TASKS: { taskType: string; category: string; reason: string; difficulty: 'easy' | 'medium' | 'hard'; icon?: any }[] = [
+  // Social Tasks
+  { taskType: "Share App with Friends", category: "social", reason: "Invite 2 friends via WhatsApp and earn bonus when they sign up", difficulty: "easy", icon: Share2 },
+  { taskType: "Follow Brand on Social Media", category: "social", reason: "Follow our partner brands on Facebook/Instagram for instant rewards", difficulty: "easy", icon: Share2 },
+  { taskType: "Share Your Success Story", category: "social", reason: "Post about your earnings on social media and tag us", difficulty: "medium", icon: Share2 },
+  
+  // Survey Tasks  
+  { taskType: "Complete Quick Survey", category: "survey", reason: "Answer 5 questions about your shopping preferences", difficulty: "easy", icon: MessageSquare },
+  { taskType: "Product Opinion Survey", category: "survey", reason: "Share your thoughts on new product ideas for market research", difficulty: "medium", icon: MessageSquare },
+  { taskType: "Consumer Habits Survey", category: "survey", reason: "Help brands understand buying behaviors in Zambia", difficulty: "medium", icon: MessageSquare },
+  
+  // Video Tasks
+  { taskType: "Watch Partner Video", category: "video_ad", reason: "Watch a 30-second ad from our partner and earn points", difficulty: "easy", icon: Video },
+  { taskType: "Watch Educational Content", category: "video_ad", reason: "Learn about financial literacy while earning rewards", difficulty: "easy", icon: Video },
+  
+  // Learning/Quiz Tasks
+  { taskType: "Knowledge Quiz Challenge", category: "learning", reason: "Test your general knowledge and earn points for correct answers", difficulty: "medium", icon: BookOpen },
+  { taskType: "Market Research Quiz", category: "learning", reason: "Answer questions about current trends and consumer habits", difficulty: "hard", icon: BookOpen },
+  { taskType: "Financial Literacy Quiz", category: "learning", reason: "Learn about saving, investing and money management", difficulty: "medium", icon: BookOpen },
+  { taskType: "Local Knowledge Quiz", category: "learning", reason: "Test your knowledge about Zambia and earn rewards", difficulty: "easy", icon: BookOpen },
+  
+  // App Install Tasks
+  { taskType: "App Install Challenge", category: "app_install", reason: "Download a partner app and complete the tutorial for points", difficulty: "medium", icon: Download },
+  { taskType: "Try New App Feature", category: "app_install", reason: "Explore a new feature in a partner app and share feedback", difficulty: "easy", icon: Download },
+  
+  // Quick Tasks
+  { taskType: "Daily Check-in Streak", category: "quick", reason: "Maintain your login streak for 7 days to unlock bonus rewards", difficulty: "medium", icon: Zap },
+  { taskType: "Profile Completion", category: "quick", reason: "Complete your profile information for verification bonus", difficulty: "easy", icon: Zap },
+  
+  // Challenge Tasks
+  { taskType: "Product Feedback Review", category: "challenge", reason: "Try a product and share your honest review with photos", difficulty: "medium", icon: Trophy },
+  { taskType: "Local Business Review", category: "challenge", reason: "Visit a local store and leave a genuine review", difficulty: "hard", icon: Trophy },
+  { taskType: "Referral Champion", category: "challenge", reason: "Get 5 friends to sign up and reach Silver VIP status", difficulty: "hard", icon: Trophy },
+  
+  // Lifestyle Tasks
   { taskType: "Brand Awareness Task", category: "lifestyle", reason: "Engage with a brand campaign and share your experience", difficulty: "medium" },
-  { taskType: "Gaming Achievement", category: "gaming", reason: "Score 100+ points in a mini-game to unlock rewards", difficulty: "medium" },
+  { taskType: "Lifestyle Survey", category: "lifestyle", reason: "Share your daily habits and preferences for research", difficulty: "easy" },
+  
+  // Gaming Tasks
+  { taskType: "Gaming Achievement", category: "gaming", reason: "Score 100+ points in a mini-game to unlock rewards", difficulty: "medium", icon: Trophy },
+  { taskType: "High Score Challenge", category: "gaming", reason: "Beat your personal best in any game for bonus points", difficulty: "hard", icon: Trophy },
 ];
 
 export function TaskRecommendations({
@@ -220,10 +249,25 @@ export function TaskRecommendations({
     setSelectedTask(null);
   };
 
-  const getVerificationType = (category: string): 'timer' | 'survey' | 'url' => {
-    if (['survey', 'learning', 'challenge'].includes(category)) return 'survey';
+  const getVerificationType = (category: string): 'timer' | 'survey' | 'url' | 'quiz' => {
+    if (['learning', 'challenge'].includes(category)) return 'quiz';
+    if (['survey'].includes(category)) return 'survey';
     if (['social', 'app_install'].includes(category)) return 'url';
     return 'timer';
+  };
+
+  const handleQuizComplete = async (passed: boolean, score: number) => {
+    if (!passed) {
+      toast({
+        title: "Quiz Not Passed",
+        description: "You need to score higher to earn points. Try again!",
+        variant: "destructive"
+      });
+      setIsModalOpen(false);
+      setSelectedTask(null);
+      return;
+    }
+    await handleComplete();
   };
 
   const renderVerification = () => {
@@ -233,6 +277,18 @@ export function TaskRecommendations({
     const points = difficultyConfig[selectedTask.difficulty].points;
     
     switch (verificationType) {
+      case 'quiz':
+        return (
+          <QuizVerification
+            taskId={`ai-${Date.now()}`}
+            taskTitle={selectedTask.taskType}
+            taskCategory={selectedTask.category}
+            userLevel={80}
+            passPercentage={60}
+            onComplete={handleQuizComplete}
+            onCancel={handleCancel}
+          />
+        );
       case 'survey':
         return (
           <SurveyVerification
