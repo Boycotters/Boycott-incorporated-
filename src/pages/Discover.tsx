@@ -24,7 +24,8 @@ export default function Discover() {
   const navigate = useNavigate();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
 
-  // Flash deal countdown - resets at midnight
+  // Flash deal visibility - random 2-3 times per week Mon-Fri only
+  const [showFlashDeal, setShowFlashDeal] = useState(false);
   const [flashDealsEndTime] = useState(() => {
     const now = new Date();
     const midnight = new Date(now);
@@ -34,8 +35,33 @@ export default function Discover() {
 
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
+  // Determine if flash deal should show (2-3 times per week, Mon-Fri only)
+  useEffect(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    
+    // Only show Mon-Fri (1-5)
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      setShowFlashDeal(false);
+      return;
+    }
+    
+    // Use date-based seed for consistent randomness per day
+    const dateSeed = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const hash = dateSeed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    // Show on ~40% of weekdays (roughly 2-3 days per week)
+    // Use modulo based on day to create predictable pattern
+    const showDays = [1, 3, 4]; // Mon, Wed, Thu are potential flash deal days
+    const shouldShow = showDays.includes(dayOfWeek) && (hash % 3 !== 0); // Add some randomness
+    
+    setShowFlashDeal(shouldShow);
+  }, []);
+
   // Countdown timer for flash deals
   useEffect(() => {
+    if (!showFlashDeal) return;
+    
     const calculateTimeLeft = () => {
       const now = new Date().getTime();
       const end = flashDealsEndTime.getTime();
@@ -51,7 +77,7 @@ export default function Discover() {
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
     return () => clearInterval(timer);
-  }, [flashDealsEndTime]);
+  }, [flashDealsEndTime, showFlashDeal]);
 
   // Fetch trending tasks
   const { data: trendingTasks, isLoading: trendingLoading } = useQuery({
@@ -349,37 +375,39 @@ export default function Discover() {
           </div>
         </div>
 
-        {/* Flash Deal Timer */}
-        <Card className="bg-gradient-to-r from-accent/20 to-primary/20 border-0 rounded-2xl overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-accent p-2 rounded-xl animate-pulse">
-                  <Timer className="w-5 h-5 text-accent-foreground" />
+        {/* Flash Deal Timer - Only shows 2-3 times per week Mon-Fri */}
+        {showFlashDeal && (
+          <Card className="bg-gradient-to-r from-accent/20 to-primary/20 border-0 rounded-2xl overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-accent p-2 rounded-xl animate-pulse">
+                    <Timer className="w-5 h-5 text-accent-foreground" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Flash Deals Ending</p>
+                    <p className="text-xs text-muted-foreground">Grab them before midnight!</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-sm">Flash Deals Ending</p>
-                  <p className="text-xs text-muted-foreground">Grab them before midnight!</p>
+                <div className="flex gap-1 font-mono text-lg font-bold">
+                  <span className="bg-background/80 px-2 py-1 rounded">{String(countdown.hours).padStart(2, '0')}</span>
+                  <span>:</span>
+                  <span className="bg-background/80 px-2 py-1 rounded">{String(countdown.minutes).padStart(2, '0')}</span>
+                  <span>:</span>
+                  <span className="bg-background/80 px-2 py-1 rounded">{String(countdown.seconds).padStart(2, '0')}</span>
                 </div>
               </div>
-              <div className="flex gap-1 font-mono text-lg font-bold">
-                <span className="bg-background/80 px-2 py-1 rounded">{String(countdown.hours).padStart(2, '0')}</span>
-                <span>:</span>
-                <span className="bg-background/80 px-2 py-1 rounded">{String(countdown.minutes).padStart(2, '0')}</span>
-                <span>:</span>
-                <span className="bg-background/80 px-2 py-1 rounded">{String(countdown.seconds).padStart(2, '0')}</span>
+              <div className="flex gap-2 mt-3">
+                {flashDeals.map((deal, i) => (
+                  <div key={i} className="flex-1 bg-background/60 backdrop-blur-sm p-3 rounded-xl text-center cursor-pointer hover:bg-background/80 transition-colors" onClick={() => navigate('/earn')}>
+                    <p className="font-bold text-primary">{deal.title}</p>
+                    <p className="text-xs text-muted-foreground">{deal.description}</p>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="flex gap-2 mt-3">
-              {flashDeals.map((deal, i) => (
-                <div key={i} className="flex-1 bg-background/60 backdrop-blur-sm p-3 rounded-xl text-center cursor-pointer hover:bg-background/80 transition-colors" onClick={() => navigate('/earn')}>
-                  <p className="font-bold text-primary">{deal.title}</p>
-                  <p className="text-xs text-muted-foreground">{deal.description}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Live Activity Feed - REAL DATA */}
         <Card className="bg-card border rounded-2xl overflow-hidden">
@@ -670,7 +698,7 @@ export default function Discover() {
                 <Button 
                   className="w-full mt-4" 
                   variant="outline"
-                  onClick={() => navigate('/referrals')}
+                  onClick={() => navigate('/leaderboard')}
                 >
                   View Full Leaderboard
                   <ChevronRight className="w-4 h-4 ml-1" />
