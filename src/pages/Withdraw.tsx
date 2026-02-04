@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -5,7 +6,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LiveWalletCard, WithdrawalForm, WithdrawalHistory } from "@/components/wallet";
+import { 
+  LiveWalletCard, 
+  WithdrawalForm, 
+  WithdrawalHistory, 
+  WithdrawalEligibilityBanner,
+  PhoneVerificationSheet 
+} from "@/components/wallet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface WithdrawalResult {
@@ -34,6 +41,7 @@ export default function Withdraw() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
 
   // Fetch wallet data
   const { data: wallet } = useQuery({
@@ -51,8 +59,24 @@ export default function Withdraw() {
     enabled: !!user?.id,
   });
 
+  // Fetch user data for phone verification status
+  const { data: userData, refetch: refetchUser } = useQuery({
+    queryKey: ['user-data-withdrawal', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('phone_verified, phone')
+        .eq('id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Check withdrawal eligibility
-  const { data: eligibility } = useQuery({
+  const { data: eligibility, refetch: refetchEligibility } = useQuery({
     queryKey: ['withdrawal-eligibility', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('check_withdrawal_eligibility', {
@@ -113,6 +137,19 @@ export default function Withdraw() {
     await withdrawMutation.mutateAsync(data);
   };
 
+  const handlePhoneVerified = () => {
+    refetchUser();
+    refetchEligibility();
+    toast.success("Phone verified! You can now withdraw.");
+  };
+
+  // Calculate eligibility
+  const referralCount = eligibility?.referral_count || 0;
+  const requiredReferrals = eligibility?.required_referrals || 2;
+  const isPhoneVerified = userData?.phone_verified || false;
+  const hasEnoughReferrals = referralCount >= requiredReferrals;
+  const isFullyEligible = hasEnoughReferrals && isPhoneVerified;
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
       <div className="max-w-md mx-auto space-y-5">
@@ -146,12 +183,21 @@ export default function Withdraw() {
             <TabsTrigger value="history" className="rounded-lg">History</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="withdraw" className="mt-4">
+          <TabsContent value="withdraw" className="mt-4 space-y-4">
+            {/* Eligibility Banner - shows only if not eligible */}
+            <WithdrawalEligibilityBanner
+              referralCount={referralCount}
+              requiredReferrals={requiredReferrals}
+              isPhoneVerified={isPhoneVerified}
+              onVerifyPhone={() => setPhoneVerificationOpen(true)}
+            />
+            
+            {/* Always show the form */}
             <WithdrawalForm
               availablePoints={wallet?.available_points || 0}
               onSubmit={handleWithdrawal}
               isSubmitting={withdrawMutation.isPending}
-              eligibility={eligibility}
+              isEligible={isFullyEligible}
             />
           </TabsContent>
           
@@ -163,6 +209,14 @@ export default function Withdraw() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Phone Verification Sheet */}
+      <PhoneVerificationSheet
+        open={phoneVerificationOpen}
+        onOpenChange={setPhoneVerificationOpen}
+        userId={user?.id}
+        onVerified={handlePhoneVerified}
+      />
     </div>
   );
 }
