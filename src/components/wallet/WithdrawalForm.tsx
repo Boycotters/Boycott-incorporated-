@@ -4,37 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Smartphone, AlertCircle, Check, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-
-interface WithdrawalEligibility {
-  eligible: boolean;
-  reason?: string;
-  message: string;
-  referral_count?: number;
-  required_referrals?: number;
-  remaining_referrals?: number;
-  is_verified?: boolean;
-}
+import { Loader2, Smartphone, AlertCircle, Check } from "lucide-react";
 
 interface WithdrawalFormProps {
   availablePoints: number;
   onSubmit: (data: { amount: number; provider: string; phoneNumber: string }) => Promise<void>;
   isSubmitting: boolean;
-  eligibility?: WithdrawalEligibility | null;
+  isEligible?: boolean;
 }
 
 const PROVIDERS = [
-  { id: 'airtel', name: 'Airtel Money', color: 'bg-red-500' },
-  { id: 'mtn', name: 'MTN Money', color: 'bg-yellow-500' },
-  { id: 'zamtel', name: 'Zamtel Kwacha', color: 'bg-green-500' },
+  { id: 'airtel', name: 'Airtel Money', color: 'bg-destructive' },
+  { id: 'mtn', name: 'MTN Money', color: 'bg-accent' },
+  { id: 'zamtel', name: 'Zamtel Kwacha', color: 'bg-primary' },
 ];
 
 const MIN_WITHDRAWAL = 500;
 const FEE_PERCENTAGE = 0.10;
 
-export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligibility }: WithdrawalFormProps) {
-  const navigate = useNavigate();
+export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, isEligible = true }: WithdrawalFormProps) {
   const [amount, setAmount] = useState("");
   const [provider, setProvider] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -58,7 +46,7 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
                   amountNum <= availablePoints && 
                   provider && 
                   phoneNumber.length >= 10 &&
-                  (eligibility?.eligible !== false);
+                  isEligible;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,54 +55,6 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
   };
 
   const quickAmounts = [500, 1000, 2000, 5000];
-
-  // Show eligibility requirements if not eligible
-  if (eligibility && !eligibility.eligible) {
-    return (
-      <Card className="p-6 rounded-2xl border-2 border-amber-500/20 bg-amber-500/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
-            <Users className="w-8 h-8 text-amber-500" />
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-bold mb-2">Unlock Withdrawals</h3>
-            <p className="text-muted-foreground text-sm">
-              Invite 2 friends to unlock your first withdrawal
-            </p>
-          </div>
-
-          <div className="bg-background rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              <span className="font-semibold">
-                {eligibility.referral_count || 0} / {eligibility.required_referrals || 2} Referrals
-              </span>
-            </div>
-            
-            <div className="w-full bg-muted rounded-full h-2">
-              <div 
-                className="bg-primary rounded-full h-2 transition-all"
-                style={{ width: `${((eligibility.referral_count || 0) / (eligibility.required_referrals || 2)) * 100}%` }}
-              />
-            </div>
-            
-            <p className="text-xs text-muted-foreground">
-              Invite {eligibility.remaining_referrals ?? (2 - (eligibility.referral_count || 0))} more friend{(eligibility.remaining_referrals ?? 1) !== 1 ? 's' : ''} to unlock withdrawals
-            </p>
-            
-            <Button 
-              onClick={() => navigate('/referrals')} 
-              className="w-full"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Invite Friends
-            </Button>
-          </div>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -127,7 +67,7 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
               key={p.id}
               htmlFor={p.id}
               className={`
-                flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all
+                relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all
                 ${provider === p.id 
                   ? 'border-primary bg-primary/5' 
                   : 'border-border hover:border-primary/50 bg-card'}
@@ -135,7 +75,7 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
             >
               <RadioGroupItem value={p.id} id={p.id} className="sr-only" />
               <div className={`w-8 h-8 ${p.color} rounded-full flex items-center justify-center`}>
-                <Smartphone className="w-4 h-4 text-white" />
+                <Smartphone className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="text-xs font-medium text-center">{p.name}</span>
               {provider === p.id && (
@@ -245,6 +185,8 @@ export function WithdrawalForm({ availablePoints, onSubmit, isSubmitting, eligib
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             Processing...
           </>
+        ) : !isEligible ? (
+          'Complete Requirements Above'
         ) : (
           'Request Withdrawal'
         )}

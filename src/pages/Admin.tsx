@@ -768,46 +768,46 @@ export default function Admin() {
           </Card>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs - Scrollable for portrait mode */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-max gap-1 h-11 p-1">
-              <TabsTrigger value="overview" className="gap-2 px-4">
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="inline-flex w-max gap-1 h-11 p-1 min-w-full sm:min-w-0">
+              <TabsTrigger value="overview" className="gap-1.5 px-3 shrink-0">
                 <BarChart3 className="w-4 h-4" />
-                Overview
+                <span className="hidden sm:inline">Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="withdrawals" className="gap-2 px-4">
+              <TabsTrigger value="withdrawals" className="gap-1.5 px-3 shrink-0">
                 <DollarSign className="w-4 h-4" />
-                Withdrawals
+                <span className="hidden sm:inline">Payouts</span>
                 {pendingWithdrawals.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 px-1.5">{pendingWithdrawals.length}</Badge>
+                  <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{pendingWithdrawals.length}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="users" className="gap-2 px-4">
+              <TabsTrigger value="users" className="gap-1.5 px-3 shrink-0">
                 <Users className="w-4 h-4" />
-                Users
+                <span className="hidden sm:inline">Users</span>
               </TabsTrigger>
-              <TabsTrigger value="tasks" className="gap-2 px-4">
+              <TabsTrigger value="tasks" className="gap-1.5 px-3 shrink-0">
                 <ClipboardList className="w-4 h-4" />
-                Tasks
+                <span className="hidden sm:inline">Tasks</span>
               </TabsTrigger>
-              <TabsTrigger value="videos" className="gap-2 px-4">
+              <TabsTrigger value="videos" className="gap-1.5 px-3 shrink-0">
                 <Video className="w-4 h-4" />
-                Videos
+                <span className="hidden sm:inline">Videos</span>
               </TabsTrigger>
-              <TabsTrigger value="surveys" className="gap-2 px-4">
+              <TabsTrigger value="surveys" className="gap-1.5 px-3 shrink-0">
                 <FileText className="w-4 h-4" />
-                Survey Data
+                <span className="hidden sm:inline">Surveys</span>
                 {unexportedSurveys.length > 0 && (
-                  <Badge className="ml-1 h-5 px-1.5 bg-purple-500">{unexportedSurveys.length}</Badge>
+                  <Badge className="ml-1 h-5 px-1.5 text-xs bg-primary">{unexportedSurveys.length}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="algorithms" className="gap-2 px-4">
+              <TabsTrigger value="algorithms" className="gap-1.5 px-3 shrink-0">
                 <Settings className="w-4 h-4" />
-                Algorithms
+                <span className="hidden sm:inline">Config</span>
               </TabsTrigger>
             </TabsList>
-          </ScrollArea>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="mt-4 space-y-4">

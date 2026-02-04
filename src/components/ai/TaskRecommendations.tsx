@@ -3,14 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Target, RefreshCw, Zap, Clock, Trophy, CheckCircle, Coins, AlertCircle, BookOpen, Video, Share2, Download, MessageSquare } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sparkles, Target, RefreshCw, Zap, Clock, Trophy, BookOpen, Video, Share2, Download, MessageSquare, Camera, HelpCircle, Brain, Globe, History, Lightbulb, Users, Timer } from "lucide-react";
 import { useAI, RecommendationsResult, TaskRecommendation } from "@/hooks/useAI";
 import { cn } from "@/lib/utils";
 import { TimerVerification } from "@/components/task-verification/TimerVerification";
 import { SurveyVerification } from "@/components/task-verification/SurveyVerification";
 import { UrlVerification } from "@/components/task-verification/UrlVerification";
 import { QuizVerification } from "@/components/task-verification/QuizVerification";
+import { ScreenshotVerification } from "@/components/task-verification/ScreenshotVerification";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,65 +28,88 @@ interface TaskRecommendationsProps {
 }
 
 const difficultyConfig = {
-  easy: { color: "bg-green-500/10 text-green-500 border-green-500/20", icon: Zap, points: 25 },
-  medium: { color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", icon: Clock, points: 50 },
-  hard: { color: "bg-red-500/10 text-red-500 border-red-500/20", icon: Trophy, points: 100 },
+  easy: { color: "bg-primary/10 text-primary border-primary/20", icon: Zap, points: 20 },
+  medium: { color: "bg-accent/10 text-accent-foreground border-accent/20", icon: Clock, points: 35 },
+  hard: { color: "bg-destructive/10 text-destructive border-destructive/20", icon: Trophy, points: 60 },
 };
 
 // Interest pools for variety
 const INTEREST_POOLS = [
-  ['social', 'gaming'],
-  ['lifestyle', 'shopping'],
-  ['learning', 'challenge'],
-  ['video_ad', 'survey'],
-  ['quick', 'app_install'],
-  ['social', 'lifestyle', 'gaming'],
-  ['shopping', 'learning'],
-  ['challenge', 'quick'],
+  ['trivia', 'learning'],
+  ['photo', 'challenge'],
+  ['survey', 'quiz'],
+  ['social', 'lifestyle'],
+  ['video_ad', 'quick'],
+  ['trivia', 'quiz', 'learning'],
+  ['photo', 'survey'],
+  ['challenge', 'social'],
 ];
 
-// Comprehensive fallback task content with real, actionable tasks
-const FALLBACK_TASKS: { taskType: string; category: string; reason: string; difficulty: 'easy' | 'medium' | 'hard'; icon?: any }[] = [
-  // Social Tasks
-  { taskType: "Share App with Friends", category: "social", reason: "Invite 2 friends via WhatsApp and earn bonus when they sign up", difficulty: "easy", icon: Share2 },
-  { taskType: "Follow Brand on Social Media", category: "social", reason: "Follow our partner brands on Facebook/Instagram for instant rewards", difficulty: "easy", icon: Share2 },
-  { taskType: "Share Your Success Story", category: "social", reason: "Post about your earnings on social media and tag us", difficulty: "medium", icon: Share2 },
+// Comprehensive task library with real, actionable content
+const FALLBACK_TASKS: { taskType: string; category: string; reason: string; difficulty: 'easy' | 'medium' | 'hard'; icon?: any; verificationType: 'quiz' | 'survey' | 'timer' | 'url' | 'photo' }[] = [
+  // TRIVIA TASKS - General Knowledge (Large Variety)
+  { taskType: "World Geography Trivia", category: "trivia", reason: "Test your knowledge of countries, capitals, and landmarks", difficulty: "easy", icon: Globe, verificationType: "quiz" },
+  { taskType: "African History Quiz", category: "trivia", reason: "Learn about important events in African history", difficulty: "medium", icon: History, verificationType: "quiz" },
+  { taskType: "Science Facts Challenge", category: "trivia", reason: "Answer questions about physics, chemistry, and biology", difficulty: "medium", icon: Brain, verificationType: "quiz" },
+  { taskType: "Sports Trivia Bowl", category: "trivia", reason: "Test your knowledge of football, basketball, and more", difficulty: "easy", icon: Trophy, verificationType: "quiz" },
+  { taskType: "Music & Entertainment Quiz", category: "trivia", reason: "Identify songs, artists, and entertainment facts", difficulty: "easy", icon: Sparkles, verificationType: "quiz" },
+  { taskType: "Zambian Culture Trivia", category: "trivia", reason: "How well do you know Zambian traditions and culture?", difficulty: "medium", icon: Globe, verificationType: "quiz" },
+  { taskType: "Math & Logic Puzzle", category: "trivia", reason: "Solve quick math problems and logical puzzles", difficulty: "hard", icon: Brain, verificationType: "quiz" },
+  { taskType: "Technology Trivia", category: "trivia", reason: "Test your knowledge of gadgets and tech innovations", difficulty: "medium", icon: Lightbulb, verificationType: "quiz" },
+  { taskType: "Animal Kingdom Quiz", category: "trivia", reason: "Identify animals and their unique characteristics", difficulty: "easy", icon: Globe, verificationType: "quiz" },
+  { taskType: "World Flags Challenge", category: "trivia", reason: "Can you identify flags from around the world?", difficulty: "medium", icon: Globe, verificationType: "quiz" },
   
-  // Survey Tasks  
-  { taskType: "Complete Quick Survey", category: "survey", reason: "Answer 5 questions about your shopping preferences", difficulty: "easy", icon: MessageSquare },
-  { taskType: "Product Opinion Survey", category: "survey", reason: "Share your thoughts on new product ideas for market research", difficulty: "medium", icon: MessageSquare },
-  { taskType: "Consumer Habits Survey", category: "survey", reason: "Help brands understand buying behaviors in Zambia", difficulty: "medium", icon: MessageSquare },
+  // TIMED QUIZ TASKS - Speed Challenges
+  { taskType: "60-Second Speed Quiz", category: "quiz", reason: "Answer as many questions as you can in 60 seconds", difficulty: "medium", icon: Timer, verificationType: "quiz" },
+  { taskType: "30-Second Lightning Round", category: "quiz", reason: "Quick-fire questions - think fast!", difficulty: "easy", icon: Zap, verificationType: "quiz" },
+  { taskType: "90-Second Challenge", category: "quiz", reason: "Extended speed quiz with harder questions", difficulty: "hard", icon: Timer, verificationType: "quiz" },
+  { taskType: "True or False Blitz", category: "quiz", reason: "Rapid true/false questions - how many can you get?", difficulty: "easy", icon: Zap, verificationType: "quiz" },
+  { taskType: "Picture Quiz Rush", category: "quiz", reason: "Identify images quickly before time runs out", difficulty: "medium", icon: Camera, verificationType: "quiz" },
   
-  // Video Tasks
-  { taskType: "Watch Partner Video", category: "video_ad", reason: "Watch a 30-second ad from our partner and earn points", difficulty: "easy", icon: Video },
-  { taskType: "Watch Educational Content", category: "video_ad", reason: "Learn about financial literacy while earning rewards", difficulty: "easy", icon: Video },
+  // LEARNING TASKS - Educational Content
+  { taskType: "Financial Literacy Lesson", category: "learning", reason: "Learn about saving, budgeting, and smart money habits", difficulty: "medium", icon: BookOpen, verificationType: "quiz" },
+  { taskType: "Digital Safety Training", category: "learning", reason: "Learn to protect yourself online from scams", difficulty: "easy", icon: BookOpen, verificationType: "quiz" },
+  { taskType: "Entrepreneurship Basics", category: "learning", reason: "Start your business journey with essential tips", difficulty: "medium", icon: Lightbulb, verificationType: "quiz" },
+  { taskType: "Health & Wellness Tips", category: "learning", reason: "Learn about nutrition, exercise, and mental health", difficulty: "easy", icon: BookOpen, verificationType: "quiz" },
+  { taskType: "Environmental Awareness", category: "learning", reason: "Understand climate change and sustainability", difficulty: "medium", icon: Globe, verificationType: "quiz" },
+  { taskType: "Career Development Guide", category: "learning", reason: "Tips for job searching and career growth", difficulty: "medium", icon: BookOpen, verificationType: "quiz" },
   
-  // Learning/Quiz Tasks
-  { taskType: "Knowledge Quiz Challenge", category: "learning", reason: "Test your general knowledge and earn points for correct answers", difficulty: "medium", icon: BookOpen },
-  { taskType: "Market Research Quiz", category: "learning", reason: "Answer questions about current trends and consumer habits", difficulty: "hard", icon: BookOpen },
-  { taskType: "Financial Literacy Quiz", category: "learning", reason: "Learn about saving, investing and money management", difficulty: "medium", icon: BookOpen },
-  { taskType: "Local Knowledge Quiz", category: "learning", reason: "Test your knowledge about Zambia and earn rewards", difficulty: "easy", icon: BookOpen },
+  // PHOTO VERIFICATION TASKS
+  { taskType: "Selfie Check-In", category: "photo", reason: "Take a selfie to verify your daily activity", difficulty: "easy", icon: Camera, verificationType: "photo" },
+  { taskType: "Product Photo Review", category: "photo", reason: "Photograph a product you use and share feedback", difficulty: "medium", icon: Camera, verificationType: "photo" },
+  { taskType: "Local Shop Photo", category: "photo", reason: "Visit and photograph a local business for exposure", difficulty: "medium", icon: Camera, verificationType: "photo" },
+  { taskType: "Receipt Photo Verification", category: "photo", reason: "Submit a photo of a recent purchase receipt", difficulty: "easy", icon: Camera, verificationType: "photo" },
+  { taskType: "Outdoor Activity Photo", category: "photo", reason: "Share a photo of you enjoying outdoor activities", difficulty: "easy", icon: Camera, verificationType: "photo" },
+  { taskType: "Workspace Photo Share", category: "photo", reason: "Show us your work or study environment", difficulty: "easy", icon: Camera, verificationType: "photo" },
+  { taskType: "Food & Drink Photo", category: "photo", reason: "Photograph your meal for food research", difficulty: "easy", icon: Camera, verificationType: "photo" },
   
-  // App Install Tasks
-  { taskType: "App Install Challenge", category: "app_install", reason: "Download a partner app and complete the tutorial for points", difficulty: "medium", icon: Download },
-  { taskType: "Try New App Feature", category: "app_install", reason: "Explore a new feature in a partner app and share feedback", difficulty: "easy", icon: Download },
+  // SURVEY TASKS
+  { taskType: "Quick Opinion Poll", category: "survey", reason: "Share your opinion on trending topics in 2 minutes", difficulty: "easy", icon: MessageSquare, verificationType: "survey" },
+  { taskType: "Shopping Preferences Survey", category: "survey", reason: "Tell brands what products you prefer", difficulty: "easy", icon: MessageSquare, verificationType: "survey" },
+  { taskType: "Media Consumption Survey", category: "survey", reason: "Share what TV, music, and content you enjoy", difficulty: "easy", icon: MessageSquare, verificationType: "survey" },
+  { taskType: "Mobile Usage Survey", category: "survey", reason: "Help researchers understand phone habits", difficulty: "medium", icon: MessageSquare, verificationType: "survey" },
+  { taskType: "Brand Awareness Survey", category: "survey", reason: "Share which brands you recognize and trust", difficulty: "easy", icon: MessageSquare, verificationType: "survey" },
   
-  // Quick Tasks
-  { taskType: "Daily Check-in Streak", category: "quick", reason: "Maintain your login streak for 7 days to unlock bonus rewards", difficulty: "medium", icon: Zap },
-  { taskType: "Profile Completion", category: "quick", reason: "Complete your profile information for verification bonus", difficulty: "easy", icon: Zap },
+  // SOCIAL TASKS
+  { taskType: "Share App with Friends", category: "social", reason: "Invite 2 friends via WhatsApp and earn bonus when they sign up", difficulty: "easy", icon: Share2, verificationType: "url" },
+  { taskType: "Follow Brand on Social", category: "social", reason: "Follow our partner brands on Facebook/Instagram", difficulty: "easy", icon: Share2, verificationType: "url" },
+  { taskType: "Social Media Share", category: "social", reason: "Share a post about your earnings experience", difficulty: "medium", icon: Share2, verificationType: "url" },
+  { taskType: "Community Invite", category: "social", reason: "Invite friends to join our earning community", difficulty: "medium", icon: Users, verificationType: "url" },
   
-  // Challenge Tasks
-  { taskType: "Product Feedback Review", category: "challenge", reason: "Try a product and share your honest review with photos", difficulty: "medium", icon: Trophy },
-  { taskType: "Local Business Review", category: "challenge", reason: "Visit a local store and leave a genuine review", difficulty: "hard", icon: Trophy },
-  { taskType: "Referral Champion", category: "challenge", reason: "Get 5 friends to sign up and reach Silver VIP status", difficulty: "hard", icon: Trophy },
+  // VIDEO TASKS
+  { taskType: "Watch Partner Video", category: "video_ad", reason: "Watch a 30-second ad from our partner", difficulty: "easy", icon: Video, verificationType: "timer" },
+  { taskType: "Educational Video", category: "video_ad", reason: "Learn about financial literacy while earning", difficulty: "easy", icon: Video, verificationType: "timer" },
+  { taskType: "Product Showcase Video", category: "video_ad", reason: "Watch and learn about new products", difficulty: "easy", icon: Video, verificationType: "timer" },
   
-  // Lifestyle Tasks
-  { taskType: "Brand Awareness Task", category: "lifestyle", reason: "Engage with a brand campaign and share your experience", difficulty: "medium" },
-  { taskType: "Lifestyle Survey", category: "lifestyle", reason: "Share your daily habits and preferences for research", difficulty: "easy" },
+  // CHALLENGE TASKS
+  { taskType: "Daily Check-in Streak", category: "challenge", reason: "Maintain your login streak for bonus rewards", difficulty: "medium", icon: Trophy, verificationType: "timer" },
+  { taskType: "Complete 5 Tasks Challenge", category: "challenge", reason: "Finish 5 tasks today for a completion bonus", difficulty: "hard", icon: Trophy, verificationType: "timer" },
+  { taskType: "Referral Champion", category: "challenge", reason: "Get 3 friends to sign up this week", difficulty: "hard", icon: Trophy, verificationType: "url" },
   
-  // Gaming Tasks
-  { taskType: "Gaming Achievement", category: "gaming", reason: "Score 100+ points in a mini-game to unlock rewards", difficulty: "medium", icon: Trophy },
-  { taskType: "High Score Challenge", category: "gaming", reason: "Beat your personal best in any game for bonus points", difficulty: "hard", icon: Trophy },
+  // QUICK TASKS
+  { taskType: "Profile Completion", category: "quick", reason: "Complete your profile information", difficulty: "easy", icon: Zap, verificationType: "timer" },
+  { taskType: "App Rating", category: "quick", reason: "Rate our app on the store for instant points", difficulty: "easy", icon: Zap, verificationType: "url" },
+  { taskType: "Notification Enable", category: "quick", reason: "Turn on notifications for exclusive offers", difficulty: "easy", icon: Zap, verificationType: "timer" },
 ];
 
 export function TaskRecommendations({
@@ -97,7 +121,7 @@ export function TaskRecommendations({
 }: TaskRecommendationsProps) {
   const [recommendations, setRecommendations] = useState<RecommendationsResult | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedTask, setSelectedTask] = useState<TaskRecommendation | null>(null);
+  const [selectedTask, setSelectedTask] = useState<(TaskRecommendation & { verificationType?: string }) | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   
@@ -106,7 +130,7 @@ export function TaskRecommendations({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { fireConfetti } = useConfetti();
-  const { canDoActivity, isWeekendBlocked, data: dailyLimits, refetch: refetchLimits } = useDailyLimits();
+  const { canDoActivity, isWeekendBlocked, refetch: refetchLimits } = useDailyLimits();
 
   const loadRecommendations = async () => {
     // Add randomness to interests for variety
@@ -116,27 +140,30 @@ export function TaskRecommendations({
     try {
       const result = await recommendTasks(userLevel, completedCategories, combinedInterests, vipTier);
       if (result && result.recommendations && result.recommendations.length > 0) {
-        // Ensure all recommendations have proper content
+        // Enrich with verification types from fallback library
         const enrichedRecommendations = result.recommendations.map((rec, idx) => {
+          // Match to fallback to get verification type
+          const matchedFallback = FALLBACK_TASKS.find(f => 
+            f.category === rec.category || f.taskType.toLowerCase().includes(rec.taskType.toLowerCase().split(' ')[0])
+          ) || FALLBACK_TASKS[(idx + Math.floor(Math.random() * FALLBACK_TASKS.length)) % FALLBACK_TASKS.length];
+          
           // If AI returned empty or placeholder content, use fallback
           if (!rec.taskType || rec.taskType.length < 3 || !rec.reason || rec.reason.length < 10) {
-            const fallback = FALLBACK_TASKS[(idx + Math.floor(Math.random() * FALLBACK_TASKS.length)) % FALLBACK_TASKS.length];
             return {
-              ...rec,
-              taskType: fallback.taskType,
-              reason: fallback.reason,
-              category: fallback.category,
-              difficulty: fallback.difficulty,
+              ...matchedFallback,
+              pointsRange: `${difficultyConfig[matchedFallback.difficulty].points} pts`
             };
           }
-          return rec;
+          return {
+            ...rec,
+            verificationType: matchedFallback.verificationType,
+          };
         });
         setRecommendations({
           ...result,
           recommendations: enrichedRecommendations,
         });
       } else {
-        // Use fallback tasks if AI fails
         generateFallbackRecommendations();
       }
     } catch (err) {
@@ -146,20 +173,21 @@ export function TaskRecommendations({
   };
 
   const generateFallbackRecommendations = () => {
-    // Shuffle and pick 4 random fallback tasks
+    // Shuffle and pick 6 random fallback tasks for more variety
     const shuffled = [...FALLBACK_TASKS].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 4);
+    const selected = shuffled.slice(0, 6);
     
     const dailyFocusOptions = [
-      "Complete quick tasks to build momentum today",
-      "Focus on surveys for maximum earnings",
-      "Try social tasks to boost your network",
-      "Challenge yourself with harder tasks for bigger rewards",
-      "Mix easy and medium tasks for steady progress",
+      "Try trivia quizzes for fun learning and quick points",
+      "Complete photo tasks for instant verification rewards",
+      "Take timed challenges to test your speed",
+      "Focus on surveys for steady earnings today",
+      "Mix easy and medium tasks for balanced progress",
+      "Explore new task types to diversify your earnings",
     ];
     
     setRecommendations({
-      recommendations: selected.map((t, i) => ({
+      recommendations: selected.map(t => ({
         ...t,
         pointsRange: `${difficultyConfig[t.difficulty].points} pts`
       })),
@@ -169,15 +197,13 @@ export function TaskRecommendations({
 
   useEffect(() => {
     loadRecommendations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  const handleTaskClick = (rec: TaskRecommendation) => {
-    // Check if user can do partnered tasks
+  const handleTaskClick = (rec: TaskRecommendation & { verificationType?: string }) => {
     if (!canDoActivity('partnered_tasks')) {
       toast({
         title: "Daily Limit Reached",
@@ -197,7 +223,6 @@ export function TaskRecommendations({
     setIsCompleting(true);
     
     try {
-      // Use secure server-side RPC to complete AI task
       const { data: result, error } = await supabase.rpc('complete_ai_partner_task', {
         p_user_id: user.id,
         p_task_type: selectedTask.taskType,
@@ -220,7 +245,6 @@ export function TaskRecommendations({
         description: `You earned ${typedResult.points_awarded || points} points!`,
       });
 
-      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['user-data'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
@@ -229,11 +253,8 @@ export function TaskRecommendations({
       
       setIsModalOpen(false);
       setSelectedTask(null);
-      
-      // Refresh recommendations
       handleRefresh();
     } catch (err: any) {
-      console.error('Error completing task:', err);
       toast({
         title: "Error",
         description: err.message || "Failed to complete task. Please try again.",
@@ -249,10 +270,12 @@ export function TaskRecommendations({
     setSelectedTask(null);
   };
 
-  const getVerificationType = (category: string): 'timer' | 'survey' | 'url' | 'quiz' => {
-    if (['learning', 'challenge'].includes(category)) return 'quiz';
-    if (['survey'].includes(category)) return 'survey';
-    if (['social', 'app_install'].includes(category)) return 'url';
+  const getVerificationType = (task: TaskRecommendation & { verificationType?: string }): 'timer' | 'survey' | 'url' | 'quiz' | 'photo' => {
+    if (task.verificationType) return task.verificationType as any;
+    if (['trivia', 'quiz', 'learning'].includes(task.category)) return 'quiz';
+    if (['survey'].includes(task.category)) return 'survey';
+    if (['photo'].includes(task.category)) return 'photo';
+    if (['social', 'app_install'].includes(task.category)) return 'url';
     return 'timer';
   };
 
@@ -270,11 +293,14 @@ export function TaskRecommendations({
     await handleComplete();
   };
 
+  const handlePhotoComplete = async (photoUrl: string) => {
+    await handleComplete();
+  };
+
   const renderVerification = () => {
     if (!selectedTask || !user?.id) return null;
     
-    const verificationType = getVerificationType(selectedTask.category);
-    const points = difficultyConfig[selectedTask.difficulty].points;
+    const verificationType = getVerificationType(selectedTask);
     
     switch (verificationType) {
       case 'quiz':
@@ -295,6 +321,15 @@ export function TaskRecommendations({
             taskId={`ai-${Date.now()}`}
             taskTitle={selectedTask.taskType}
             onComplete={handleComplete}
+            onCancel={handleCancel}
+          />
+        );
+      case 'photo':
+        return (
+          <ScreenshotVerification
+            taskId={`ai-${Date.now()}`}
+            userId={user.id}
+            onComplete={handlePhotoComplete}
             onCancel={handleCancel}
           />
         );
@@ -366,8 +401,8 @@ export function TaskRecommendations({
                 <Sparkles className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">AI Recommendations</CardTitle>
-                <p className="text-xs text-muted-foreground">Personalized for you</p>
+                <CardTitle className="text-base">For You</CardTitle>
+                <p className="text-xs text-muted-foreground">Personalized tasks</p>
               </div>
             </div>
             <Button 
@@ -392,69 +427,67 @@ export function TaskRecommendations({
             <p className="text-sm font-medium">{recommendations.dailyFocus}</p>
           </div>
 
-          {/* Recommendations */}
-          <div className="space-y-2">
-            {recommendations.recommendations.slice(0, 4).map((rec, index) => {
+          {/* Recommendations Grid */}
+          <div className="grid gap-2">
+            {recommendations.recommendations.slice(0, 6).map((rec, index) => {
               const DiffIcon = difficultyConfig[rec.difficulty].icon;
               const points = difficultyConfig[rec.difficulty].points;
+              const TaskIcon = (rec as any).icon || HelpCircle;
               
               return (
                 <div
                   key={index}
                   className="group p-3 rounded-lg border bg-card/50 hover:bg-card transition-colors cursor-pointer"
-                  onClick={() => handleTaskClick(rec)}
+                  onClick={() => handleTaskClick(rec as any)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm truncate">{rec.taskType}</span>
-                        <Badge 
-                          variant="outline" 
-                          className={cn("text-xs capitalize shrink-0", difficultyConfig[rec.difficulty].color)}
-                        >
-                          <DiffIcon className="w-3 h-3 mr-1" />
-                          {rec.difficulty}
-                        </Badge>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        <TaskIcon className="w-4 h-4 text-muted-foreground" />
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{rec.reason}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-medium text-sm truncate">{rec.taskType}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{rec.reason}</p>
+                      </div>
                     </div>
-                    <Badge variant="secondary" className="shrink-0 text-xs">
-                      <Coins className="w-3 h-3 mr-1" />
-                      {points} pts
-                    </Badge>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge 
+                        variant="outline" 
+                        className={cn("text-xs capitalize", difficultyConfig[rec.difficulty].color)}
+                      >
+                        {rec.difficulty}
+                      </Badge>
+                      <span className="text-xs font-semibold text-primary">{points} pts</span>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Load More Button */}
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            size="sm"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Load More Tasks
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Task Completion Modal */}
+      {/* Verification Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-center">{selectedTask?.taskType}</DialogTitle>
+            <DialogTitle>{selectedTask?.taskType}</DialogTitle>
+            <DialogDescription>{selectedTask?.reason}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">{selectedTask?.reason}</p>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                {selectedTask && (
-                  <>
-                    <Badge className={difficultyConfig[selectedTask.difficulty].color}>
-                      {selectedTask.difficulty}
-                    </Badge>
-                    <Badge variant="secondary">
-                      <Coins className="w-3 h-3 mr-1" />
-                      {difficultyConfig[selectedTask.difficulty].points} pts
-                    </Badge>
-                  </>
-                )}
-              </div>
-            </div>
-            {renderVerification()}
-          </div>
+          {renderVerification()}
         </DialogContent>
       </Dialog>
     </>
