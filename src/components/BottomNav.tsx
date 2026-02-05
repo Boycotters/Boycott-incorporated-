@@ -20,6 +20,7 @@ export const BottomNav = () => {
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isEarnTab = item.path === "/earn";
             return (
               <Link
                 key={item.path}
@@ -31,12 +32,17 @@ export const BottomNav = () => {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <item.icon
-                  className={cn(
-                    "w-6 h-6 transition-all duration-300",
-                    isActive && "scale-110"
-                  )}
-                />
+                <div className={cn(
+                  "transition-all duration-300",
+                  isEarnTab && isActive && "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]"
+                )}>
+                  <item.icon
+                    className={cn(
+                      "w-6 h-6 transition-all duration-300",
+                      isActive && "scale-110"
+                    )}
+                  />
+                </div>
                 <span className="text-xs font-medium">{item.label}</span>
               </Link>
             );
