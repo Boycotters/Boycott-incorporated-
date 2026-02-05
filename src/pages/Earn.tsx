@@ -471,6 +471,7 @@ export default function Earn() {
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
       queryClient.invalidateQueries({ queryKey: ['weekly-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
     },
     onError: (error: any) => {
       toast({

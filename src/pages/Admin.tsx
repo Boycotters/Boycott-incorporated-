@@ -64,6 +64,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { TaskManagement, WithdrawalManagement } from "@/components/admin";
 
 interface Withdrawal {
   id: string;
@@ -1009,66 +1010,8 @@ export default function Admin() {
           </TabsContent>
 
           {/* Withdrawals Tab */}
-          <TabsContent value="withdrawals" className="mt-4 space-y-3">
-            {withdrawals.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">No withdrawal requests</p>
-                </CardContent>
-              </Card>
-            ) : (
-              withdrawals.map((withdrawal) => (
-                <Card key={withdrawal.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-semibold">{withdrawal.amount.toLocaleString()} pts</p>
-                        <p className="text-sm text-muted-foreground">
-                          {withdrawal.provider} • {withdrawal.phone_number}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(withdrawal.created_at).toLocaleDateString()} at {new Date(withdrawal.created_at).toLocaleTimeString()}
-                        </p>
-                      </div>
-                      <Badge className={getStatusColor(withdrawal.status)}>
-                        {withdrawal.status}
-                      </Badge>
-                    </div>
-                    
-                    {withdrawal.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="flex-1 gap-1"
-                          onClick={() => updateWithdrawalMutation.mutate({
-                            withdrawalId: withdrawal.id,
-                            status: 'approved'
-                          })}
-                          disabled={updateWithdrawalMutation.isPending}
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="flex-1 gap-1"
-                          onClick={() => updateWithdrawalMutation.mutate({
-                            withdrawalId: withdrawal.id,
-                            status: 'rejected',
-                            notes: 'Rejected by admin'
-                          })}
-                          disabled={updateWithdrawalMutation.isPending}
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
+          <TabsContent value="withdrawals" className="mt-4">
+            <WithdrawalManagement withdrawals={withdrawals} />
           </TabsContent>
 
           {/* Users Tab */}
@@ -1138,145 +1081,8 @@ export default function Admin() {
           </TabsContent>
 
           {/* Tasks Tab */}
-          <TabsContent value="tasks" className="mt-4 space-y-3">
-            <Dialog open={addTaskOpen} onOpenChange={setAddTaskOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add New Task
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Task</DialogTitle>
-                  <DialogDescription>
-                    Create a new task for users to complete and earn points.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="task-title">Title</Label>
-                    <Input
-                      id="task-title"
-                      value={newTask.title}
-                      onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Task title"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="task-description">Description</Label>
-                    <Textarea
-                      id="task-description"
-                      value={newTask.description}
-                      onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Task description"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="task-points">Points Reward</Label>
-                      <Input
-                        id="task-points"
-                        type="number"
-                        value={newTask.points_reward}
-                        onChange={(e) => setNewTask(prev => ({ ...prev, points_reward: parseInt(e.target.value) || 10 }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="task-category">Category</Label>
-                      <Select
-                        value={newTask.category}
-                        onValueChange={(value) => setNewTask(prev => ({ ...prev, category: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="digital">Digital</SelectItem>
-                          <SelectItem value="physical">Physical</SelectItem>
-                          <SelectItem value="survey">Survey</SelectItem>
-                          <SelectItem value="partnership">Partnership</SelectItem>
-                          <SelectItem value="social">Social</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="task-difficulty">Difficulty</Label>
-                      <Select
-                        value={newTask.difficulty}
-                        onValueChange={(value) => setNewTask(prev => ({ ...prev, difficulty: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="easy">Easy</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="hard">Hard</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="task-verification">Verification</Label>
-                      <Select
-                        value={newTask.verification_type}
-                        onValueChange={(value) => setNewTask(prev => ({ ...prev, verification_type: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="url">URL</SelectItem>
-                          <SelectItem value="screenshot">Screenshot</SelectItem>
-                          <SelectItem value="quiz">Quiz</SelectItem>
-                          <SelectItem value="timer">Timer</SelectItem>
-                          <SelectItem value="survey">Survey</SelectItem>
-                          <SelectItem value="data">Data Entry</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full" 
-                    onClick={() => addTaskMutation.mutate(newTask)}
-                    disabled={addTaskMutation.isPending || !newTask.title}
-                  >
-                    Add Task
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {(tasks || []).map((task) => (
-              <Card key={task.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold">{task.title}</p>
-                        <Badge variant="outline">{task.category}</Badge>
-                        <Badge variant="secondary">{task.difficulty}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-1">{task.description}</p>
-                      <p className="text-sm font-medium text-primary mt-1">+{task.points_reward} pts</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={task.is_active ?? false}
-                        onCheckedChange={(checked) => toggleTaskMutation.mutate({ taskId: task.id, isActive: checked })}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <TabsContent value="tasks" className="mt-4">
+            <TaskManagement tasks={tasks} />
           </TabsContent>
 
           {/* Videos Tab */}
