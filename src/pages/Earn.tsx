@@ -47,6 +47,7 @@ interface Task {
   verification_type: string | null;
   is_active: boolean | null;
   created_at: string | null;
+  quiz_data?: Array<{ question: string; options: string[]; correct_answer: number }> | null;
 }
 
 interface LoginStreakResult {

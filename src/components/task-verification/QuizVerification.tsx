@@ -18,6 +18,12 @@ interface QuizQuestion {
   explanation?: string;
 }
 
+interface CustomQuizData {
+  question: string;
+  options: string[];
+  correct_answer: number;
+}
+
 interface GeneratedQuiz {
   title: string;
   description: string;
@@ -32,6 +38,7 @@ interface QuizVerificationProps {
   taskCategory?: string;
   userLevel?: number;
   passPercentage?: number;
+  customQuizData?: CustomQuizData[];
   onComplete: (passed: boolean, score: number) => void;
   onCancel: () => void;
 }
@@ -191,6 +198,7 @@ export function QuizVerification({
   taskCategory = "general",
   userLevel = 1,
   passPercentage = 60,
+  customQuizData,
   onComplete,
   onCancel,
 }: QuizVerificationProps) {
@@ -204,9 +212,35 @@ export function QuizVerification({
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [score, setScore] = useState(0);
 
+  // Convert custom quiz data to the internal format
+  const convertCustomQuizData = (data: CustomQuizData[]): GeneratedQuiz => {
+    const questions: QuizQuestion[] = data.map((q, index) => ({
+      id: `custom_${index}`,
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correct_answer,
+    }));
+
+    return {
+      title: taskTitle,
+      description: `Score ${passPercentage}% or higher to pass.`,
+      passPercentage,
+      timePerQuestion: 30,
+      questions,
+    };
+  };
+
   // Generate quiz on mount
   useEffect(() => {
     const loadQuiz = async () => {
+      // If custom quiz data is provided, use it directly
+      if (customQuizData && customQuizData.length > 0) {
+        setQuiz(convertCustomQuizData(customQuizData));
+        setTimeLeft(30);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // Try AI service first
         const response = await fetch(
@@ -247,7 +281,7 @@ export function QuizVerification({
     };
 
     loadQuiz();
-  }, [taskTitle, taskCategory, userLevel, passPercentage]);
+  }, [taskTitle, taskCategory, userLevel, passPercentage, customQuizData]);
 
   // Timer countdown
   useEffect(() => {

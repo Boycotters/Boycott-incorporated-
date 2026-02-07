@@ -802,6 +802,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           points_reward: number
+          quiz_data: Json | null
           title: string
           verification_type: string | null
         }
@@ -813,6 +814,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           points_reward: number
+          quiz_data?: Json | null
           title: string
           verification_type?: string | null
         }
@@ -824,6 +826,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           points_reward?: number
+          quiz_data?: Json | null
           title?: string
           verification_type?: string | null
         }
