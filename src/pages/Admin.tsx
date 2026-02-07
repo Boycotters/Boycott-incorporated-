@@ -64,7 +64,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { TaskManagement, WithdrawalManagement } from "@/components/admin";
+import { TaskManagement, WithdrawalManagement, UserManagement } from "@/components/admin";
 
 interface Withdrawal {
   id: string;
@@ -98,6 +98,8 @@ interface User {
   id: string;
   email: string;
   full_name: string | null;
+  phone: string | null;
+  phone_verified: boolean | null;
   total_points: number | null;
   level: number | null;
   vip_tier: string | null;
@@ -1015,69 +1017,12 @@ export default function Admin() {
           </TabsContent>
 
           {/* Users Tab */}
-          <TabsContent value="users" className="mt-4 space-y-4">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search users by email or name..." 
-                  className="pl-9"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>VIP</TableHead>
-                    <TableHead>Streak</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(users || []).map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{u.full_name || 'No name'}</p>
-                          <p className="text-xs text-muted-foreground">{u.email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{u.total_points?.toLocaleString() || 0}</TableCell>
-                      <TableCell>{u.level || 1}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{u.vip_tier || 'bronze'}</Badge>
-                      </TableCell>
-                      <TableCell>{u.current_streak || 0} days</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant={(u as any).is_banned ? "outline" : "destructive"}
-                          onClick={() => banUserMutation.mutate({ 
-                            userId: u.id, 
-                            isBanned: !(u as any).is_banned,
-                            reason: (u as any).is_banned ? '' : 'Banned by admin'
-                          })}
-                          disabled={banUserMutation.isPending}
-                        >
-                          {(u as any).is_banned ? 'Unban' : 'Ban'}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+          <TabsContent value="users" className="mt-4">
+            <UserManagement 
+              users={users} 
+              searchQuery={userSearch}
+              onSearchChange={setUserSearch}
+            />
           </TabsContent>
 
           {/* Tasks Tab */}
