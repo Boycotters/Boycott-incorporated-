@@ -50,6 +50,9 @@ export function useDailyLimits() {
   };
 
   const isWeekendBlocked = data ? (data.is_weekend && !data.has_campaign) : false;
+  
+  // Daily cap: 400 with campaign, 200 without
+  const effectiveMaxPoints = data?.has_campaign ? 400 : 200;
 
   return {
     data,
@@ -59,8 +62,8 @@ export function useDailyLimits() {
     getRemainingForActivity,
     hasReachedDailyCap: data ? data.total_points.remaining <= 0 : false,
     totalPointsEarned: data?.total_points.earned ?? 0,
-  totalPointsRemaining: data?.total_points.remaining ?? 400,
-  maxDailyPoints: 400,
+    totalPointsRemaining: data?.total_points.remaining ?? effectiveMaxPoints,
+    maxDailyPoints: effectiveMaxPoints,
     isWeekend: data?.is_weekend ?? false,
     hasCampaign: data?.has_campaign ?? false,
     isWeekendBlocked,

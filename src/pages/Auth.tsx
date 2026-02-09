@@ -29,6 +29,7 @@ const signupSchema = z.object({
     .regex(/[A-Z]/, { message: "Password must contain an uppercase letter" })
     .regex(/[0-9]/, { message: "Password must contain a number" }),
   fullName: z.string().trim().min(1, { message: "Full name is required" }).max(100, { message: "Full name is too long" }),
+  phone: z.string().min(10, { message: "Phone number is required (at least 10 digits)" }),
 });
 
 const forgotPasswordSchema = z.object({
@@ -72,7 +73,7 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
-  const [signupErrors, setSignupErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
+  const [signupErrors, setSignupErrors] = useState<{ email?: string; password?: string; fullName?: string; phone?: string }>({});
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -305,18 +306,23 @@ const Auth = () => {
       return;
     }
     
+    // Validate phone
+    const cleanedPhone = signupPhone.replace(/[^\d+]/g, '');
+    
     const result = signupSchema.safeParse({ 
       email: signupEmail, 
       password: signupPassword, 
-      fullName: signupFullName 
+      fullName: signupFullName,
+      phone: cleanedPhone,
     });
     
     if (!result.success) {
-      const errors: { email?: string; password?: string; fullName?: string } = {};
+      const errors: { email?: string; password?: string; fullName?: string; phone?: string } = {};
       result.error.errors.forEach((err) => {
         if (err.path[0] === 'email') errors.email = err.message;
         if (err.path[0] === 'password') errors.password = err.message;
         if (err.path[0] === 'fullName') errors.fullName = err.message;
+        if (err.path[0] === 'phone') errors.phone = err.message;
       });
       setSignupErrors(errors);
       return;
@@ -339,6 +345,7 @@ const Auth = () => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: result.data.fullName,
+            phone: cleanedPhone,
           }
         }
       });
@@ -384,6 +391,18 @@ const Auth = () => {
           });
         } catch (refError) {
           console.error('Referral processing failed:', refError);
+        }
+      }
+
+      // Save phone number to users table
+      if (userId && cleanedPhone) {
+        try {
+          await supabase
+            .from('users')
+            .update({ phone: cleanedPhone })
+            .eq('id', userId);
+        } catch (phoneError) {
+          console.error('Phone save failed:', phoneError);
         }
       }
 
@@ -795,16 +814,21 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-phone">Phone Number (Optional)</Label>
+                  <Label htmlFor="signup-phone">Phone Number *</Label>
                   <Input
                     id="signup-phone"
                     type="tel"
                     placeholder="+260 XXX XXX XXX"
                     value={signupPhone}
                     onChange={(e) => setSignupPhone(formatPhoneNumber(e.target.value))}
+                    required
+                    className={signupErrors.phone ? "border-destructive" : ""}
                   />
+                  {signupErrors.phone && (
+                    <p className="text-sm text-destructive">{signupErrors.phone}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">
-                    You'll verify this after signing up
+                    Include country code (e.g., +260 for Zambia). Required for withdrawals.
                   </p>
                 </div>
                 <div className="space-y-2">
