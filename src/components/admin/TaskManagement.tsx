@@ -58,6 +58,14 @@ const CATEGORIES = [
   { value: 'challenge', label: 'Challenge' },
   { value: 'trivia', label: 'Trivia' },
   { value: 'photo', label: 'Photo Verification' },
+  { value: 'video_ad', label: 'Video Ad' },
+];
+
+const PAGE_PLACEMENTS = [
+  { value: 'earn', label: 'Earn Page' },
+  { value: 'discover', label: 'Discover Page' },
+  { value: 'home', label: 'Home Page' },
+  { value: 'all', label: 'All Pages' },
 ];
 
 const VERIFICATION_TYPES = [
@@ -96,6 +104,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
     category: 'digital',
     difficulty: 'easy',
     verification_type: 'quiz',
+    page_placement: 'earn',
     quiz_data: [] as QuizQuestion[]
   });
 
@@ -111,6 +120,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
         category: task.category,
         difficulty: task.difficulty,
         verification_type: task.verification_type,
+        page_placement: task.page_placement || 'earn',
         is_active: true,
       };
       
@@ -211,6 +221,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
       category: 'digital',
       difficulty: 'easy',
       verification_type: 'quiz',
+      page_placement: 'earn',
       quiz_data: []
     });
   };
@@ -470,7 +481,25 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+             </div>
+          </div>
+
+          {/* Page Placement */}
+          <div className="space-y-2">
+            <Label>Show on Page</Label>
+            <Select
+              value={isNew ? newTask.page_placement : ((selectedTask as any)?.page_placement || 'earn')}
+              onValueChange={(value) => setFormTask((prev: any) => ({ ...prev, page_placement: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_PLACEMENTS.map(pp => (
+                  <SelectItem key={pp.value} value={pp.value}>{pp.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Quiz Questions Editor */}

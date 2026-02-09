@@ -801,6 +801,7 @@ export type Database = {
           difficulty: string | null
           id: string
           is_active: boolean | null
+          page_placement: string | null
           points_reward: number
           quiz_data: Json | null
           title: string
@@ -813,6 +814,7 @@ export type Database = {
           difficulty?: string | null
           id?: string
           is_active?: boolean | null
+          page_placement?: string | null
           points_reward: number
           quiz_data?: Json | null
           title: string
@@ -825,6 +827,7 @@ export type Database = {
           difficulty?: string | null
           id?: string
           is_active?: boolean | null
+          page_placement?: string | null
           points_reward?: number
           quiz_data?: Json | null
           title?: string

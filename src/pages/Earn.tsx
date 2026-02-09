@@ -47,7 +47,8 @@ interface Task {
   verification_type: string | null;
   is_active: boolean | null;
   created_at: string | null;
-  quiz_data?: Array<{ question: string; options: string[]; correct_answer: number }> | null;
+  page_placement: string | null;
+  quiz_data?: any;
 }
 
 interface LoginStreakResult {
@@ -884,7 +885,7 @@ export default function Earn() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Available Tasks</h2>
           
-          {(tasks || []).map((task) => {
+          {(tasks || []).filter(task => !isTaskCompleted(task.id)).map((task) => {
             const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
             const VerifyIcon = verificationIcons[task.verification_type || 'instant'] || Zap;
             const completed = isTaskCompleted(task.id);

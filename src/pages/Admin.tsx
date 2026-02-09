@@ -119,6 +119,7 @@ interface Task {
   difficulty: string | null;
   verification_type: string | null;
   is_active: boolean | null;
+  page_placement: string | null;
 }
 
 interface SurveyResponse {
