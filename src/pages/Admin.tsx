@@ -810,6 +810,10 @@ export default function Admin() {
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Config</span>
               </TabsTrigger>
+              <TabsTrigger value="verification" className="gap-1.5 px-3 shrink-0">
+                <UserCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Verify</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1469,15 +1473,59 @@ export default function Admin() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="w-5 h-5" />
-                  Earning Algorithms
+                  Platform Algorithms & Configuration
                 </CardTitle>
                 <CardDescription>
-                  Configure platform earning rules and limits
+                  Configure platform earning rules, daily caps, and verification algorithms
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Daily Cap Algorithm Info */}
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                      <p className="font-semibold">Daily Earning Cap Algorithm</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-background p-3 rounded-lg">
+                        <p className="text-muted-foreground text-xs">With Campaign</p>
+                        <p className="text-xl font-bold text-primary">400 pts (K40)</p>
+                        <p className="text-xs text-muted-foreground">50% campaign / 50% tasks</p>
+                      </div>
+                      <div className="bg-background p-3 rounded-lg">
+                        <p className="text-muted-foreground text-xs">No Campaign</p>
+                        <p className="text-xl font-bold">200 pts (K20)</p>
+                        <p className="text-xs text-muted-foreground">Regular earning limit</p>
+                      </div>
+                    </div>
+                    <div className="bg-background p-3 rounded-lg text-sm">
+                      <p className="text-muted-foreground text-xs mb-1">Weekly Limit</p>
+                      <p className="font-semibold">900 pts (Mon-Fri)</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Campaign Task Verification Algorithm */}
+                <Card className="bg-accent/5 border-accent/20">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-accent-foreground" />
+                      <p className="font-semibold">Campaign Task Verification</p>
+                    </div>
+                    <div className="text-sm space-y-2 text-muted-foreground">
+                      <p>• <strong>GPS Check:</strong> Verify user is in target location</p>
+                      <p>• <strong>Photo Proof:</strong> Screenshot verification required</p>
+                      <p>• <strong>Time Gate:</strong> Minimum engagement time enforced</p>
+                      <p>• <strong>Quiz Gate:</strong> Knowledge check before reward</p>
+                      <p>• <strong>Daily Limit:</strong> Max campaign tasks capped at 50% of daily cap</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Existing algorithms from DB */}
                 {algorithms.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No algorithms configured</p>
+                  <p className="text-muted-foreground text-center py-4">No custom algorithms configured</p>
                 ) : (
                   algorithms.map((algo) => (
                     <Card key={algo.id} className="bg-muted/50">
@@ -1504,6 +1552,66 @@ export default function Admin() {
                     </Card>
                   ))
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Verification Tab */}
+          <TabsContent value="verification" className="mt-4 space-y-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="w-5 h-5" />
+                  Task Verification Types
+                </CardTitle>
+                <CardDescription>
+                  Overview of verification methods available for tasks
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[
+                  { type: 'screenshot', label: 'Screenshot Verification', desc: 'User uploads a screenshot as proof of task completion' },
+                  { type: 'url', label: 'URL Verification', desc: 'User submits a URL to verify task completion' },
+                  { type: 'timer', label: 'Timer Verification', desc: 'User must spend minimum time on task' },
+                  { type: 'gps', label: 'GPS Location Verification', desc: 'Verify user is at the required physical location' },
+                  { type: 'quiz', label: 'Quiz Verification', desc: 'User must pass a quiz to earn points' },
+                  { type: 'survey', label: 'Survey Verification', desc: 'User completes a survey questionnaire' },
+                  { type: 'ai_survey', label: 'AI Survey/Quiz', desc: 'AI-generated questions based on task category' },
+                  { type: 'instant', label: 'Instant / Data Verification', desc: 'Automatic verification against user data' },
+                ].map(item => (
+                  <div key={item.type} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                    <Badge variant="outline" className="shrink-0 mt-0.5">{item.type}</Badge>
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Photo verification submissions would go here */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Screenshot Submissions</CardTitle>
+                <CardDescription>Review user-submitted screenshot proofs</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Screenshot submissions from tasks will appear here for review. Currently all screenshot tasks are auto-approved on submission.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">GPS Verification Logs</CardTitle>
+                <CardDescription>Track GPS-verified task completions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  GPS verification logs from location-based tasks will appear here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>

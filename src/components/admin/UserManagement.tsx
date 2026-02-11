@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Phone, PhoneCall, Shield, ShieldCheck, Ban, CheckCircle2, XCircle, Copy, User } from "lucide-react";
+import { Search, Phone, PhoneCall, Shield, ShieldCheck, Ban, CheckCircle2, XCircle, Copy, User, Users, MapPin, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -26,9 +25,10 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
-interface User {
+interface UserData {
   id: string;
   email: string;
   full_name: string | null;
@@ -45,19 +45,19 @@ interface User {
 }
 
 interface UserManagementProps {
-  users: User[];
+  users: UserData[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
 
 export function UserManagement({ users, searchQuery, onSearchChange }: UserManagementProps) {
   const queryClient = useQueryClient();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [banReason, setBanReason] = useState('');
   const [verifyPhoneDialogOpen, setVerifyPhoneDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
-  // Copy phone number to clipboard
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
@@ -71,7 +71,6 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
         p_is_banned: isBanned,
         p_ban_reason: reason || null
       });
-      
       if (error) throw error;
       return data;
     },
@@ -86,44 +85,55 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
         toast.error(data?.message || 'Operation failed');
       }
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  // Verify phone mutation
+  // Verify phone mutation - uses secure admin RPC
   const verifyPhoneMutation = useMutation({
     mutationFn: async ({ userId, verified }: { userId: string; verified: boolean }) => {
-      const { error } = await supabase
-        .from('users')
-        .update({ phone_verified: verified })
-        .eq('id', userId);
-      
+      const { data, error } = await supabase.rpc('admin_verify_phone' as any, {
+        p_user_id: userId,
+        p_verified: verified
+      });
       if (error) throw error;
+      return data as any;
     },
-    onSuccess: () => {
-      toast.success('Phone verification status updated');
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setVerifyPhoneDialogOpen(false);
-      setSelectedUser(null);
+    onSuccess: (data: any) => {
+      if (data?.success) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+        setVerifyPhoneDialogOpen(false);
+        setSelectedUser(null);
+      } else {
+        toast.error(data?.message || 'Failed to update verification');
+      }
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  const handleBanUser = (user: User) => {
+  const handleBanUser = (user: UserData) => {
     setSelectedUser(user);
     setBanDialogOpen(true);
   };
 
-  const handleVerifyPhone = (user: User) => {
+  const handleVerifyPhone = (user: UserData) => {
     setSelectedUser(user);
     setVerifyPhoneDialogOpen(true);
   };
 
   const usersWithPhones = users.filter(u => u.phone);
   const unverifiedPhones = users.filter(u => u.phone && !u.phone_verified);
+  const verifiedPhones = users.filter(u => u.phone && u.phone_verified);
+
+  const getFilteredUsers = () => {
+    switch (activeTab) {
+      case 'unverified': return unverifiedPhones;
+      case 'verified': return verifiedPhones;
+      default: return users;
+    }
+  };
+
+  const filteredUsers = getFilteredUsers();
 
   return (
     <div className="space-y-4">
@@ -139,198 +149,147 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
       </div>
 
       {/* Phone Verification Summary */}
-      <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            Phone Verification Queue
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold">{unverifiedPhones.length}</p>
-              <p className="text-xs text-muted-foreground">Pending verification</p>
-            </div>
-            <Badge variant="secondary">
-              {usersWithPhones.length} users with phones
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Users requiring phone verification */}
-      {unverifiedPhones.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2 text-orange-600">
-              <PhoneCall className="w-4 h-4" />
-              Awaiting Phone Verification
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <ScrollArea className="max-h-[200px]">
-              <div className="space-y-2">
-                {unverifiedPhones.map(user => (
-                  <div key={user.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{user.full_name || user.email}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground font-mono">{user.phone}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => copyToClipboard(user.phone!)}
-                        >
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 text-green-600 border-green-300 hover:bg-green-50"
-                      onClick={() => handleVerifyPhone(user)}
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      Verify
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+      <div className="grid grid-cols-3 gap-2">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-3 text-center">
+            <p className="text-xl font-bold">{users.length}</p>
+            <p className="text-xs text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
-      )}
+        <Card className="bg-orange-500/5 border-orange-500/20">
+          <CardContent className="p-3 text-center">
+            <p className="text-xl font-bold text-orange-600">{unverifiedPhones.length}</p>
+            <p className="text-xs text-muted-foreground">Pending</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-500/5 border-green-500/20">
+          <CardContent className="p-3 text-center">
+            <p className="text-xl font-bold text-green-600">{verifiedPhones.length}</p>
+            <p className="text-xs text-muted-foreground">Verified</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* User Table */}
-      <Card>
-        <CardContent className="p-0">
-          <ScrollArea className="max-h-[400px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Points</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="w-4 h-4 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate max-w-[150px]">
-                              {user.full_name || 'No name'}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                              {user.email}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {user.phone ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-mono">{user.phone}</span>
-                            {user.phone_verified ? (
-                              <ShieldCheck className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <Shield className="w-3 h-3 text-orange-500" />
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5"
-                              onClick={() => copyToClipboard(user.phone!)}
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">No phone</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-sm font-medium">{user.total_points || 0}</p>
-                          <p className="text-xs text-muted-foreground">Lvl {user.level || 1}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {user.is_banned ? (
-                            <Badge variant="destructive" className="text-xs w-fit">Banned</Badge>
+      {/* Tabs for filtering */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="all">All ({users.length})</TabsTrigger>
+          <TabsTrigger value="unverified">Pending ({unverifiedPhones.length})</TabsTrigger>
+          <TabsTrigger value="verified">Verified ({verifiedPhones.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* User List - Full scrollable */}
+      <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+        {filteredUsers.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No users found
+            </CardContent>
+          </Card>
+        ) : (
+          filteredUsers.map((user) => (
+            <Card key={user.id} className="overflow-hidden">
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {user.full_name || 'No name'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                      {user.phone ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Phone className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-mono">{user.phone}</span>
+                          {user.phone_verified ? (
+                            <ShieldCheck className="w-3 h-3 text-green-500" />
                           ) : (
-                            <Badge variant="secondary" className="text-xs w-fit">Active</Badge>
-                          )}
-                          {user.vip_tier && user.vip_tier !== 'bronze' && (
-                            <Badge variant="outline" className="text-xs w-fit capitalize">{user.vip_tier}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {user.phone && !user.phone_verified && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0 text-green-600"
-                              onClick={() => handleVerifyPhone(user)}
-                              title="Verify phone"
-                            >
-                              <ShieldCheck className="w-4 h-4" />
-                            </Button>
+                            <Shield className="w-3 h-3 text-orange-500" />
                           )}
                           <Button
-                            size="sm"
                             variant="ghost"
-                            className={`h-7 w-7 p-0 ${user.is_banned ? 'text-green-600' : 'text-red-600'}`}
-                            onClick={() => handleBanUser(user)}
-                            title={user.is_banned ? 'Unban user' : 'Ban user'}
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={() => copyToClipboard(user.phone!)}
                           >
-                            {user.is_banned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                            <Copy className="w-3 h-3" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">No phone</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {user.total_points || 0} pts • Lvl {user.level || 1}
+                        </span>
+                        {user.is_banned && (
+                          <Badge variant="destructive" className="text-[10px] h-4">Banned</Badge>
+                        )}
+                        {user.created_at && (
+                          <span className="text-[10px] text-muted-foreground">
+                            Joined {format(new Date(user.created_at), 'MMM d, yy')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {user.phone && !user.phone_verified && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1 text-green-600 border-green-300"
+                        onClick={() => handleVerifyPhone(user)}
+                      >
+                        <ShieldCheck className="w-3 h-3" />
+                        Verify
+                      </Button>
+                    )}
+                    {user.phone && user.phone_verified && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs gap-1 text-orange-600"
+                        onClick={() => handleVerifyPhone(user)}
+                        title="Revoke verification"
+                      >
+                        <XCircle className="w-3 h-3" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-7 w-7 p-0 ${user.is_banned ? 'text-green-600' : 'text-red-600'}`}
+                      onClick={() => handleBanUser(user)}
+                      title={user.is_banned ? 'Unban user' : 'Ban user'}
+                    >
+                      {user.is_banned ? <CheckCircle2 className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       {/* Ban Dialog */}
       <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {selectedUser?.is_banned ? 'Unban User' : 'Ban User'}
-            </DialogTitle>
+            <DialogTitle>{selectedUser?.is_banned ? 'Unban User' : 'Ban User'}</DialogTitle>
             <DialogDescription>
               {selectedUser?.is_banned 
                 ? `Are you sure you want to unban ${selectedUser?.email}?`
-                : `This will prevent ${selectedUser?.email} from accessing the app.`
-              }
+                : `This will prevent ${selectedUser?.email} from accessing the app.`}
             </DialogDescription>
           </DialogHeader>
-          
           {!selectedUser?.is_banned && (
             <div className="space-y-2">
               <Label>Reason for ban</Label>
@@ -341,11 +300,8 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
               />
             </div>
           )}
-          
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setBanDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setBanDialogOpen(false)}>Cancel</Button>
             <Button
               variant={selectedUser?.is_banned ? "default" : "destructive"}
               onClick={() => {
@@ -369,12 +325,15 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
       <Dialog open={verifyPhoneDialogOpen} onOpenChange={setVerifyPhoneDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Verify Phone Number</DialogTitle>
+            <DialogTitle>
+              {selectedUser?.phone_verified ? 'Revoke Phone Verification' : 'Verify Phone Number'}
+            </DialogTitle>
             <DialogDescription>
-              Confirm that you have verified this user's phone number.
+              {selectedUser?.phone_verified 
+                ? 'Remove verification status from this user.'
+                : 'Confirm that you have verified this user\'s phone number.'}
             </DialogDescription>
           </DialogHeader>
-          
           {selectedUser && (
             <div className="space-y-4">
               <div className="bg-muted/50 p-4 rounded-lg space-y-2">
@@ -386,15 +345,16 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
                   <span className="text-sm text-muted-foreground">Phone:</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-mono font-medium">{selectedUser.phone}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => copyToClipboard(selectedUser.phone!)}
-                    >
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(selectedUser.phone!)}>
                       <Copy className="w-3 h-3" />
                     </Button>
                   </div>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Badge variant={selectedUser.phone_verified ? "default" : "secondary"}>
+                    {selectedUser.phone_verified ? '✓ Verified' : 'Unverified'}
+                  </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Joined:</span>
@@ -405,21 +365,29 @@ export function UserManagement({ users, searchQuery, onSearchChange }: UserManag
               </div>
               
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setVerifyPhoneDialogOpen(false)}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={() => setVerifyPhoneDialogOpen(false)}>Cancel</Button>
                 <Button
                   className="gap-2"
+                  variant={selectedUser.phone_verified ? "destructive" : "default"}
                   onClick={() => {
                     verifyPhoneMutation.mutate({
                       userId: selectedUser.id,
-                      verified: true
+                      verified: !selectedUser.phone_verified
                     });
                   }}
                   disabled={verifyPhoneMutation.isPending}
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  {verifyPhoneMutation.isPending ? 'Verifying...' : 'Confirm Verification'}
+                  {selectedUser.phone_verified ? (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      {verifyPhoneMutation.isPending ? 'Removing...' : 'Remove Verification'}
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      {verifyPhoneMutation.isPending ? 'Verifying...' : 'Confirm Verification'}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

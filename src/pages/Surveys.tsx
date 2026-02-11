@@ -85,13 +85,28 @@ export default function Surveys() {
         .from('tasks')
         .select('*')
         .eq('is_active', true)
-        .in('verification_type', ['survey', 'ai_survey'])
+        .in('category', ['survey', 'market_research', 'feedback', 'research'])
         .order('points_reward', { ascending: false });
       
       if (error) throw error;
-      return data?.map(task => ({
+      
+      // Also get tasks with survey/ai_survey verification type
+      const { data: surveyVerifTasks, error: err2 } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('is_active', true)
+        .in('verification_type', ['survey', 'ai_survey'])
+        .order('points_reward', { ascending: false });
+      
+      if (err2) throw err2;
+
+      // Merge and deduplicate
+      const allTasks = [...(data || []), ...(surveyVerifTasks || [])];
+      const uniqueMap = new Map(allTasks.map(t => [t.id, t]));
+      
+      return Array.from(uniqueMap.values()).map(task => ({
         ...task,
-        source: task.verification_type === 'ai_survey' ? 'ai' as const : 'partner' as const
+        source: (task.verification_type === 'ai_survey' ? 'ai' : 'partner') as "ai" | "partner"
       })) as SurveyTask[];
     },
   });

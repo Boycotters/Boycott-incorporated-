@@ -12,6 +12,7 @@ import { DataVerification } from "./DataVerification";
 import { SurveyVerification } from "./SurveyVerification";
 import { AISurveyVerification } from "./AISurveyVerification";
 import { QuizVerification } from "./QuizVerification";
+import { GPSVerification } from "./GPSVerification";
 
 interface QuizData {
   question: string;
@@ -170,6 +171,15 @@ export function TaskVerificationModal({
           <DataVerification
             taskId={task.id}
             userId={userId}
+            taskTitle={task.title}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
+      case 'gps':
+        return (
+          <GPSVerification
+            taskId={task.id}
             taskTitle={task.title}
             onComplete={() => handleComplete()}
             onCancel={handleCancel}
