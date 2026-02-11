@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard, HelpCircle, FileText, Info } from "lucide-react";
+import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard, HelpCircle, FileText, Info, Users, Gift } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,94 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+// Referral section component
+function ReferralSection({ userId }: { userId?: string }) {
+  const navigate = useNavigate();
+  
+  const { data: referrals } = useQuery({
+    queryKey: ['my-referrals-settings', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase
+        .from('referrals')
+        .select('*, referred:referred_id(full_name, created_at)')
+        .eq('referrer_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+
+  const { data: userData } = useQuery({
+    queryKey: ['user-referral-code-settings', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from('users')
+        .select('referral_code')
+        .eq('id', userId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+
+  const totalEarned = referrals?.reduce((sum, ref) => sum + (ref.bonus_points || 0), 0) || 0;
+
+  return (
+    <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="bg-secondary p-2 rounded-xl">
+          <Users className="w-5 h-5 text-secondary-foreground" />
+        </div>
+        <h3 className="font-semibold text-lg">Referrals</h3>
+      </div>
+
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-secondary/30 p-3 rounded-xl">
+            <p className="text-lg font-bold">{referrals?.length || 0}</p>
+            <p className="text-xs text-muted-foreground">Invited</p>
+          </div>
+          <div className="bg-secondary/30 p-3 rounded-xl">
+            <p className="text-lg font-bold">{totalEarned}</p>
+            <p className="text-xs text-muted-foreground">Points Earned</p>
+          </div>
+          <div className="bg-secondary/30 p-3 rounded-xl">
+            <p className="text-xs font-mono font-bold truncate">{userData?.referral_code || '...'}</p>
+            <p className="text-xs text-muted-foreground">Your Code</p>
+          </div>
+        </div>
+
+        {referrals && referrals.length > 0 && (
+          <div className="space-y-2 max-h-32 overflow-y-auto">
+            {referrals.map((ref) => (
+              <div key={ref.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Gift className="w-3 h-3 text-primary" />
+                  <span className="text-sm">{(ref.referred as any)?.full_name || 'Anonymous'}</span>
+                </div>
+                <span className="text-xs font-medium text-green-600">+{ref.bonus_points} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Button 
+          variant="outline" 
+          className="w-full rounded-xl"
+          onClick={() => navigate('/referrals')}
+        >
+          <Gift className="w-4 h-4 mr-2" />
+          {referrals && referrals.length > 0 ? 'View All Referrals' : 'Invite Friends'}
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -481,6 +569,9 @@ export default function Settings() {
             </Dialog>
           </div>
         </Card>
+
+        {/* Referral Stats */}
+        <ReferralSection userId={user?.id} />
 
         {/* Help & Legal */}
         <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">

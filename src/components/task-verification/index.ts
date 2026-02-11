@@ -6,4 +6,5 @@ export { DataVerification } from "./DataVerification";
 export { SurveyVerification } from "./SurveyVerification";
 export { AISurveyVerification } from "./AISurveyVerification";
 export { QuizVerification } from "./QuizVerification";
+export { GPSVerification } from "./GPSVerification";
 

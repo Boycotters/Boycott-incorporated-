@@ -1601,6 +1601,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_verify_phone: {
+        Args: { p_user_id: string; p_verified?: boolean }
+        Returns: Json
+      }
       are_tasks_available_today: { Args: never; Returns: Json }
       award_survey_points:
         | {
