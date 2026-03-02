@@ -64,7 +64,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { TaskManagement, WithdrawalManagement, UserManagement } from "@/components/admin";
+import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement } from "@/components/admin";
 
 interface Withdrawal {
   id: string;
@@ -810,6 +810,10 @@ export default function Admin() {
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Config</span>
               </TabsTrigger>
+              <TabsTrigger value="tournaments" className="gap-1.5 px-3 shrink-0">
+                <Gamepad2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Tournaments</span>
+              </TabsTrigger>
               <TabsTrigger value="verification" className="gap-1.5 px-3 shrink-0">
                 <UserCheck className="w-4 h-4" />
                 <span className="hidden sm:inline">Verify</span>
@@ -1554,6 +1558,11 @@ export default function Admin() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tournaments Tab */}
+          <TabsContent value="tournaments" className="mt-4">
+            <TournamentManagement />
           </TabsContent>
 
           {/* Verification Tab */}
