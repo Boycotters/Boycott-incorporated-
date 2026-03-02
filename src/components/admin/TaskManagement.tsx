@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -59,6 +59,12 @@ const CATEGORIES = [
   { value: 'trivia', label: 'Trivia' },
   { value: 'photo', label: 'Photo Verification' },
   { value: 'video_ad', label: 'Video Ad' },
+  { value: 'lifestyle', label: 'Lifestyle' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'shopping', label: 'Shopping' },
+  { value: 'market_research', label: 'Market Research' },
+  { value: 'feedback', label: 'Feedback' },
+  { value: 'app_install', label: 'App Install' },
 ];
 
 const PAGE_PLACEMENTS = [
@@ -76,6 +82,7 @@ const VERIFICATION_TYPES = [
   { value: 'survey', label: 'Survey' },
   { value: 'data', label: 'Data Entry' },
   { value: 'ai_survey', label: 'AI Survey' },
+  { value: 'gps', label: 'GPS Location' },
 ];
 
 const DIFFICULTIES = [
@@ -90,215 +97,23 @@ const DEFAULT_QUESTION: QuizQuestion = {
   correct_answer: 0
 };
 
-export function TaskManagement({ tasks }: TaskManagementProps) {
-  const queryClient = useQueryClient();
-  const [addTaskOpen, setAddTaskOpen] = useState(false);
-  const [editTaskOpen, setEditTaskOpen] = useState(false);
-  const [expandedTask, setExpandedTask] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  
-  const [newTask, setNewTask] = useState({
-    title: '',
-    description: '',
-    points_reward: 40,
-    category: 'digital',
-    difficulty: 'easy',
-    verification_type: 'quiz',
-    page_placement: 'earn',
-    quiz_data: [] as QuizQuestion[]
-  });
-
-  const [editQuizData, setEditQuizData] = useState<QuizQuestion[]>([]);
-
-  // Add task mutation
-  const addTaskMutation = useMutation({
-    mutationFn: async (task: typeof newTask) => {
-      const insertData: any = {
-        title: task.title,
-        description: task.description,
-        points_reward: task.points_reward,
-        category: task.category,
-        difficulty: task.difficulty,
-        verification_type: task.verification_type,
-        page_placement: task.page_placement || 'earn',
-        is_active: true,
-      };
-      
-      if (task.quiz_data.length > 0) {
-        insertData.quiz_data = task.quiz_data;
-      }
-      
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert(insertData)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Task created successfully');
-      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
-      setAddTaskOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  // Update task mutation
-  const updateTaskMutation = useMutation({
-    mutationFn: async (task: Partial<Task> & { id: string }) => {
-      const { id, ...updates } = task;
-      const updateData: any = { ...updates };
-      if (editQuizData.length > 0) {
-        updateData.quiz_data = editQuizData;
-      }
-      const { error } = await supabase
-        .from('tasks')
-        .update(updateData)
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Task updated');
-      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
-      setEditTaskOpen(false);
-      setSelectedTask(null);
-      setEditQuizData([]);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  // Toggle task status mutation
-  const toggleTaskMutation = useMutation({
-    mutationFn: async ({ taskId, isActive }: { taskId: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ is_active: isActive })
-        .eq('id', taskId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Task status updated');
-      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  // Delete task mutation
-  const deleteTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Task deleted');
-      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const resetForm = () => {
-    setNewTask({
-      title: '',
-      description: '',
-      points_reward: 40,
-      category: 'digital',
-      difficulty: 'easy',
-      verification_type: 'quiz',
-      page_placement: 'earn',
-      quiz_data: []
-    });
-  };
-
-  const handleEditTask = (task: Task) => {
-    setSelectedTask(task);
-    setEditQuizData(task.quiz_data || []);
-    setEditTaskOpen(true);
-  };
-
-  // Quiz question management for new task
-  const addQuestion = () => {
-    setNewTask(prev => ({
-      ...prev,
-      quiz_data: [...prev.quiz_data, { ...DEFAULT_QUESTION }]
-    }));
-  };
-
-  const updateQuestion = (index: number, field: keyof QuizQuestion, value: any) => {
-    setNewTask(prev => ({
-      ...prev,
-      quiz_data: prev.quiz_data.map((q, i) => 
-        i === index ? { ...q, [field]: value } : q
-      )
-    }));
-  };
-
-  const updateQuestionOption = (qIndex: number, optIndex: number, value: string) => {
-    setNewTask(prev => ({
-      ...prev,
-      quiz_data: prev.quiz_data.map((q, i) => 
-        i === qIndex ? { ...q, options: q.options.map((o, oi) => oi === optIndex ? value : o) } : q
-      )
-    }));
-  };
-
-  const removeQuestion = (index: number) => {
-    setNewTask(prev => ({
-      ...prev,
-      quiz_data: prev.quiz_data.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Quiz question management for edit
-  const addEditQuestion = () => {
-    setEditQuizData(prev => [...prev, { ...DEFAULT_QUESTION }]);
-  };
-
-  const updateEditQuestion = (index: number, field: keyof QuizQuestion, value: any) => {
-    setEditQuizData(prev => prev.map((q, i) => 
-      i === index ? { ...q, [field]: value } : q
-    ));
-  };
-
-  const updateEditQuestionOption = (qIndex: number, optIndex: number, value: string) => {
-    setEditQuizData(prev => prev.map((q, i) => 
-      i === qIndex ? { ...q, options: q.options.map((o, oi) => oi === optIndex ? value : o) } : q
-    ));
-  };
-
-  const removeEditQuestion = (index: number) => {
-    setEditQuizData(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const QuizQuestionsEditor = ({ 
-    questions, 
-    onAddQuestion, 
-    onUpdateQuestion, 
-    onUpdateOption, 
-    onRemoveQuestion 
-  }: {
-    questions: QuizQuestion[];
-    onAddQuestion: () => void;
-    onUpdateQuestion: (index: number, field: keyof QuizQuestion, value: any) => void;
-    onUpdateOption: (qIndex: number, optIndex: number, value: string) => void;
-    onRemoveQuestion: (index: number) => void;
-  }) => (
+// ==========================================
+// Extracted QuizQuestionsEditor component
+// ==========================================
+function QuizQuestionsEditor({ 
+  questions, 
+  onAddQuestion, 
+  onUpdateQuestion, 
+  onUpdateOption, 
+  onRemoveQuestion 
+}: {
+  questions: QuizQuestion[];
+  onAddQuestion: () => void;
+  onUpdateQuestion: (index: number, field: keyof QuizQuestion, value: any) => void;
+  onUpdateOption: (qIndex: number, optIndex: number, value: string) => void;
+  onRemoveQuestion: (index: number) => void;
+}) {
+  return (
     <div className="space-y-4 border-t pt-4 mt-4">
       <div className="flex items-center justify-between">
         <Label className="flex items-center gap-2">
@@ -369,170 +184,332 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
       </ScrollArea>
     </div>
   );
+}
 
-  const TaskForm = ({ 
-    task, 
-    onSubmit, 
-    isLoading,
-    submitLabel,
-    isEdit = false
-  }: { 
-    task: typeof newTask | Task; 
-    onSubmit: () => void; 
-    isLoading: boolean;
-    submitLabel: string;
-    isEdit?: boolean;
-  }) => {
-    const isNew = !('id' in task);
-    const formTask = isNew ? newTask : task as Task;
-    const setFormTask = isNew 
-      ? setNewTask 
-      : (updater: any) => setSelectedTask(prev => prev ? { ...prev, ...updater(prev) } : null);
-    
-    const showQuizEditor = ['quiz', 'trivia'].includes(
-      isNew ? newTask.verification_type : (selectedTask?.verification_type || '')
-    ) || ['learning', 'challenge', 'trivia'].includes(
-      isNew ? newTask.category : (selectedTask?.category || '')
-    );
+// ==========================================
+// Extracted TaskFormContent component
+// ==========================================
+function TaskFormContent({ 
+  title, description, points_reward, category, difficulty, verification_type, page_placement,
+  quizData,
+  onFieldChange,
+  onQuizAdd, onQuizUpdate, onQuizOptionUpdate, onQuizRemove,
+  onSubmit, isLoading, submitLabel
+}: {
+  title: string;
+  description: string;
+  points_reward: number;
+  category: string;
+  difficulty: string;
+  verification_type: string;
+  page_placement: string;
+  quizData: QuizQuestion[];
+  onFieldChange: (field: string, value: any) => void;
+  onQuizAdd: () => void;
+  onQuizUpdate: (index: number, field: keyof QuizQuestion, value: any) => void;
+  onQuizOptionUpdate: (qIndex: number, optIndex: number, value: string) => void;
+  onQuizRemove: (index: number) => void;
+  onSubmit: () => void;
+  isLoading: boolean;
+  submitLabel: string;
+}) {
+  const showQuizEditor = ['quiz', 'trivia'].includes(verification_type) || 
+    ['learning', 'challenge', 'trivia'].includes(category);
 
-    return (
-      <ScrollArea className="max-h-[70vh]">
-        <div className="space-y-4 py-4 pr-4">
+  return (
+    <ScrollArea className="max-h-[70vh]">
+      <div className="space-y-4 py-4 pr-4">
+        <div className="space-y-2">
+          <Label htmlFor="task-title">Title *</Label>
+          <Input
+            id="task-title"
+            value={title}
+            onChange={(e) => onFieldChange('title', e.target.value)}
+            placeholder="e.g., Complete Daily Trivia Challenge"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="task-description">Description *</Label>
+          <Textarea
+            id="task-description"
+            value={description}
+            onChange={(e) => onFieldChange('description', e.target.value)}
+            placeholder="Detailed instructions for completing the task..."
+            rows={3}
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="task-title">Title *</Label>
+            <Label htmlFor="task-points">Points Reward</Label>
             <Input
-              id="task-title"
-              value={formTask.title}
-              onChange={(e) => setFormTask((prev: any) => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g., Complete Daily Trivia Challenge"
+              id="task-points"
+              type="number"
+              value={points_reward}
+              onChange={(e) => onFieldChange('points_reward', parseInt(e.target.value) || 10)}
+              min={1}
+              max={200}
             />
           </div>
-          
           <div className="space-y-2">
-            <Label htmlFor="task-description">Description *</Label>
-            <Textarea
-              id="task-description"
-              value={formTask.description || ''}
-              onChange={(e) => setFormTask((prev: any) => ({ ...prev, description: e.target.value }))}
-              placeholder="Detailed instructions for completing the task..."
-              rows={3}
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-points">Points Reward</Label>
-              <Input
-                id="task-points"
-                type="number"
-                value={formTask.points_reward}
-                onChange={(e) => setFormTask((prev: any) => ({ ...prev, points_reward: parseInt(e.target.value) || 10 }))}
-                min={1}
-                max={200}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select
-                value={formTask.category || 'digital'}
-                onValueChange={(value) => setFormTask((prev: any) => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Difficulty</Label>
-              <Select
-                value={formTask.difficulty || 'easy'}
-                onValueChange={(value) => setFormTask((prev: any) => ({ ...prev, difficulty: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIFFICULTIES.map(diff => (
-                    <SelectItem key={diff.value} value={diff.value}>{diff.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Verification Type</Label>
-              <Select
-                value={formTask.verification_type || 'quiz'}
-                onValueChange={(value) => setFormTask((prev: any) => ({ ...prev, verification_type: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VERIFICATION_TYPES.map(vt => (
-                    <SelectItem key={vt.value} value={vt.value}>{vt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-             </div>
-          </div>
-
-          {/* Page Placement */}
-          <div className="space-y-2">
-            <Label>Show on Page</Label>
-            <Select
-              value={isNew ? newTask.page_placement : ((selectedTask as any)?.page_placement || 'earn')}
-              onValueChange={(value) => setFormTask((prev: any) => ({ ...prev, page_placement: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+            <Label>Category</Label>
+            <Select value={category} onValueChange={(v) => onFieldChange('category', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {PAGE_PLACEMENTS.map(pp => (
-                  <SelectItem key={pp.value} value={pp.value}>{pp.label}</SelectItem>
+                {CATEGORIES.map(cat => (
+                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          {/* Quiz Questions Editor */}
-          {showQuizEditor && (
-            isEdit ? (
-              <QuizQuestionsEditor
-                questions={editQuizData}
-                onAddQuestion={addEditQuestion}
-                onUpdateQuestion={updateEditQuestion}
-                onUpdateOption={updateEditQuestionOption}
-                onRemoveQuestion={removeEditQuestion}
-              />
-            ) : (
-              <QuizQuestionsEditor
-                questions={newTask.quiz_data}
-                onAddQuestion={addQuestion}
-                onUpdateQuestion={updateQuestion}
-                onUpdateOption={updateQuestionOption}
-                onRemoveQuestion={removeQuestion}
-              />
-            )
-          )}
-
-          <Button 
-            className="w-full" 
-            onClick={onSubmit}
-            disabled={isLoading || !formTask.title || !formTask.description}
-          >
-            {isLoading ? 'Saving...' : submitLabel}
-          </Button>
         </div>
-      </ScrollArea>
-    );
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Difficulty</Label>
+            <Select value={difficulty} onValueChange={(v) => onFieldChange('difficulty', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {DIFFICULTIES.map(diff => (
+                  <SelectItem key={diff.value} value={diff.value}>{diff.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Verification Type</Label>
+            <Select value={verification_type} onValueChange={(v) => onFieldChange('verification_type', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VERIFICATION_TYPES.map(vt => (
+                  <SelectItem key={vt.value} value={vt.value}>{vt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Show on Page</Label>
+          <Select value={page_placement} onValueChange={(v) => onFieldChange('page_placement', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {PAGE_PLACEMENTS.map(pp => (
+                <SelectItem key={pp.value} value={pp.value}>{pp.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {showQuizEditor && (
+          <QuizQuestionsEditor
+            questions={quizData}
+            onAddQuestion={onQuizAdd}
+            onUpdateQuestion={onQuizUpdate}
+            onUpdateOption={onQuizOptionUpdate}
+            onRemoveQuestion={onQuizRemove}
+          />
+        )}
+
+        <Button 
+          className="w-full" 
+          onClick={onSubmit}
+          disabled={isLoading || !title || !description}
+        >
+          {isLoading ? 'Saving...' : submitLabel}
+        </Button>
+      </div>
+    </ScrollArea>
+  );
+}
+
+// ==========================================
+// Main TaskManagement component
+// ==========================================
+export function TaskManagement({ tasks }: TaskManagementProps) {
+  const queryClient = useQueryClient();
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [editTaskOpen, setEditTaskOpen] = useState(false);
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  // New task form state
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newPoints, setNewPoints] = useState(40);
+  const [newCategory, setNewCategory] = useState('digital');
+  const [newDifficulty, setNewDifficulty] = useState('easy');
+  const [newVerification, setNewVerification] = useState('quiz');
+  const [newPlacement, setNewPlacement] = useState('earn');
+  const [newQuizData, setNewQuizData] = useState<QuizQuestion[]>([]);
+
+  // Edit task form state
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPoints, setEditPoints] = useState(40);
+  const [editCategory, setEditCategory] = useState('digital');
+  const [editDifficulty, setEditDifficulty] = useState('easy');
+  const [editVerification, setEditVerification] = useState('quiz');
+  const [editPlacement, setEditPlacement] = useState('earn');
+  const [editQuizData, setEditQuizData] = useState<QuizQuestion[]>([]);
+
+  const handleNewFieldChange = useCallback((field: string, value: any) => {
+    switch (field) {
+      case 'title': setNewTitle(value); break;
+      case 'description': setNewDescription(value); break;
+      case 'points_reward': setNewPoints(value); break;
+      case 'category': setNewCategory(value); break;
+      case 'difficulty': setNewDifficulty(value); break;
+      case 'verification_type': setNewVerification(value); break;
+      case 'page_placement': setNewPlacement(value); break;
+    }
+  }, []);
+
+  const handleEditFieldChange = useCallback((field: string, value: any) => {
+    switch (field) {
+      case 'title': setEditTitle(value); break;
+      case 'description': setEditDescription(value); break;
+      case 'points_reward': setEditPoints(value); break;
+      case 'category': setEditCategory(value); break;
+      case 'difficulty': setEditDifficulty(value); break;
+      case 'verification_type': setEditVerification(value); break;
+      case 'page_placement': setEditPlacement(value); break;
+    }
+  }, []);
+
+  // Quiz question management for new task
+  const addNewQuestion = useCallback(() => {
+    setNewQuizData(prev => [...prev, { ...DEFAULT_QUESTION }]);
+  }, []);
+  const updateNewQuestion = useCallback((index: number, field: keyof QuizQuestion, value: any) => {
+    setNewQuizData(prev => prev.map((q, i) => i === index ? { ...q, [field]: value } : q));
+  }, []);
+  const updateNewQuestionOption = useCallback((qIndex: number, optIndex: number, value: string) => {
+    setNewQuizData(prev => prev.map((q, i) => i === qIndex ? { ...q, options: q.options.map((o, oi) => oi === optIndex ? value : o) } : q));
+  }, []);
+  const removeNewQuestion = useCallback((index: number) => {
+    setNewQuizData(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Quiz question management for edit
+  const addEditQuestion = useCallback(() => {
+    setEditQuizData(prev => [...prev, { ...DEFAULT_QUESTION }]);
+  }, []);
+  const updateEditQuestion = useCallback((index: number, field: keyof QuizQuestion, value: any) => {
+    setEditQuizData(prev => prev.map((q, i) => i === index ? { ...q, [field]: value } : q));
+  }, []);
+  const updateEditQuestionOption = useCallback((qIndex: number, optIndex: number, value: string) => {
+    setEditQuizData(prev => prev.map((q, i) => i === qIndex ? { ...q, options: q.options.map((o, oi) => oi === optIndex ? value : o) } : q));
+  }, []);
+  const removeEditQuestion = useCallback((index: number) => {
+    setEditQuizData(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Add task mutation
+  const addTaskMutation = useMutation({
+    mutationFn: async () => {
+      const insertData: any = {
+        title: newTitle,
+        description: newDescription,
+        points_reward: newPoints,
+        category: newCategory,
+        difficulty: newDifficulty,
+        verification_type: newVerification,
+        page_placement: newPlacement,
+        is_active: true,
+      };
+      if (newQuizData.length > 0) {
+        insertData.quiz_data = newQuizData;
+      }
+      const { error } = await supabase.from('tasks').insert(insertData).select().single();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Task created successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
+      setAddTaskOpen(false);
+      resetNewForm();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Update task mutation
+  const updateTaskMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedTask) return;
+      const updateData: any = {
+        title: editTitle,
+        description: editDescription,
+        points_reward: editPoints,
+        category: editCategory,
+        difficulty: editDifficulty,
+        verification_type: editVerification,
+        page_placement: editPlacement,
+      };
+      if (editQuizData.length > 0) {
+        updateData.quiz_data = editQuizData;
+      }
+      const { error } = await supabase.from('tasks').update(updateData).eq('id', selectedTask.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Task updated');
+      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
+      setEditTaskOpen(false);
+      setSelectedTask(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Toggle task status
+  const toggleTaskMutation = useMutation({
+    mutationFn: async ({ taskId, isActive }: { taskId: string; isActive: boolean }) => {
+      const { error } = await supabase.from('tasks').update({ is_active: isActive }).eq('id', taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Task status updated');
+      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Delete task
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Task deleted');
+      queryClient.invalidateQueries({ queryKey: ['admin-tasks'] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const resetNewForm = () => {
+    setNewTitle('');
+    setNewDescription('');
+    setNewPoints(40);
+    setNewCategory('digital');
+    setNewDifficulty('easy');
+    setNewVerification('quiz');
+    setNewPlacement('earn');
+    setNewQuizData([]);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+    setEditPoints(task.points_reward);
+    setEditCategory(task.category || 'digital');
+    setEditDifficulty(task.difficulty || 'easy');
+    setEditVerification(task.verification_type || 'quiz');
+    setEditPlacement((task as any).page_placement || 'earn');
+    setEditQuizData(task.quiz_data || []);
+    setEditTaskOpen(true);
   };
 
   return (
@@ -549,12 +526,24 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
-              Create a task for users to complete and earn points. For quiz tasks, add questions below.
+              Create a task for users to complete and earn points.
             </DialogDescription>
           </DialogHeader>
-          <TaskForm 
-            task={newTask}
-            onSubmit={() => addTaskMutation.mutate(newTask)}
+          <TaskFormContent
+            title={newTitle}
+            description={newDescription}
+            points_reward={newPoints}
+            category={newCategory}
+            difficulty={newDifficulty}
+            verification_type={newVerification}
+            page_placement={newPlacement}
+            quizData={newQuizData}
+            onFieldChange={handleNewFieldChange}
+            onQuizAdd={addNewQuestion}
+            onQuizUpdate={updateNewQuestion}
+            onQuizOptionUpdate={updateNewQuestionOption}
+            onQuizRemove={removeNewQuestion}
+            onSubmit={() => addTaskMutation.mutate()}
             isLoading={addTaskMutation.isPending}
             submitLabel="Create Task"
           />
@@ -571,12 +560,23 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
             </DialogDescription>
           </DialogHeader>
           {selectedTask && (
-            <TaskForm 
-              task={selectedTask}
-              onSubmit={() => updateTaskMutation.mutate({ ...selectedTask, quiz_data: editQuizData.length > 0 ? editQuizData : null })}
+            <TaskFormContent
+              title={editTitle}
+              description={editDescription}
+              points_reward={editPoints}
+              category={editCategory}
+              difficulty={editDifficulty}
+              verification_type={editVerification}
+              page_placement={editPlacement}
+              quizData={editQuizData}
+              onFieldChange={handleEditFieldChange}
+              onQuizAdd={addEditQuestion}
+              onQuizUpdate={updateEditQuestion}
+              onQuizOptionUpdate={updateEditQuestionOption}
+              onQuizRemove={removeEditQuestion}
+              onSubmit={() => updateTaskMutation.mutate()}
               isLoading={updateTaskMutation.isPending}
               submitLabel="Save Changes"
-              isEdit={true}
             />
           )}
         </DialogContent>
