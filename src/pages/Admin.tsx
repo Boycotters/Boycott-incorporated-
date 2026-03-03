@@ -31,7 +31,8 @@ import {
   Key,
   Upload,
   Link as LinkIcon,
-  User
+  User,
+  Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +65,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement } from "@/components/admin";
+import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
 
 interface Withdrawal {
   id: string;
@@ -817,6 +818,10 @@ export default function Admin() {
               <TabsTrigger value="verification" className="gap-1.5 px-3 shrink-0">
                 <UserCheck className="w-4 h-4" />
                 <span className="hidden sm:inline">Verify</span>
+              </TabsTrigger>
+              <TabsTrigger value="transfers" className="gap-1.5 px-3 shrink-0">
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Transfers</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1623,6 +1628,11 @@ export default function Admin() {
                 </p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Transfers Tab */}
+          <TabsContent value="transfers" className="mt-4">
+            <TransferManagement />
           </TabsContent>
         </Tabs>
       </div>

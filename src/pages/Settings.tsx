@@ -1,4 +1,4 @@
-import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard, HelpCircle, FileText, Info, Users, Gift } from "lucide-react";
+import { ArrowLeft, User, Bell, Moon, Shield, LogOut, ChevronRight, Save, Phone, CheckCircle2, AlertCircle, Key, Lock, Calendar, Briefcase, MapPin, CreditCard, HelpCircle, FileText, Info, Users, Gift, QrCode, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PhoneVerification } from "@/components/auth/PhoneVerification";
+import { QRPaymentSection } from "@/components/settings/QRPaymentSection";
+import { PointTransferSection } from "@/components/settings/PointTransferSection";
 import { Badge } from "@/components/ui/badge";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -569,6 +571,12 @@ export default function Settings() {
             </Dialog>
           </div>
         </Card>
+
+        {/* QR Payments */}
+        <QRPaymentSection userId={user?.id} />
+
+        {/* Point Transfers */}
+        <PointTransferSection />
 
         {/* Referral Stats */}
         <ReferralSection userId={user?.id} />

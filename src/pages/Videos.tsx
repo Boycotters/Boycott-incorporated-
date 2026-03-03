@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DespiaAdReward } from "@/components/despia";
 
 interface Video {
   id: string;
@@ -444,7 +445,14 @@ export default function Videos() {
         </div>
 
         {/* Claim Button / Watch Status */}
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="absolute bottom-4 left-4 right-4 space-y-2">
+          {/* Rewarded Ad Button */}
+          <DespiaAdReward
+            rewardPoints={15}
+            buttonLabel="Watch Ad for Bonus"
+            className="mb-1"
+          />
+
           {isVideoWatched ? (
             <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500/20 text-green-400">
               <CheckCircle2 className="w-5 h-5" />

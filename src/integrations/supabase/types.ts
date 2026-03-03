@@ -543,6 +543,51 @@ export type Database = {
         }
         Relationships: []
       }
+      point_transfers: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          fee: number
+          id: string
+          recipient_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_id: string
+          status: string
+          updated_at: string
+          verification_code: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          fee?: number
+          id?: string
+          recipient_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_id: string
+          status?: string
+          updated_at?: string
+          verification_code: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          fee?: number
+          id?: string
+          recipient_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_id?: string
+          status?: string
+          updated_at?: string
+          verification_code?: string
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           created_at: string
@@ -1593,6 +1638,14 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_review_transfer: {
+        Args: {
+          p_action: string
+          p_admin_notes?: string
+          p_transfer_id: string
+        }
+        Returns: Json
+      }
       admin_update_withdrawal: {
         Args: {
           p_admin_notes?: string
@@ -1719,6 +1772,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      initiate_point_transfer: {
+        Args: {
+          p_amount: number
+          p_recipient_email: string
+          p_sender_id: string
+        }
+        Returns: Json
       }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
       join_tournament: {
