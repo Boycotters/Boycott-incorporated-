@@ -1663,6 +1663,10 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+          {/* Security & Compliance Tab */}
+          <TabsContent value="security" className="mt-4 space-y-4">
+            <SecurityCompliancePanel users={users} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
