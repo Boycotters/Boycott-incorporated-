@@ -33,7 +33,10 @@ import {
   Link as LinkIcon,
   User,
   Send,
-  Navigation as NavigationIcon
+  Navigation as NavigationIcon,
+  ShieldAlert,
+  AlertTriangle,
+  CalendarClock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +71,7 @@ import {
 } from "@/components/ui/collapsible";
 import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
+import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
 
 interface Withdrawal {
   id: string;
@@ -828,6 +832,10 @@ export default function Admin() {
               <TabsTrigger value="gps-tracking" className="gap-1.5 px-3 shrink-0">
                 <NavigationIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">GPS</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="gap-1.5 px-3 shrink-0">
+                <ShieldAlert className="w-4 h-4" />
+                <span className="hidden sm:inline">Security</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1655,6 +1663,10 @@ export default function Admin() {
                 <GPSTrackingDashboard />
               </CardContent>
             </Card>
+          </TabsContent>
+          {/* Security & Compliance Tab */}
+          <TabsContent value="security" className="mt-4 space-y-4">
+            <SecurityCompliancePanel users={users} />
           </TabsContent>
         </Tabs>
       </div>
