@@ -32,7 +32,8 @@ import {
   Upload,
   Link as LinkIcon,
   User,
-  Send
+  Send,
+  Navigation as NavigationIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,6 +67,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
+import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 
 interface Withdrawal {
   id: string;
@@ -822,6 +824,10 @@ export default function Admin() {
               <TabsTrigger value="transfers" className="gap-1.5 px-3 shrink-0">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Transfers</span>
+              </TabsTrigger>
+              <TabsTrigger value="gps-tracking" className="gap-1.5 px-3 shrink-0">
+                <NavigationIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">GPS</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1633,6 +1639,22 @@ export default function Admin() {
           {/* Transfers Tab */}
           <TabsContent value="transfers" className="mt-4">
             <TransferManagement />
+          </TabsContent>
+
+          {/* GPS Tracking Tab */}
+          <TabsContent value="gps-tracking" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <NavigationIcon className="w-5 h-5 text-primary" />
+                  Real-Time GPS Tracking
+                </CardTitle>
+                <CardDescription>Monitor user locations and movement in real-time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GPSTrackingDashboard />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
