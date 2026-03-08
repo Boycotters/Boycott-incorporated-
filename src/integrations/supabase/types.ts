@@ -781,6 +781,30 @@ export type Database = {
         }
         Relationships: []
       }
+      streak_shields: {
+        Row: {
+          created_at: string | null
+          id: string
+          month_year: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          month_year: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          month_year?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       survey_responses: {
         Row: {
           completion_time_seconds: number | null
@@ -1760,6 +1784,8 @@ export type Database = {
       }
       check_daily_earning_cap: { Args: { p_user_id: string }; Returns: Json }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
+      check_point_expiry_status: { Args: { p_user_id: string }; Returns: Json }
+      check_redemption_fraud: { Args: { p_user_id: string }; Returns: Json }
       check_streak_milestones: { Args: { p_user_id: string }; Returns: Json }
       check_withdrawal_eligibility: {
         Args: { p_user_id: string }
@@ -1925,6 +1951,7 @@ export type Database = {
         Args: { p_activity_date?: string; p_user_id: string }
         Returns: undefined
       }
+      use_streak_shield: { Args: { p_user_id: string }; Returns: Json }
       verify_admin_access_code: {
         Args: { p_code: string; p_user_id: string }
         Returns: Json

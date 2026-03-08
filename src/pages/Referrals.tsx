@@ -50,7 +50,7 @@ export default function Referrals() {
 
   const referralCode = userData?.referral_code || 'Loading...';
   const referralLink = `${window.location.origin}/auth?ref=${referralCode}`;
-  const shareMessage = `🎉 Join JoyCards and start earning real money! Use my referral code: ${referralCode}\n\n✅ Complete tasks\n✅ Play games\n✅ Watch videos\n✅ Cash out to Mobile Money\n\nSign up here: ${referralLink}`;
+  const shareMessage = `🎉 Join Boycott Inc. and start earning real money! Use my referral code: ${referralCode}\n\n✅ Complete tasks\n✅ Play games\n✅ Watch videos\n✅ Cash out to Mobile Money\n\nSign up here: ${referralLink}`;
 
   const copyToClipboard = async (text: string, isShareMessage = false) => {
     try {
@@ -67,7 +67,7 @@ export default function Referrals() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join JoyCards',
+          title: 'Join Boycott Inc.',
           text: shareMessage,
           url: referralLink,
         });
