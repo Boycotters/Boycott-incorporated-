@@ -67,7 +67,7 @@ export default function Referrals() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join JoyCards',
+          title: 'Join Boycott Inc.',
           text: shareMessage,
           url: referralLink,
         });
