@@ -832,6 +832,10 @@ export default function Admin() {
                 <NavigationIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">GPS</span>
               </TabsTrigger>
+              <TabsTrigger value="security" className="gap-1.5 px-3 shrink-0">
+                <ShieldAlert className="w-4 h-4" />
+                <span className="hidden sm:inline">Security</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
