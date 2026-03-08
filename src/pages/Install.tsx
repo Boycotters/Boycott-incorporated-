@@ -65,7 +65,7 @@ const Install = () => {
             </div>
             <CardTitle>App Installed!</CardTitle>
             <CardDescription>
-              Nexus is already installed on your device.
+              Boycott Inc. is already installed on your device.
             </CardDescription>
           </CardHeader>
           <CardContent>
