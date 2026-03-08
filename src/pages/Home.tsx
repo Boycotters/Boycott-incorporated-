@@ -508,11 +508,21 @@ export default function Home() {
         <Card className="bg-gradient-primary p-4 rounded-2xl shadow-hover border-0">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-white/80 text-xs font-medium">Total Points</p>
+              <p className="text-white/80 text-xs font-medium">Available Points</p>
               <h2 className="text-white text-2xl font-bold">{totalPoints.toLocaleString()}</h2>
             </div>
             <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
               <Trophy className="w-5 h-5 text-white" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <p className="text-white/60 text-[10px]">Pending</p>
+              <p className="text-white text-sm font-bold">{lockedPoints.toLocaleString()}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <p className="text-white/60 text-[10px]">Lifetime Earned</p>
+              <p className="text-white text-sm font-bold">{(userData?.total_points || 0).toLocaleString()}</p>
             </div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-xl">
