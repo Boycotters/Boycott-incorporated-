@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PhoneVerification } from "@/components/auth/PhoneVerification";
 import { QRPaymentSection } from "@/components/settings/QRPaymentSection";
 import { PointTransferSection } from "@/components/settings/PointTransferSection";
+import { UserLocationMap } from "@/components/settings/UserLocationMap";
 import { Badge } from "@/components/ui/badge";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
