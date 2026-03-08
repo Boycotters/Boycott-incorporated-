@@ -1114,6 +1114,68 @@ export type Database = {
           },
         ]
       }
+      user_gps_locations: {
+        Row: {
+          altitude: number | null
+          created_at: string
+          device_info: Json | null
+          heading: number | null
+          horizontal_accuracy: number | null
+          id: string
+          is_partnered_task: boolean | null
+          latitude: number
+          longitude: number
+          session_id: string | null
+          speed: number | null
+          task_id: string | null
+          timestamp: string
+          user_id: string
+          vertical_accuracy: number | null
+        }
+        Insert: {
+          altitude?: number | null
+          created_at?: string
+          device_info?: Json | null
+          heading?: number | null
+          horizontal_accuracy?: number | null
+          id?: string
+          is_partnered_task?: boolean | null
+          latitude: number
+          longitude: number
+          session_id?: string | null
+          speed?: number | null
+          task_id?: string | null
+          timestamp?: string
+          user_id: string
+          vertical_accuracy?: number | null
+        }
+        Update: {
+          altitude?: number | null
+          created_at?: string
+          device_info?: Json | null
+          heading?: number | null
+          horizontal_accuracy?: number | null
+          id?: string
+          is_partnered_task?: boolean | null
+          latitude?: number
+          longitude?: number
+          session_id?: string | null
+          speed?: number | null
+          task_id?: string | null
+          timestamp?: string
+          user_id?: string
+          vertical_accuracy?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_gps_locations_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_inventory: {
         Row: {
           created_at: string | null
