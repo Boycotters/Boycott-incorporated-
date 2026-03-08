@@ -464,9 +464,14 @@ export default function Settings() {
           )}
         </Card>
 
-        {/* Preferences */}
+        {/* Notification Preferences (FR-NOT-002) */}
         <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
-          <h3 className="font-semibold text-lg mb-4">Preferences</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-secondary p-2 rounded-xl">
+              <Bell className="w-5 h-5 text-secondary-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg">Notification Preferences</h3>
+          </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -482,17 +487,48 @@ export default function Settings() {
               <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-secondary p-2 rounded-xl">
-                  <Bell className="w-5 h-5 text-secondary-foreground" />
-                </div>
+            <div className="border-t border-border pt-3 space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">Notification Categories</p>
+              
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Notifications</p>
-                  <p className="text-xs text-muted-foreground">Enable push notifications</p>
+                  <p className="font-medium text-sm">Streak Reminders</p>
+                  <p className="text-xs text-muted-foreground">Daily login streak alerts</p>
                 </div>
+                <Switch defaultChecked />
               </div>
-              <Switch checked={notifications} onCheckedChange={setNotifications} />
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">New Tasks</p>
+                  <p className="text-xs text-muted-foreground">When new tasks are available</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Redemptions</p>
+                  <p className="text-xs text-muted-foreground">Withdrawal & reward updates</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Promotions</p>
+                  <p className="text-xs text-muted-foreground">Flash sales & special offers</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Referrals</p>
+                  <p className="text-xs text-muted-foreground">When friends join or earn</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
             </div>
           </div>
         </Card>
