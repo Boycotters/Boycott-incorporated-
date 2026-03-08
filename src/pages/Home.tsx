@@ -411,21 +411,40 @@ export default function Home() {
                   <p className="text-white text-lg font-bold leading-tight">{currentStreak} Days</p>
                 </div>
               </div>
-              {streakData?.already_claimed_today ? (
-                <div className="bg-white/20 px-2 py-1 rounded-lg">
-                  <span className="text-white text-xs font-medium">✓ Claimed</span>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  className="bg-white text-orange-600 hover:bg-white/90 font-bold rounded-lg text-xs h-7 px-2"
-                  onClick={() => checkStreakMutation.mutate()}
-                  disabled={checkStreakMutation.isPending}
-                >
-                  <Gift className="w-3 h-3 mr-1" />
-                  Claim
-                </Button>
-              )}
+              <div className="flex items-center gap-1.5">
+                {/* Streak Shield for VIP (FR-STRK-004) */}
+                {(vipTier?.slug === 'platinum' || vipTier?.slug === 'diamond') && (
+                  <Button
+                    size="sm"
+                    className="bg-white/20 hover:bg-white/30 text-white rounded-lg text-[10px] h-7 px-2"
+                    onClick={async () => {
+                      const { data, error } = await supabase.rpc('use_streak_shield', { p_user_id: user?.id });
+                      if (error) { toast.error('Failed to activate shield'); return; }
+                      const result = data as any;
+                      if (result?.success) toast.success(result.message);
+                      else toast.error(result?.message || 'Shield unavailable');
+                    }}
+                  >
+                    <Shield className="w-3 h-3 mr-1" />
+                    Shield
+                  </Button>
+                )}
+                {streakData?.already_claimed_today ? (
+                  <div className="bg-white/20 px-2 py-1 rounded-lg">
+                    <span className="text-white text-xs font-medium">✓ Claimed</span>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="bg-white text-orange-600 hover:bg-white/90 font-bold rounded-lg text-xs h-7 px-2"
+                    onClick={() => checkStreakMutation.mutate()}
+                    disabled={checkStreakMutation.isPending}
+                  >
+                    <Gift className="w-3 h-3 mr-1" />
+                    Claim
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="flex items-center justify-between text-[10px] mt-1.5">
               <span className="text-white/70">Best: {longestStreak} days</span>
