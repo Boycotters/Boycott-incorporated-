@@ -561,7 +561,7 @@ export default function Profile() {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Achievements */}
+        {/* Achievements (FR-ACH-005: Progress toward next milestone) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Achievements</h3>
@@ -575,6 +575,9 @@ export default function Profile() {
               <ChevronRight className="w-3 h-3 ml-0.5" />
             </Button>
           </div>
+          
+          {/* Next Achievement Progress */}
+          <NextAchievementProgress userId={user?.id} totalPoints={totalPoints} completedTasks={completedTasks || 0} currentStreak={currentStreak} referralCount={referralStats?.count || 0} />
           
           <div className="grid grid-cols-4 gap-2">
             {userAchievements && userAchievements.length > 0 ? (
