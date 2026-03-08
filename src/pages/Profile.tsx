@@ -54,6 +54,80 @@ interface VipTier {
   benefits: string[];
 }
 
+// FR-ACH-005: Next achievement progress component
+function NextAchievementProgress({ userId, totalPoints, completedTasks, currentStreak, referralCount }: { 
+  userId?: string; totalPoints: number; completedTasks: number; currentStreak: number; referralCount: number 
+}) {
+  const { data: nextAchievement } = useQuery({
+    queryKey: ['next-achievement', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      // Get all achievements
+      const { data: allAchievements } = await supabase
+        .from('achievements')
+        .select('*')
+        .eq('is_active', true);
+      
+      // Get earned achievement IDs
+      const { data: earned } = await supabase
+        .from('user_achievements')
+        .select('achievement_id')
+        .eq('user_id', userId);
+      
+      const earnedIds = new Set(earned?.map(e => e.achievement_id) || []);
+      
+      // Find closest unearned achievement
+      const unearned = (allAchievements || []).filter(a => !earnedIds.has(a.id));
+      
+      if (unearned.length === 0) return null;
+      
+      // Calculate progress for each and return closest
+      let closest: any = null;
+      let closestProgress = 0;
+      
+      for (const ach of unearned) {
+        let current = 0;
+        const target = ach.requirement_value;
+        
+        if (ach.requirement_type === 'tasks_completed') current = completedTasks;
+        else if (ach.requirement_type === 'points_earned') current = totalPoints;
+        else if (ach.requirement_type === 'streak_days') current = currentStreak;
+        else if (ach.requirement_type === 'referrals') current = referralCount;
+        else current = 0;
+        
+        const progress = Math.min(100, (current / target) * 100);
+        if (progress > closestProgress) {
+          closestProgress = progress;
+          closest = { ...ach, progress, current };
+        }
+      }
+      
+      return closest;
+    },
+    enabled: !!userId,
+  });
+  
+  if (!nextAchievement) return null;
+  
+  return (
+    <Card className="bg-gradient-card p-3 rounded-xl shadow-card border border-border">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xl">{nextAchievement.icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold truncate">{nextAchievement.name}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {nextAchievement.current}/{nextAchievement.requirement_value} — {nextAchievement.description}
+          </p>
+        </div>
+        <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+          +{nextAchievement.points_reward} pts
+        </Badge>
+      </div>
+      <Progress value={nextAchievement.progress} className="h-1.5" />
+    </Card>
+  );
+}
+
 export default function Profile() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
