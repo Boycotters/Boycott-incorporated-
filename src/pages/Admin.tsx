@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/collapsible";
 import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
+import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
 
 interface Withdrawal {
   id: string;
