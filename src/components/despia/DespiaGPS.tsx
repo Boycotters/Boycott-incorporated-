@@ -3,6 +3,8 @@ import despia from "despia-native";
 import { Button } from "@/components/ui/button";
 import { MapPin, Loader2, Navigation } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LocationPoint {
   latitude: number;
@@ -17,17 +19,41 @@ interface DespiaGPSProps {
   onLocationUpdate?: (locations: LocationPoint[]) => void;
   bufferSeconds?: number;
   serverEndpoint?: string;
+  taskId?: string;
+  isPartneredTask?: boolean;
 }
 
 export function DespiaGPS({
   onLocationUpdate,
   bufferSeconds = 10,
   serverEndpoint,
+  taskId,
+  isPartneredTask = false,
 }: DespiaGPSProps) {
+  const { user } = useAuth();
   const [isTracking, setIsTracking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [locations, setLocations] = useState<LocationPoint[]>([]);
   const isNative = navigator.userAgent.includes("despia");
+
+  const saveLocationsToDb = async (locs: LocationPoint[]) => {
+    if (!user?.id || locs.length === 0) return;
+    
+    const rows = locs.map((loc) => ({
+      user_id: user.id,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      altitude: loc.altitude,
+      speed: loc.speed,
+      horizontal_accuracy: loc.horizontalAccuracy,
+      timestamp: new Date(loc.timestamp).toISOString(),
+      task_id: taskId || null,
+      is_partnered_task: isPartneredTask,
+      session_id: `despia-${Date.now()}`,
+    }));
+
+    await supabase.from("user_gps_locations").insert(rows);
+  };
 
   const startTracking = useCallback(() => {
     if (!isNative) {
@@ -55,13 +81,17 @@ export function DespiaGPS({
       setLocations(locationData);
       setIsTracking(false);
       onLocationUpdate?.(locationData);
+      
+      // Save to database
+      await saveLocationsToDb(locationData);
+      
       toast.success(`Collected ${locationData.length} location points`);
     } catch (err: any) {
       toast.error("Failed to stop tracking");
     } finally {
       setIsLoading(false);
     }
-  }, [isNative, onLocationUpdate]);
+  }, [isNative, onLocationUpdate, user?.id, taskId, isPartneredTask]);
 
   return (
     <div className="space-y-3">
