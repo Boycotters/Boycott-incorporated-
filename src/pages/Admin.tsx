@@ -1640,6 +1640,22 @@ export default function Admin() {
           <TabsContent value="transfers" className="mt-4">
             <TransferManagement />
           </TabsContent>
+
+          {/* GPS Tracking Tab */}
+          <TabsContent value="gps-tracking" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <NavigationIcon className="w-5 h-5 text-primary" />
+                  Real-Time GPS Tracking
+                </CardTitle>
+                <CardDescription>Monitor user locations and movement in real-time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GPSTrackingDashboard />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
