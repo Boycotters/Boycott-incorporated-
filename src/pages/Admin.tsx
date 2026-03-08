@@ -824,6 +824,10 @@ export default function Admin() {
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Transfers</span>
               </TabsTrigger>
+              <TabsTrigger value="gps-tracking" className="gap-1.5 px-3 shrink-0">
+                <Navigation className="w-4 h-4" />
+                <span className="hidden sm:inline">GPS</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 

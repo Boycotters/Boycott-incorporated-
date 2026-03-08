@@ -573,6 +573,9 @@ export default function Settings() {
           </div>
         </Card>
 
+        {/* My Location */}
+        <UserLocationMap />
+
         {/* QR Payments */}
         <QRPaymentSection userId={user?.id} />
 
