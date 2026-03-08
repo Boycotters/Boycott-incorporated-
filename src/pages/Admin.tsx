@@ -66,6 +66,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
+import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 
 interface Withdrawal {
   id: string;
