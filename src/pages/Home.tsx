@@ -1,4 +1,4 @@
-import { Trophy, TrendingUp, Target, Clock, Flame, Gift, Crown, ChevronRight, Award, Users } from "lucide-react";
+import { Trophy, TrendingUp, Target, Clock, Flame, Gift, Crown, ChevronRight, Award, Users, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
