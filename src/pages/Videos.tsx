@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
-import { DespiaAdReward } from "@/components/despia";
+
 
 interface Video {
   id: string;
