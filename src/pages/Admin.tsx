@@ -1674,6 +1674,10 @@ export default function Admin() {
           <TabsContent value="security" className="mt-4 space-y-4">
             <SecurityCompliancePanel users={users} />
           </TabsContent>
+          {/* AI Models Tab */}
+          <TabsContent value="ai-models" className="mt-4 space-y-4">
+            <AIModelsPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

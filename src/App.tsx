@@ -70,6 +70,7 @@ const AppContent = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       {showNav && <BottomNav />}
+      {!hideNavRoutes.includes(location.pathname) && <AIChatbot />}
     </>
   );
 };
