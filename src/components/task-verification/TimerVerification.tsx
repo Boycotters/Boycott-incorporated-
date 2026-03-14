@@ -166,7 +166,7 @@ export function TimerVerification({
   const TaskIcon = taskContent.icon;
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     
     if (started && !completed) {
       interval = setInterval(() => {
