@@ -838,6 +838,10 @@ export default function Admin() {
                 <ShieldAlert className="w-4 h-4" />
                 <span className="hidden sm:inline">Security</span>
               </TabsTrigger>
+              <TabsTrigger value="ai-models" className="gap-1.5 px-3 shrink-0">
+                <Brain className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Models</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
