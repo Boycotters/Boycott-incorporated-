@@ -222,13 +222,3 @@ export function useAI() {
   };
 }
 
-export type { 
-  GeneratedSurvey, 
-  SurveyQuestion, 
-  VerificationResult, 
-  TaskRecommendation, 
-  RecommendationsResult,
-  ModerationResult,
-  UserAnalysis,
-  PartnershipTask
-};
