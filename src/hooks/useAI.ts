@@ -7,7 +7,12 @@ type AIAction =
   | 'recommend_tasks' 
   | 'moderate_content'
   | 'analyze_user'
-  | 'generate_partnership';
+  | 'generate_partnership'
+  | 'chatbot'
+  | 'fraud_detection'
+  | 'sentiment_analysis'
+  | 'learning_insights'
+  | 'implementation_roadmap';
 
 interface AIResponse<T> {
   success: boolean;
@@ -15,7 +20,7 @@ interface AIResponse<T> {
   error?: string;
 }
 
-interface SurveyQuestion {
+export interface SurveyQuestion {
   id: string;
   question: string;
   type: 'multiple_choice' | 'scale' | 'text';
@@ -23,21 +28,21 @@ interface SurveyQuestion {
   required: boolean;
 }
 
-interface GeneratedSurvey {
+export interface GeneratedSurvey {
   title: string;
   description: string;
   estimatedMinutes: number;
   questions: SurveyQuestion[];
 }
 
-interface VerificationResult {
+export interface VerificationResult {
   approved: boolean;
   confidence: number;
   reason: string;
   flags?: string[];
 }
 
-interface TaskRecommendation {
+export interface TaskRecommendation {
   category: string;
   taskType: string;
   reason: string;
@@ -45,19 +50,19 @@ interface TaskRecommendation {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-interface RecommendationsResult {
+export interface RecommendationsResult {
   recommendations: TaskRecommendation[];
   dailyFocus: string;
 }
 
-interface ModerationResult {
+export interface ModerationResult {
   safe: boolean;
   issues: string[];
   severity: 'none' | 'low' | 'medium' | 'high';
   action: 'approve' | 'flag_for_review' | 'reject';
 }
 
-interface UserAnalysis {
+export interface UserAnalysis {
   userType: string;
   strengths: string[];
   suggestedChallenges: string[];
@@ -65,7 +70,7 @@ interface UserAnalysis {
   riskOfChurn: 'low' | 'medium' | 'high';
 }
 
-interface PartnershipTask {
+export interface PartnershipTask {
   title: string;
   description: string;
   requirements: string[];
@@ -73,6 +78,72 @@ interface PartnershipTask {
   suggestedPoints: number;
   estimatedTime: string;
   callToAction: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatbotResponse {
+  reply: string;
+}
+
+export interface FraudDetectionResult {
+  riskScore: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  isFraudulent: boolean;
+  indicators: string[];
+  recommendation: 'approve' | 'review' | 'reject' | 'ban';
+  explanation: string;
+  patterns?: string[];
+}
+
+export interface SentimentResult {
+  sentiment: 'very_negative' | 'negative' | 'neutral' | 'positive' | 'very_positive';
+  confidence: number;
+  emotions: string[];
+  keyTopics: string[];
+  satisfaction: number;
+  actionItems?: string[];
+  summary: string;
+}
+
+export interface LearningPattern {
+  pattern: string;
+  frequency: string;
+  impact: 'low' | 'medium' | 'high';
+  suggestion: string;
+}
+
+export interface LearningInsights {
+  engagementScore: number;
+  patterns: LearningPattern[];
+  retentionRisk: 'low' | 'medium' | 'high';
+  optimizations: string[];
+  predictedActions?: string[];
+  personalizedSuggestions?: string[];
+}
+
+export interface RoadmapPhase {
+  name: string;
+  description: string;
+  durationWeeks: number;
+  costUSD: number;
+  tasks: string[];
+  deliverables: string[];
+}
+
+export interface ImplementationRoadmap {
+  title: string;
+  summary: string;
+  totalEstimatedCostUSD: number;
+  totalEstimatedCostZMW: number;
+  totalTimeWeeks: number;
+  phases: RoadmapPhase[];
+  risks: string[];
+  prerequisites?: string[];
+  recommendations?: string[];
 }
 
 export function useAI() {
@@ -88,16 +159,9 @@ export function useAI() {
         body: { action, data }
       });
 
-      if (fnError) {
-        throw new Error(fnError.message);
-      }
-
+      if (fnError) throw new Error(fnError.message);
       const result = response as AIResponse<T>;
-
-      if (!result.success) {
-        throw new Error(result.error || 'AI request failed');
-      }
-
+      if (!result.success) throw new Error(result.error || 'AI request failed');
       return result.data || null;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -108,79 +172,38 @@ export function useAI() {
     }
   };
 
-  const generateSurvey = async (
-    taskType: string,
-    userLevel: number,
-    category: string,
-    previousAnswers?: string[]
-  ): Promise<GeneratedSurvey | null> => {
-    return callAI<GeneratedSurvey>('generate_survey', {
-      taskType,
-      userLevel,
-      category,
-      previousAnswers
-    });
-  };
+  const generateSurvey = (taskType: string, userLevel: number, category: string, previousAnswers?: string[]) =>
+    callAI<GeneratedSurvey>('generate_survey', { taskType, userLevel, category, previousAnswers });
 
-  const verifyContent = async (
-    type: 'url' | 'text' | 'survey_response',
-    content: string,
-    taskRequirements: string
-  ): Promise<VerificationResult | null> => {
-    return callAI<VerificationResult>('verify_content', {
-      type,
-      content,
-      taskRequirements
-    });
-  };
+  const verifyContent = (type: 'url' | 'text' | 'survey_response', content: string, taskRequirements: string) =>
+    callAI<VerificationResult>('verify_content', { type, content, taskRequirements });
 
-  const recommendTasks = async (
-    userLevel: number,
-    completedCategories: string[],
-    interests: string[],
-    vipTier: string
-  ): Promise<RecommendationsResult | null> => {
-    return callAI<RecommendationsResult>('recommend_tasks', {
-      userLevel,
-      completedCategories,
-      interests,
-      vipTier
-    });
-  };
+  const recommendTasks = (userLevel: number, completedCategories: string[], interests: string[], vipTier: string) =>
+    callAI<RecommendationsResult>('recommend_tasks', { userLevel, completedCategories, interests, vipTier });
 
-  const moderateContent = async (
-    content: string,
-    contentType: string
-  ): Promise<ModerationResult | null> => {
-    return callAI<ModerationResult>('moderate_content', {
-      content,
-      contentType
-    });
-  };
+  const moderateContent = (content: string, contentType: string) =>
+    callAI<ModerationResult>('moderate_content', { content, contentType });
 
-  const analyzeUser = async (
-    completionHistory: string[],
-    streakDays: number,
-    preferredCategories: string[]
-  ): Promise<UserAnalysis | null> => {
-    return callAI<UserAnalysis>('analyze_user', {
-      completionHistory,
-      streakDays,
-      preferredCategories
-    });
-  };
+  const analyzeUser = (completionHistory: string[], streakDays: number, preferredCategories: string[]) =>
+    callAI<UserAnalysis>('analyze_user', { completionHistory, streakDays, preferredCategories });
 
-  const generatePartnership = async (
-    brandCategory: string,
-    targetAudience: string,
-    campaignType: string
-  ): Promise<PartnershipTask | null> => {
-    return callAI<PartnershipTask>('generate_partnership', {
-      brandCategory,
-      targetAudience,
-      campaignType
-    });
-  };
+  const generatePartnership = (brandCategory: string, targetAudience: string, campaignType: string) =>
+    callAI<PartnershipTask>('generate_partnership', { brandCategory, targetAudience, campaignType });
+
+  const chatbot = (messages: ChatMessage[], userContext?: any) =>
+    callAI<ChatbotResponse>('chatbot', { messages, userContext });
+
+  const detectFraud = (userId: string, submissionType: string, submissionData: any, userHistory?: any) =>
+    callAI<FraudDetectionResult>('fraud_detection', { userId, submissionType, submissionData, userHistory });
+
+  const analyzeSentiment = (text: string, context?: string) =>
+    callAI<SentimentResult>('sentiment_analysis', { text, context });
+
+  const getLearningInsights = (userId: string, behaviorData: any) =>
+    callAI<LearningInsights>('learning_insights', { userId, behaviorData });
+
+  const getImplementationRoadmap = (feature: string, currentStack?: string, constraints?: string) =>
+    callAI<ImplementationRoadmap>('implementation_roadmap', { feature, currentStack, constraints });
 
   return {
     loading,
@@ -190,7 +213,12 @@ export function useAI() {
     recommendTasks,
     moderateContent,
     analyzeUser,
-    generatePartnership
+    generatePartnership,
+    chatbot,
+    detectFraud,
+    analyzeSentiment,
+    getLearningInsights,
+    getImplementationRoadmap,
   };
 }
 

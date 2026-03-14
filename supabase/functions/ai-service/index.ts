@@ -13,7 +13,12 @@ type AIAction =
   | 'moderate_content'
   | 'analyze_user'
   | 'generate_partnership'
-  | 'generate_quiz';
+  | 'generate_quiz'
+  | 'chatbot'
+  | 'fraud_detection'
+  | 'sentiment_analysis'
+  | 'learning_insights'
+  | 'implementation_roadmap';
 
 interface AIRequest {
   action: AIAction;
@@ -25,29 +30,17 @@ const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Rate limit: 10 AI requests per minute per user
 async function checkRateLimit(userId: string | undefined, action: string): Promise<{ allowed: boolean; message?: string }> {
-  if (!userId) {
-    return { allowed: true }; // Allow anonymous requests but they won't be logged
-  }
-  
+  if (!userId) return { allowed: true };
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  
   const { data, error } = await supabase.rpc('check_ai_rate_limit', {
-    p_user_id: userId,
-    p_action: action,
-    p_limit_per_minute: 10
+    p_user_id: userId, p_action: action, p_limit_per_minute: 10
   });
-  
-  if (error) {
-    console.error('Rate limit check error:', error);
-    return { allowed: true }; // Allow if rate limit check fails
-  }
-  
+  if (error) { console.error('Rate limit check error:', error); return { allowed: true }; }
   return data as { allowed: boolean; message?: string };
 }
 
-async function callAI(systemPrompt: string, userPrompt: string, useTools = false, tools?: any[]) {
+async function callAI(systemPrompt: string, userPrompt: string, useTools = false, tools?: any[], stream = false) {
   const body: any = {
     model: 'google/gemini-2.5-flash',
     messages: [
@@ -59,6 +52,10 @@ async function callAI(systemPrompt: string, userPrompt: string, useTools = false
   if (useTools && tools) {
     body.tools = tools;
     body.tool_choice = { type: 'function', function: { name: tools[0].function.name } };
+  }
+
+  if (stream) {
+    body.stream = true;
   }
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -76,6 +73,10 @@ async function callAI(systemPrompt: string, userPrompt: string, useTools = false
     throw new Error(`AI Gateway error: ${response.status}`);
   }
 
+  if (stream) {
+    return response;
+  }
+
   const result = await response.json();
   
   if (useTools && result.choices?.[0]?.message?.tool_calls) {
@@ -86,296 +87,462 @@ async function callAI(systemPrompt: string, userPrompt: string, useTools = false
   return result.choices?.[0]?.message?.content || '';
 }
 
-// Generate dynamic survey questions
-async function generateSurvey(data: { taskType: string; userLevel: number; category: string; previousAnswers?: string[] }) {
-  const systemPrompt = `You are an expert survey designer for a Zambian rewards app called Pesa Rewards. Generate engaging, relevant survey questions that users will enjoy answering. The surveys should be appropriate for the user's level and category. Be creative and generate DIFFERENT questions each time. Include questions relevant to Zambian lifestyle, culture, and local context when appropriate.`;
-  
-  // Add randomness for variety
+// ===== EXISTING HANDLERS =====
+
+async function generateSurvey(data: any) {
   const randomSeed = Math.floor(Math.random() * 1000);
   const surveyStyles = ['conversational', 'professional', 'fun', 'quick', 'in-depth'];
   const randomStyle = surveyStyles[Math.floor(Math.random() * surveyStyles.length)];
   
-  const userPrompt = `Generate a ${randomStyle} survey for the following context (Variation: ${randomSeed}):
+  return await callAI(
+    `You are an expert survey designer for a Zambian rewards app called Pesa Rewards. Generate engaging, relevant survey questions.`,
+    `Generate a ${randomStyle} survey (Variation: ${randomSeed}):
 - Task Type: ${data.taskType}
 - User Level: ${data.userLevel}
 - Category: ${data.category}
-${data.previousAnswers ? `- Previous answers indicate interests in: ${data.previousAnswers.join(', ')}` : ''}
-
-Create 4-5 UNIQUE, engaging questions that feel personalized and interesting. Make them DIFFERENT from typical surveys.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'create_survey',
-      description: 'Create a structured survey with questions',
-      parameters: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'Survey title' },
-          description: { type: 'string', description: 'Brief survey description' },
-          estimatedMinutes: { type: 'number', description: 'Estimated time in minutes' },
-          questions: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                question: { type: 'string' },
-                type: { type: 'string', enum: ['multiple_choice', 'scale', 'text'] },
-                options: { type: 'array', items: { type: 'string' } },
-                required: { type: 'boolean' }
-              },
-              required: ['id', 'question', 'type', 'required']
+${data.previousAnswers ? `- Previous answers: ${data.previousAnswers.join(', ')}` : ''}
+Create 4-5 UNIQUE questions.`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'create_survey',
+        description: 'Create a structured survey',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            estimatedMinutes: { type: 'number' },
+            questions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  question: { type: 'string' },
+                  type: { type: 'string', enum: ['multiple_choice', 'scale', 'text'] },
+                  options: { type: 'array', items: { type: 'string' } },
+                  required: { type: 'boolean' }
+                },
+                required: ['id', 'question', 'type', 'required']
+              }
             }
-          }
-        },
-        required: ['title', 'description', 'estimatedMinutes', 'questions']
+          },
+          required: ['title', 'description', 'estimatedMinutes', 'questions']
+        }
       }
-    }
-  }];
-
-  return await callAI(systemPrompt, userPrompt, true, tools);
+    }]
+  );
 }
 
-// AI-powered content verification
-async function verifyContent(data: { type: 'url' | 'text' | 'survey_response'; content: string; taskRequirements: string }) {
-  const systemPrompt = `You are a content verification expert for a rewards platform. Your job is to determine if submitted content meets task requirements. Be fair but thorough in your assessment.`;
-  
-  const userPrompt = `Verify if this submission meets the requirements:
-
-Task Requirements: ${data.taskRequirements}
-Submission Type: ${data.type}
-Content: ${data.content}
-
-Assess whether this appears to be a genuine, quality submission.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'verify_submission',
-      description: 'Verify if a submission meets requirements',
-      parameters: {
-        type: 'object',
-        properties: {
-          approved: { type: 'boolean', description: 'Whether the submission is approved' },
-          confidence: { type: 'number', description: 'Confidence score 0-100' },
-          reason: { type: 'string', description: 'Explanation for the decision' },
-          flags: { type: 'array', items: { type: 'string' }, description: 'Any concerns or flags' }
-        },
-        required: ['approved', 'confidence', 'reason']
+async function verifyContent(data: any) {
+  return await callAI(
+    `You are a content verification expert for a rewards platform.`,
+    `Verify submission:\nRequirements: ${data.taskRequirements}\nType: ${data.type}\nContent: ${data.content}`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'verify_submission',
+        description: 'Verify submission',
+        parameters: {
+          type: 'object',
+          properties: {
+            approved: { type: 'boolean' },
+            confidence: { type: 'number' },
+            reason: { type: 'string' },
+            flags: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['approved', 'confidence', 'reason']
+        }
       }
-    }
-  }];
-
-  return await callAI(systemPrompt, userPrompt, true, tools);
+    }]
+  );
 }
 
-// AI task recommendations
-async function recommendTasks(data: { userLevel: number; completedCategories: string[]; interests: string[]; vipTier: string }) {
-  const systemPrompt = `You are a personalized task recommendation engine for a Zambian rewards app. Suggest tasks that match user interests and skill level, balancing variety with relevance. Be creative and suggest different types of tasks each time. Include tasks related to local Zambian context when appropriate.`;
-  
-  // Add randomness seed for variety
+async function recommendTasks(data: any) {
   const randomSeed = Math.floor(Math.random() * 1000);
   const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
   
-  const userPrompt = `Generate task recommendations for this user (Variation seed: ${randomSeed}, Time: ${timeOfDay}):
-- Level: ${data.userLevel}
-- VIP Tier: ${data.vipTier}
-- Recently completed categories: ${data.completedCategories.join(', ') || 'None'}
+  return await callAI(
+    `You are a personalized task recommendation engine for a Zambian rewards app.`,
+    `Recommend tasks (Seed: ${randomSeed}, Time: ${timeOfDay}):
+- Level: ${data.userLevel}, VIP: ${data.vipTier}
+- Recent: ${data.completedCategories.join(', ') || 'None'}
 - Interests: ${data.interests.join(', ') || 'General'}
-
-Recommend a DIVERSE mix of 4-5 task types they would enjoy. Be creative and suggest DIFFERENT tasks than before. Consider time of day for relevance.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'recommend_tasks',
-      description: 'Generate personalized task recommendations',
-      parameters: {
-        type: 'object',
-        properties: {
-          recommendations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                category: { type: 'string' },
-                taskType: { type: 'string' },
-                reason: { type: 'string', description: 'Why this is recommended' },
-                pointsRange: { type: 'string', description: 'Expected points range' },
-                difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] }
-              },
-              required: ['category', 'taskType', 'reason', 'pointsRange', 'difficulty']
-            }
+Recommend 4-5 DIVERSE tasks.`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'recommend_tasks',
+        description: 'Generate task recommendations',
+        parameters: {
+          type: 'object',
+          properties: {
+            recommendations: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  category: { type: 'string' },
+                  taskType: { type: 'string' },
+                  reason: { type: 'string' },
+                  pointsRange: { type: 'string' },
+                  difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] }
+                },
+                required: ['category', 'taskType', 'reason', 'pointsRange', 'difficulty']
+              }
+            },
+            dailyFocus: { type: 'string' }
           },
-          dailyFocus: { type: 'string', description: 'Suggested focus category for today' }
-        },
-        required: ['recommendations', 'dailyFocus']
+          required: ['recommendations', 'dailyFocus']
+        }
       }
-    }
-  }];
-
-  return await callAI(systemPrompt, userPrompt, true, tools);
+    }]
+  );
 }
 
-// Content moderation
-async function moderateContent(data: { content: string; contentType: string }) {
-  const systemPrompt = `You are a content moderation system. Analyze content for policy violations, spam, or inappropriate material. Be thorough but fair.`;
-  
-  const userPrompt = `Analyze this ${data.contentType} for policy compliance:
-
-"${data.content}"
-
-Check for: spam, inappropriate content, fake/misleading info, policy violations.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'moderate_content',
-      description: 'Analyze content for policy compliance',
-      parameters: {
-        type: 'object',
-        properties: {
-          safe: { type: 'boolean' },
-          issues: { type: 'array', items: { type: 'string' } },
-          severity: { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
-          action: { type: 'string', enum: ['approve', 'flag_for_review', 'reject'] }
-        },
-        required: ['safe', 'issues', 'severity', 'action']
+async function moderateContent(data: any) {
+  return await callAI(
+    `You are a content moderation system.`,
+    `Analyze this ${data.contentType}: "${data.content}"`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'moderate_content',
+        description: 'Analyze content',
+        parameters: {
+          type: 'object',
+          properties: {
+            safe: { type: 'boolean' },
+            issues: { type: 'array', items: { type: 'string' } },
+            severity: { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
+            action: { type: 'string', enum: ['approve', 'flag_for_review', 'reject'] }
+          },
+          required: ['safe', 'issues', 'severity', 'action']
+        }
       }
-    }
-  }];
-
-  return await callAI(systemPrompt, userPrompt, true, tools);
+    }]
+  );
 }
 
-// User analysis for personalization
-async function analyzeUser(data: { completionHistory: string[]; streakDays: number; preferredCategories: string[] }) {
-  const systemPrompt = `You are a user behavior analyst. Analyze patterns to understand user preferences and suggest personalization improvements.`;
-  
-  const userPrompt = `Analyze this user's behavior:
-- Task History: ${data.completionHistory.join(', ')}
-- Current Streak: ${data.streakDays} days
-- Preferred Categories: ${data.preferredCategories.join(', ')}
-
-Provide insights for personalization.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'analyze_user',
-      description: 'Provide user behavior analysis',
-      parameters: {
-        type: 'object',
-        properties: {
-          userType: { type: 'string', description: 'Classification of user type' },
-          strengths: { type: 'array', items: { type: 'string' } },
-          suggestedChallenges: { type: 'array', items: { type: 'string' } },
-          engagementTips: { type: 'array', items: { type: 'string' } },
-          riskOfChurn: { type: 'string', enum: ['low', 'medium', 'high'] }
-        },
-        required: ['userType', 'strengths', 'suggestedChallenges', 'engagementTips', 'riskOfChurn']
+async function analyzeUser(data: any) {
+  return await callAI(
+    `You are a user behavior analyst for personalization.`,
+    `Analyze user:
+- History: ${data.completionHistory.join(', ')}
+- Streak: ${data.streakDays} days
+- Categories: ${data.preferredCategories.join(', ')}`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'analyze_user',
+        description: 'Analyze user behavior',
+        parameters: {
+          type: 'object',
+          properties: {
+            userType: { type: 'string' },
+            strengths: { type: 'array', items: { type: 'string' } },
+            suggestedChallenges: { type: 'array', items: { type: 'string' } },
+            engagementTips: { type: 'array', items: { type: 'string' } },
+            riskOfChurn: { type: 'string', enum: ['low', 'medium', 'high'] }
+          },
+          required: ['userType', 'strengths', 'suggestedChallenges', 'engagementTips', 'riskOfChurn']
+        }
       }
-    }
-  }];
-
-  return await callAI(systemPrompt, userPrompt, true, tools);
+    }]
+  );
 }
 
-// Generate partnership/brand tasks
-async function generatePartnership(data: { brandCategory: string; targetAudience: string; campaignType: string }) {
-  const systemPrompt = `You are a partnership and campaign specialist for a Zambian rewards app. Create engaging brand collaboration tasks that benefit both users and partners. Be creative and generate UNIQUE, DIFFERENT tasks each time. Include Zambian context when relevant.`;
-  
-  // Add randomness for variety
+async function generatePartnership(data: any) {
   const randomSeed = Math.floor(Math.random() * 1000);
-  const themes = ['trendy', 'classic', 'innovative', 'community-focused', 'lifestyle', 'digital', 'local'];
+  const themes = ['trendy', 'classic', 'innovative', 'community-focused', 'lifestyle'];
   const randomTheme = themes[Math.floor(Math.random() * themes.length)];
   
-  const userPrompt = `Create a UNIQUE partnership task (Variation: ${randomSeed}, Theme: ${randomTheme}):
-- Brand Category: ${data.brandCategory}
-- Target Audience: ${data.targetAudience}
-- Campaign Type: ${data.campaignType}
-
-Generate an engaging, CREATIVE task that users will want to complete. Make it DIFFERENT from typical tasks. Consider local Zambian brands and context when appropriate.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'create_partnership_task',
-      description: 'Create a brand partnership task',
-      parameters: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' },
-          description: { type: 'string' },
-          requirements: { type: 'array', items: { type: 'string' } },
-          verificationMethod: { type: 'string', enum: ['url', 'screenshot', 'survey', 'timer'] },
-          suggestedPoints: { type: 'number' },
-          estimatedTime: { type: 'string' },
-          callToAction: { type: 'string' }
-        },
-        required: ['title', 'description', 'requirements', 'verificationMethod', 'suggestedPoints', 'estimatedTime', 'callToAction']
+  return await callAI(
+    `You are a partnership specialist for a Zambian rewards app.`,
+    `Create partnership task (Variation: ${randomSeed}, Theme: ${randomTheme}):
+- Brand: ${data.brandCategory}
+- Audience: ${data.targetAudience}
+- Campaign: ${data.campaignType}`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'create_partnership_task',
+        description: 'Create a partnership task',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            requirements: { type: 'array', items: { type: 'string' } },
+            verificationMethod: { type: 'string', enum: ['url', 'screenshot', 'survey', 'timer'] },
+            suggestedPoints: { type: 'number' },
+            estimatedTime: { type: 'string' },
+            callToAction: { type: 'string' }
+          },
+          required: ['title', 'description', 'requirements', 'verificationMethod', 'suggestedPoints', 'estimatedTime', 'callToAction']
+        }
       }
-    }
-  }];
-
-  return await callAI(systemPrompt, userPrompt, true, tools);
+    }]
+  );
 }
 
-// Generate quiz with pass/fail scoring
-async function generateQuiz(data: { topic: string; category: string; difficulty: string; questionCount: number; passPercentage: number }) {
-  const systemPrompt = `You are an expert quiz creator for a Zambian rewards app. Create engaging, educational quiz questions that test knowledge while being fun. Include questions relevant to Zambian culture, lifestyle, and general knowledge when appropriate. Make sure each question has exactly 4 options with only one correct answer.`;
-  
+async function generateQuiz(data: any) {
   const randomSeed = Math.floor(Math.random() * 1000);
-  const questionStyles = ['trivia', 'educational', 'fun facts', 'practical knowledge', 'current events'];
-  const randomStyle = questionStyles[Math.floor(Math.random() * questionStyles.length)];
-  
-  const userPrompt = `Create a ${randomStyle} quiz (Variation: ${randomSeed}):
-- Topic: ${data.topic}
-- Category: ${data.category}
-- Difficulty: ${data.difficulty}
-- Number of Questions: ${data.questionCount}
-- Pass Percentage: ${data.passPercentage}%
-
-Generate ${data.questionCount} UNIQUE quiz questions with 4 options each. Each question should have exactly one correct answer. Include brief explanations for why the correct answer is right. Make questions engaging and educational.`;
-
-  const tools = [{
-    type: 'function',
-    function: {
-      name: 'create_quiz',
-      description: 'Create a quiz with questions',
-      parameters: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'Quiz title' },
-          description: { type: 'string', description: 'Brief quiz description' },
-          passPercentage: { type: 'number', description: 'Required percentage to pass' },
-          timePerQuestion: { type: 'number', description: 'Seconds per question' },
-          questions: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                question: { type: 'string' },
-                options: { type: 'array', items: { type: 'string' }, description: 'Exactly 4 options' },
-                correctAnswer: { type: 'number', description: 'Index of correct option (0-3)' },
-                explanation: { type: 'string', description: 'Why this answer is correct' }
-              },
-              required: ['id', 'question', 'options', 'correctAnswer']
+  return await callAI(
+    `You are an expert quiz creator for a Zambian rewards app.`,
+    `Create quiz (Variation: ${randomSeed}):
+- Topic: ${data.topic}, Category: ${data.category}
+- Difficulty: ${data.difficulty}, Questions: ${data.questionCount}
+- Pass: ${data.passPercentage}%`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'create_quiz',
+        description: 'Create a quiz',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            passPercentage: { type: 'number' },
+            timePerQuestion: { type: 'number' },
+            questions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  question: { type: 'string' },
+                  options: { type: 'array', items: { type: 'string' } },
+                  correctAnswer: { type: 'number' },
+                  explanation: { type: 'string' }
+                },
+                required: ['id', 'question', 'options', 'correctAnswer']
+              }
             }
-          }
-        },
-        required: ['title', 'description', 'passPercentage', 'timePerQuestion', 'questions']
+          },
+          required: ['title', 'description', 'passPercentage', 'timePerQuestion', 'questions']
+        }
       }
-    }
-  }];
+    }]
+  );
+}
 
-  return await callAI(systemPrompt, userPrompt, true, tools);
+// ===== NEW AI MODEL HANDLERS =====
+
+// Chatbot - conversational assistant
+async function handleChatbot(data: { messages: Array<{ role: string; content: string }>; userContext?: any }) {
+  const systemPrompt = `You are Pesa AI, a friendly and helpful assistant for Pesa Rewards, a Zambian rewards and earning app. You help users with:
+- Understanding how to earn points (tasks, surveys, videos, games)
+- Explaining VIP tiers, streaks, and achievements
+- Providing tips to maximize earnings
+- Answering questions about withdrawals and mobile money
+- General support and troubleshooting
+
+Be conversational, encouraging, and use simple language. Mention Zambian Kwacha (ZMW) when discussing money. Keep responses concise but helpful. Use emojis sparingly for friendliness.
+
+${data.userContext ? `User context: Level ${data.userContext.level}, VIP: ${data.userContext.vipTier}, Points: ${data.userContext.totalPoints}, Streak: ${data.userContext.streak} days` : ''}`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...data.messages.map(m => ({ role: m.role, content: m.content }))
+  ];
+
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages,
+    }),
+  });
+
+  if (!response.ok) throw new Error(`AI Gateway error: ${response.status}`);
+  const result = await response.json();
+  return { reply: result.choices?.[0]?.message?.content || 'Sorry, I could not process that.' };
+}
+
+// Fraud Detection - analyze submissions for fraud
+async function handleFraudDetection(data: { userId: string; submissionType: string; submissionData: any; userHistory?: any }) {
+  return await callAI(
+    `You are a fraud detection AI for a rewards platform. Analyze submissions for signs of fraud, bot activity, duplicate accounts, or gaming the system. Be thorough but fair. Consider patterns like:
+- Impossible completion times
+- Copy-pasted or generic responses
+- GPS spoofing indicators
+- Suspicious earning patterns
+- Account age vs activity level`,
+    `Analyze this submission for fraud:
+- User ID: ${data.userId}
+- Submission Type: ${data.submissionType}
+- Data: ${JSON.stringify(data.submissionData)}
+${data.userHistory ? `- User History: ${JSON.stringify(data.userHistory)}` : ''}
+
+Provide a detailed fraud analysis.`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'fraud_analysis',
+        description: 'Analyze submission for fraud',
+        parameters: {
+          type: 'object',
+          properties: {
+            riskScore: { type: 'number', description: 'Fraud risk score 0-100' },
+            riskLevel: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+            isFraudulent: { type: 'boolean' },
+            indicators: { type: 'array', items: { type: 'string' }, description: 'Fraud indicators found' },
+            recommendation: { type: 'string', enum: ['approve', 'review', 'reject', 'ban'] },
+            explanation: { type: 'string' },
+            patterns: { type: 'array', items: { type: 'string' }, description: 'Suspicious patterns detected' }
+          },
+          required: ['riskScore', 'riskLevel', 'isFraudulent', 'indicators', 'recommendation', 'explanation']
+        }
+      }
+    }]
+  );
+}
+
+// Sentiment Analysis - analyze user feedback
+async function handleSentimentAnalysis(data: { text: string; context?: string }) {
+  return await callAI(
+    `You are a sentiment analysis AI. Analyze text for emotional tone, satisfaction level, and actionable insights. Consider cultural context of Zambian users.`,
+    `Analyze sentiment of this feedback:
+"${data.text}"
+${data.context ? `Context: ${data.context}` : ''}`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'analyze_sentiment',
+        description: 'Analyze text sentiment',
+        parameters: {
+          type: 'object',
+          properties: {
+            sentiment: { type: 'string', enum: ['very_negative', 'negative', 'neutral', 'positive', 'very_positive'] },
+            confidence: { type: 'number', description: '0-100' },
+            emotions: { type: 'array', items: { type: 'string' }, description: 'Detected emotions' },
+            keyTopics: { type: 'array', items: { type: 'string' } },
+            satisfaction: { type: 'number', description: 'Satisfaction score 1-10' },
+            actionItems: { type: 'array', items: { type: 'string' }, description: 'Suggested actions' },
+            summary: { type: 'string' }
+          },
+          required: ['sentiment', 'confidence', 'emotions', 'keyTopics', 'satisfaction', 'summary']
+        }
+      }
+    }]
+  );
+}
+
+// Learning System - analyze user behavior patterns
+async function handleLearningInsights(data: { userId: string; behaviorData: any }) {
+  return await callAI(
+    `You are a machine learning insights engine for a rewards platform. Analyze user behavior data to generate actionable insights for platform improvement. Focus on:
+- User engagement patterns
+- Feature usage optimization
+- Retention improvement
+- Personalization opportunities
+- Revenue optimization suggestions`,
+    `Analyze platform behavior data:
+${JSON.stringify(data.behaviorData)}
+
+Generate insights for platform self-improvement.`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'learning_insights',
+        description: 'Generate learning insights',
+        parameters: {
+          type: 'object',
+          properties: {
+            engagementScore: { type: 'number', description: 'Overall engagement 0-100' },
+            patterns: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  pattern: { type: 'string' },
+                  frequency: { type: 'string' },
+                  impact: { type: 'string', enum: ['low', 'medium', 'high'] },
+                  suggestion: { type: 'string' }
+                },
+                required: ['pattern', 'frequency', 'impact', 'suggestion']
+              }
+            },
+            retentionRisk: { type: 'string', enum: ['low', 'medium', 'high'] },
+            optimizations: { type: 'array', items: { type: 'string' } },
+            predictedActions: { type: 'array', items: { type: 'string' } },
+            personalizedSuggestions: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['engagementScore', 'patterns', 'retentionRisk', 'optimizations']
+        }
+      }
+    }]
+  );
+}
+
+// Implementation Roadmap & Cost Estimates
+async function handleImplementationRoadmap(data: { feature: string; currentStack?: string; constraints?: string }) {
+  return await callAI(
+    `You are a technical project manager and architect. Generate detailed implementation roadmaps with realistic cost and time estimates for a mobile-first rewards app built with React, Supabase, and deployed on Lovable. Costs should be in USD and ZMW.`,
+    `Create implementation roadmap for:
+Feature: ${data.feature}
+${data.currentStack ? `Current Stack: ${data.currentStack}` : 'Stack: React + Supabase + Lovable'}
+${data.constraints ? `Constraints: ${data.constraints}` : ''}
+
+Provide detailed phases, timelines, costs, and risks.`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'create_roadmap',
+        description: 'Create implementation roadmap',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            summary: { type: 'string' },
+            totalEstimatedCostUSD: { type: 'number' },
+            totalEstimatedCostZMW: { type: 'number' },
+            totalTimeWeeks: { type: 'number' },
+            phases: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  description: { type: 'string' },
+                  durationWeeks: { type: 'number' },
+                  costUSD: { type: 'number' },
+                  tasks: { type: 'array', items: { type: 'string' } },
+                  deliverables: { type: 'array', items: { type: 'string' } }
+                },
+                required: ['name', 'description', 'durationWeeks', 'costUSD', 'tasks', 'deliverables']
+              }
+            },
+            risks: { type: 'array', items: { type: 'string' } },
+            prerequisites: { type: 'array', items: { type: 'string' } },
+            recommendations: { type: 'array', items: { type: 'string' } }
+          },
+          required: ['title', 'summary', 'totalEstimatedCostUSD', 'totalEstimatedCostZMW', 'totalTimeWeeks', 'phases', 'risks']
+        }
+      }
+    }]
+  );
 }
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -386,87 +553,81 @@ serve(async (req) => {
     }
 
     const { action, data, userId } = await req.json() as AIRequest;
-    console.log(`AI Service: Processing action "${action}" for user ${userId || 'anonymous'}`);
+    console.log(`AI Service: Processing "${action}" for user ${userId || 'anonymous'}`);
 
-    // Check rate limit
     const rateLimitResult = await checkRateLimit(userId, action);
     if (!rateLimitResult.allowed) {
       return new Response(JSON.stringify({ 
-        success: false, 
-        error: rateLimitResult.message || 'Rate limit exceeded. Please wait a moment.' 
-      }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        success: false, error: rateLimitResult.message || 'Rate limit exceeded.' 
+      }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     let result;
 
     switch (action) {
       case 'generate_survey':
-        result = await generateSurvey(data as { taskType: string; userLevel: number; category: string; previousAnswers?: string[] });
+        result = await generateSurvey(data);
         break;
       case 'verify_content':
-        result = await verifyContent(data as { type: 'url' | 'text' | 'survey_response'; content: string; taskRequirements: string });
+        result = await verifyContent(data);
         break;
       case 'recommend_tasks':
-        result = await recommendTasks(data as { userLevel: number; completedCategories: string[]; interests: string[]; vipTier: string });
+        result = await recommendTasks(data);
         break;
       case 'moderate_content':
-        result = await moderateContent(data as { content: string; contentType: string });
+        result = await moderateContent(data);
         break;
       case 'analyze_user':
-        result = await analyzeUser(data as { completionHistory: string[]; streakDays: number; preferredCategories: string[] });
+        result = await analyzeUser(data);
         break;
       case 'generate_partnership':
-        result = await generatePartnership(data as { brandCategory: string; targetAudience: string; campaignType: string });
+        result = await generatePartnership(data);
         break;
       case 'generate_quiz':
-        result = await generateQuiz(data as { topic: string; category: string; difficulty: string; questionCount: number; passPercentage: number });
+        result = await generateQuiz(data);
+        break;
+      case 'chatbot':
+        result = await handleChatbot(data as any);
+        break;
+      case 'fraud_detection':
+        result = await handleFraudDetection(data as any);
+        break;
+      case 'sentiment_analysis':
+        result = await handleSentimentAnalysis(data as any);
+        break;
+      case 'learning_insights':
+        result = await handleLearningInsights(data as any);
+        break;
+      case 'implementation_roadmap':
+        result = await handleImplementationRoadmap(data as any);
         break;
       default:
         throw new Error(`Unknown action: ${action}`);
     }
 
-    console.log(`AI Service: Action "${action}" completed successfully`);
+    console.log(`AI Service: "${action}" completed`);
 
     return new Response(JSON.stringify({ success: true, data: result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('AI Service error:', error);
-    
     const err = error as Error;
     
-    // Handle rate limiting from AI gateway
     if (err.message?.includes('429')) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Rate limit exceeded. Please try again in a moment.' 
-      }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded. Please try again.' }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Handle payment required
     if (err.message?.includes('402')) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'AI credits exhausted. Please add credits to continue.' 
-      }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted. Please add credits.' }), {
+        status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: err.message || 'Unknown error' 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ success: false, error: err.message || 'Unknown error' }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
-
