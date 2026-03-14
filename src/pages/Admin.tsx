@@ -36,7 +36,8 @@ import {
   Navigation as NavigationIcon,
   ShieldAlert,
   AlertTriangle,
-  CalendarClock
+  CalendarClock,
+  Brain
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +73,7 @@ import {
 import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
+import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
 
 interface Withdrawal {
   id: string;
@@ -836,6 +838,10 @@ export default function Admin() {
               <TabsTrigger value="security" className="gap-1.5 px-3 shrink-0">
                 <ShieldAlert className="w-4 h-4" />
                 <span className="hidden sm:inline">Security</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai-models" className="gap-1.5 px-3 shrink-0">
+                <Brain className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Models</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1667,6 +1673,10 @@ export default function Admin() {
           {/* Security & Compliance Tab */}
           <TabsContent value="security" className="mt-4 space-y-4">
             <SecurityCompliancePanel users={users} />
+          </TabsContent>
+          {/* AI Models Tab */}
+          <TabsContent value="ai-models" className="mt-4 space-y-4">
+            <AIModelsPanel />
           </TabsContent>
         </Tabs>
       </div>
