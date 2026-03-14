@@ -72,6 +72,7 @@ import {
 import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
+import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
 
 interface Withdrawal {
   id: string;
