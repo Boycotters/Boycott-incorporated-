@@ -51,7 +51,7 @@ export default function Surveys() {
   const { fireConfetti } = useConfetti();
   const queryClient = useQueryClient();
   const { generateSurvey, loading: aiLoading } = useAI();
-  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
+  const { isWeekendBlocked, hasCampaign, canDoActivity, data: limitsData } = useDailyLimits();
 
   const [activeTab, setActiveTab] = useState<"available" | "active">("available");
   const [activeSurvey, setActiveSurvey] = useState<GeneratedSurvey | null>(null);
@@ -161,6 +161,14 @@ export default function Surveys() {
   };
 
   const handleStartSurvey = (survey: GeneratedSurvey) => {
+    if (!canDoActivity('surveys')) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've completed all ${limitsData?.surveys.max || 3} surveys for today. Come back tomorrow!`,
+        variant: "destructive",
+      });
+      return;
+    }
     setActiveSurvey(survey);
     setCurrentQuestion(0);
     setAnswers({});
