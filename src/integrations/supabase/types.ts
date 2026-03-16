@@ -1766,6 +1766,18 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_completion_time?: number
+              p_points: number
+              p_questions?: Json
+              p_responses?: Json
+              p_survey_id?: string
+              p_survey_title: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       check_ai_rate_limit: {
         Args: {
           p_action: string

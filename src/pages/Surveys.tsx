@@ -161,6 +161,14 @@ export default function Surveys() {
   };
 
   const handleStartSurvey = (survey: GeneratedSurvey) => {
+    if (!canDoActivity('surveys')) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've completed all ${limitsData?.surveys.max || 3} surveys for today. Come back tomorrow!`,
+        variant: "destructive",
+      });
+      return;
+    }
     setActiveSurvey(survey);
     setCurrentQuestion(0);
     setAnswers({});
