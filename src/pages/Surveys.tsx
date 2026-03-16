@@ -51,7 +51,7 @@ export default function Surveys() {
   const { fireConfetti } = useConfetti();
   const queryClient = useQueryClient();
   const { generateSurvey, loading: aiLoading } = useAI();
-  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
+  const { isWeekendBlocked, hasCampaign, canDoActivity, data: limitsData } = useDailyLimits();
 
   const [activeTab, setActiveTab] = useState<"available" | "active">("available");
   const [activeSurvey, setActiveSurvey] = useState<GeneratedSurvey | null>(null);
