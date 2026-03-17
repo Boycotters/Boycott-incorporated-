@@ -70,7 +70,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
+import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement, RewardsManagement } from "@/components/admin";
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
 import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
