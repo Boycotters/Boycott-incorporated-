@@ -1683,6 +1683,10 @@ export default function Admin() {
           <TabsContent value="ai-models" className="mt-4 space-y-4">
             <AIModelsPanel />
           </TabsContent>
+          {/* Rewards Management Tab */}
+          <TabsContent value="rewards" className="mt-4">
+            <RewardsManagement />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
