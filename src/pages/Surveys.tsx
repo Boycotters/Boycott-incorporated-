@@ -258,23 +258,14 @@ export default function Surveys() {
     },
   });
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!activeSurvey || submitting) return;
     setSubmitting(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      completeSurveyMutation.mutate({ 
-        points: activeSurvey.points_reward, 
-        survey: activeSurvey,
-        surveyAnswers: answers 
-      }, {
-        onSuccess: () => {
-          setCompleted(true);
-        }
-      });
-    } catch (error) {
-      setSubmitting(false);
-    }
+    completeSurveyMutation.mutate({ 
+      points: activeSurvey.points_reward, 
+      survey: activeSurvey,
+      surveyAnswers: answers 
+    });
   };
 
   const handleExitSurvey = () => {
