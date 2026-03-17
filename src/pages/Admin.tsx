@@ -843,6 +843,10 @@ export default function Admin() {
                 <Brain className="w-4 h-4" />
                 <span className="hidden sm:inline">AI Models</span>
               </TabsTrigger>
+              <TabsTrigger value="rewards" className="gap-1.5 px-3 shrink-0">
+                <Gift className="w-4 h-4" />
+                <span className="hidden sm:inline">Rewards</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
