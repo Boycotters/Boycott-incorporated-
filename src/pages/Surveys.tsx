@@ -238,6 +238,7 @@ export default function Surveys() {
     },
     onSuccess: (points) => {
       setSubmitting(false);
+      setCompleted(true);
       fireConfetti();
       toast({
         title: "Survey Complete! 🎉",
@@ -247,6 +248,7 @@ export default function Surveys() {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
       queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
+      queryClient.invalidateQueries({ queryKey: ['completed-surveys'] });
     },
     onError: (error: any) => {
       setSubmitting(false);
