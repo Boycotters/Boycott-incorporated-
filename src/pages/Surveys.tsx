@@ -238,6 +238,7 @@ export default function Surveys() {
     },
     onSuccess: (points) => {
       setSubmitting(false);
+      setCompleted(true);
       fireConfetti();
       toast({
         title: "Survey Complete! 🎉",
@@ -247,6 +248,7 @@ export default function Surveys() {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
       queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
+      queryClient.invalidateQueries({ queryKey: ['completed-surveys'] });
     },
     onError: (error: any) => {
       setSubmitting(false);
@@ -258,23 +260,14 @@ export default function Surveys() {
     },
   });
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!activeSurvey || submitting) return;
     setSubmitting(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      completeSurveyMutation.mutate({ 
-        points: activeSurvey.points_reward, 
-        survey: activeSurvey,
-        surveyAnswers: answers 
-      }, {
-        onSuccess: () => {
-          setCompleted(true);
-        }
-      });
-    } catch (error) {
-      setSubmitting(false);
-    }
+    completeSurveyMutation.mutate({ 
+      points: activeSurvey.points_reward, 
+      survey: activeSurvey,
+      surveyAnswers: answers 
+    });
   };
 
   const handleExitSurvey = () => {

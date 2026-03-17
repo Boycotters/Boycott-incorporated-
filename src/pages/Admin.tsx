@@ -37,7 +37,8 @@ import {
   ShieldAlert,
   AlertTriangle,
   CalendarClock,
-  Brain
+  Brain,
+  Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +71,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement } from "@/components/admin";
+import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagement, TransferManagement, RewardsManagement } from "@/components/admin";
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
 import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
@@ -842,6 +843,10 @@ export default function Admin() {
               <TabsTrigger value="ai-models" className="gap-1.5 px-3 shrink-0">
                 <Brain className="w-4 h-4" />
                 <span className="hidden sm:inline">AI Models</span>
+              </TabsTrigger>
+              <TabsTrigger value="rewards" className="gap-1.5 px-3 shrink-0">
+                <Gift className="w-4 h-4" />
+                <span className="hidden sm:inline">Rewards</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1677,6 +1682,10 @@ export default function Admin() {
           {/* AI Models Tab */}
           <TabsContent value="ai-models" className="mt-4 space-y-4">
             <AIModelsPanel />
+          </TabsContent>
+          {/* Rewards Management Tab */}
+          <TabsContent value="rewards" className="mt-4">
+            <RewardsManagement />
           </TabsContent>
         </Tabs>
       </div>

@@ -86,15 +86,20 @@ export default function Videos() {
     },
   });
 
-  // Fetch user's watched videos
+  // Fetch user's watched videos - only today's watches count for daily reset
   const { data: watchedVideos } = useQuery({
     queryKey: ['watched-videos', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
       const { data, error } = await supabase
         .from('user_video_views')
         .select('video_id, completed, points_awarded')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('completed', true)
+        .gte('watched_at', todayStart.toISOString());
       
       if (error) throw error;
       return data as VideoView[];
