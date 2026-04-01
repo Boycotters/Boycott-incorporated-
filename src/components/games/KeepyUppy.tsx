@@ -127,6 +127,9 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     }
   }, [timeLeft, isPlaying, gameOver, endGame]);
 
+  // Track if ball should end game (set outside of render)
+  const shouldEndGameRef = useRef(false);
+
   // Ball DOM ref for direct manipulation
   const ballElRef = useRef<HTMLDivElement>(null);
 
