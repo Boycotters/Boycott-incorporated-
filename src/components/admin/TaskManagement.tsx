@@ -132,7 +132,7 @@ function QuizQuestionsEditor({
         </p>
       )}
       
-      <ScrollArea className="max-h-[300px]">
+      <ScrollArea className="max-h-[400px]">
         <div className="space-y-4 pr-2">
           {questions.map((q, qIndex) => (
             <Card key={qIndex} className="p-3 bg-muted/50">
