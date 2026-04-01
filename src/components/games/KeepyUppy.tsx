@@ -305,7 +305,8 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
             
             {/* Ball with visible hitbox indicator */}
             <div
-              className="absolute transition-none pointer-events-none"
+              ref={ballElRef}
+              className="absolute will-change-transform pointer-events-none"
               style={{
                 left: ball.x - BALL_RADIUS,
                 top: ball.y - BALL_RADIUS,
