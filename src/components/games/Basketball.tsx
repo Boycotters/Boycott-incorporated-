@@ -127,29 +127,54 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     }
   }, [timeLeft, isPlaying, gameOver, endGame]);
 
-  // Smooth hoop movement
+  // Smooth hoop movement using requestAnimationFrame
+  const hoopDirRef = useRef(1);
+  const hoopAnimRef = useRef<number | null>(null);
+  const backboardRef = useRef<HTMLDivElement>(null);
+  const hoopElRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
     if (!isPlaying || gameOver) return;
     
-    const moveHoop = setInterval(() => {
-      setHoopX(prev => {
-        const speed = 1.2; // Slower movement
-        let newX = prev + (speed * hoopDirection);
+    let lastTime = 0;
+    const moveHoop = (time: number) => {
+      if (!lastTime) lastTime = time;
+      const delta = time - lastTime;
+      
+      if (delta >= 16) { // ~60fps cap
+        lastTime = time;
+        const speed = 1.2;
+        let newX = hoopXRef.current + (speed * hoopDirRef.current);
         
         if (newX >= CONTAINER_WIDTH - 60) {
-          setHoopDirection(-1);
+          hoopDirRef.current = -1;
           newX = CONTAINER_WIDTH - 60;
         } else if (newX <= 60) {
-          setHoopDirection(1);
+          hoopDirRef.current = 1;
           newX = 60;
         }
         
-        return newX;
-      });
-    }, 50);
+        hoopXRef.current = newX;
+        setHoopX(newX);
+        
+        // Direct DOM update for backboard and hoop
+        if (backboardRef.current) {
+          backboardRef.current.style.left = `${newX - 40}px`;
+        }
+        if (hoopElRef.current) {
+          hoopElRef.current.style.left = `${newX - HOOP_WIDTH / 2}px`;
+        }
+      }
+      
+      hoopAnimRef.current = requestAnimationFrame(moveHoop);
+    };
     
-    return () => clearInterval(moveHoop);
-  }, [isPlaying, gameOver, hoopDirection]);
+    hoopAnimRef.current = requestAnimationFrame(moveHoop);
+    
+    return () => {
+      if (hoopAnimRef.current) cancelAnimationFrame(hoopAnimRef.current);
+    };
+  }, [isPlaying, gameOver]);
 
   // Ball ref for smooth animation without re-renders
   const ballRef = useRef<Ball>(ball);
