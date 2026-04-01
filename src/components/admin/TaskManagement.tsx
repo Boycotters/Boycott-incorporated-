@@ -132,7 +132,7 @@ function QuizQuestionsEditor({
         </p>
       )}
       
-      <ScrollArea className="max-h-[300px]">
+      <ScrollArea className="max-h-[400px]">
         <div className="space-y-4 pr-2">
           {questions.map((q, qIndex) => (
             <Card key={qIndex} className="p-3 bg-muted/50">
@@ -522,7 +522,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
             Create New Task
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
@@ -552,7 +552,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
 
       {/* Edit Task Dialog */}
       <Dialog open={editTaskOpen} onOpenChange={setEditTaskOpen}>
-        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>

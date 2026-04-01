@@ -130,55 +130,60 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
   // Track if ball should end game (set outside of render)
   const shouldEndGameRef = useRef(false);
 
-  // Game physics loop
+  // Ball DOM ref for direct manipulation
+  const ballElRef = useRef<HTMLDivElement>(null);
+
+  // Game physics loop - use refs to avoid re-renders every frame
   useEffect(() => {
     if (!isPlaying || gameOver) return;
 
     const gameLoop = () => {
       if (gameOverRef.current) return;
       
-      // Check if we flagged end game in previous frame
       if (shouldEndGameRef.current) {
         shouldEndGameRef.current = false;
         endGame(scoreRef.current);
         return;
       }
       
-      setBall(prev => {
-        let newVy = prev.vy + GRAVITY;
-        let newY = prev.y + newVy;
-        let newX = prev.x + prev.vx;
-        let newVx = prev.vx * AIR_RESISTANCE; // Air resistance
-        let newRotation = prev.rotation + prev.vx * 4;
-        
-        // Apply air resistance to vertical velocity too (subtle)
-        newVy *= 0.998;
-        
-        // Bounce off walls with energy loss
-        if (newX < BALL_RADIUS) {
-          newX = BALL_RADIUS;
-          newVx = Math.abs(newVx) * 0.7;
-        } else if (newX > CONTAINER_WIDTH - BALL_RADIUS) {
-          newX = CONTAINER_WIDTH - BALL_RADIUS;
-          newVx = -Math.abs(newVx) * 0.7;
-        }
-        
-        // Ceiling bounce
-        if (newY < BALL_RADIUS + 10) {
-          newY = BALL_RADIUS + 10;
-          newVy = Math.abs(newVy) * 0.5;
-        }
-        
-        // Check if ball hit the ground - flag for next frame (not during render!)
-        if (newY > CONTAINER_HEIGHT - BALL_RADIUS - 16) {
-          shouldEndGameRef.current = true;
-          return prev;
-        }
-        
-        const newBall = { x: newX, y: newY, vx: newVx, vy: newVy, rotation: newRotation };
-        ballRef.current = newBall;
-        return newBall;
-      });
+      const prev = ballRef.current;
+      let newVy = prev.vy + GRAVITY;
+      let newY = prev.y + newVy;
+      let newX = prev.x + prev.vx;
+      let newVx = prev.vx * AIR_RESISTANCE;
+      let newRotation = prev.rotation + prev.vx * 4;
+      
+      newVy *= 0.998;
+      
+      if (newX < BALL_RADIUS) {
+        newX = BALL_RADIUS;
+        newVx = Math.abs(newVx) * 0.7;
+      } else if (newX > CONTAINER_WIDTH - BALL_RADIUS) {
+        newX = CONTAINER_WIDTH - BALL_RADIUS;
+        newVx = -Math.abs(newVx) * 0.7;
+      }
+      
+      if (newY < BALL_RADIUS + 10) {
+        newY = BALL_RADIUS + 10;
+        newVy = Math.abs(newVy) * 0.5;
+      }
+      
+      if (newY > CONTAINER_HEIGHT - BALL_RADIUS - 16) {
+        shouldEndGameRef.current = true;
+        // Don't update - keep last position
+        animationRef.current = requestAnimationFrame(gameLoop);
+        return;
+      }
+      
+      const newBall = { x: newX, y: newY, vx: newVx, vy: newVy, rotation: newRotation };
+      ballRef.current = newBall;
+      
+      // Direct DOM update for smooth animation
+      if (ballElRef.current) {
+        ballElRef.current.style.left = `${newX - BALL_RADIUS}px`;
+        ballElRef.current.style.top = `${newY - BALL_RADIUS}px`;
+        ballElRef.current.style.transform = `rotate(${newRotation}deg)`;
+      }
       
       animationRef.current = requestAnimationFrame(gameLoop);
     };
@@ -303,7 +308,8 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
             
             {/* Ball with visible hitbox indicator */}
             <div
-              className="absolute transition-none pointer-events-none"
+              ref={ballElRef}
+              className="absolute will-change-transform pointer-events-none"
               style={{
                 left: ball.x - BALL_RADIUS,
                 top: ball.y - BALL_RADIUS,

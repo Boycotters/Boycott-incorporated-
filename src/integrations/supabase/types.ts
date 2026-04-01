@@ -1748,14 +1748,6 @@ export type Database = {
       award_survey_points:
         | {
             Args: {
-              p_points: number
-              p_survey_title: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
               p_completion_time?: number
               p_points: number
               p_questions?: Json
