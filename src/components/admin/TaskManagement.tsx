@@ -552,7 +552,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
 
       {/* Edit Task Dialog */}
       <Dialog open={editTaskOpen} onOpenChange={setEditTaskOpen}>
-        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>
