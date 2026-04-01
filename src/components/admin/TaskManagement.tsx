@@ -522,7 +522,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
             Create New Task
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
