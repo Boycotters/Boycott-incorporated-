@@ -419,7 +419,8 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             {/* Ball */}
             {ball.visible && (
               <div
-                className="absolute transition-none"
+                ref={ballElRef}
+                className="absolute will-change-transform"
                 style={{
                   left: ball.x - BALL_SIZE / 2,
                   top: ball.y - BALL_SIZE / 2,
