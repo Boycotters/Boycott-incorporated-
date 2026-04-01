@@ -151,102 +151,98 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
     return () => clearInterval(moveHoop);
   }, [isPlaying, gameOver, hoopDirection]);
 
-  // Ball physics - FIXED: Proper scoring only when ball goes through center
+  // Ball ref for smooth animation without re-renders
+  const ballRef = useRef<Ball>(ball);
+  const hoopXRef = useRef(hoopX);
+  const ballElRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { hoopXRef.current = hoopX; }, [hoopX]);
+
+  // Ball physics using refs to avoid re-renders every frame
   useEffect(() => {
     if (!ball.visible || gameOver) return;
+    ballRef.current = ball;
 
     const gameLoop = () => {
-      setBall(prev => {
-        if (!prev.visible) return prev;
+      const prev = ballRef.current;
+      if (!prev.visible) return;
+      
+      let newVy = prev.vy + GRAVITY;
+      let newY = prev.y + newVy;
+      let newX = prev.x + prev.vx;
+      let newVx = prev.vx;
+      let scored = prev.scored;
+      
+      const currentHoopX = hoopXRef.current;
+      const hoopLeft = currentHoopX - HOOP_WIDTH / 2;
+      const hoopRight = currentHoopX + HOOP_WIDTH / 2;
+      const ballCenterX = newX;
+      const ballRadius = BALL_SIZE / 2;
+      
+      const scoringZoneLeft = hoopLeft + 5;
+      const scoringZoneRight = hoopRight - 5;
+      const isInScoringZone = ballCenterX >= scoringZoneLeft && ballCenterX <= scoringZoneRight;
+      const isAtHoopLevel = prev.y <= HOOP_Y + 15 && newY >= HOOP_Y - 10;
+      const isMovingDown = prev.vy > 0.5;
+      
+      if (!prev.scored && isInScoringZone && isAtHoopLevel && isMovingDown) {
+        setScore(s => s + 1);
+        scoreRef.current += 1;
+        scored = true;
+        newVy = newVy * 0.6;
+      }
+      
+      // Rim collision
+      const rimTopY = HOOP_Y - 5;
+      const rimBottomY = HOOP_Y + 12;
+      
+      const hitLeftRim = !scored &&
+        ballCenterX + ballRadius >= hoopLeft - 2 &&
+        ballCenterX <= hoopLeft + 3 &&
+        newY >= rimTopY && newY <= rimBottomY;
         
-        let newVy = prev.vy + GRAVITY;
-        let newY = prev.y + newVy;
-        let newX = prev.x + prev.vx;
-        
-        const hoopLeft = hoopX - HOOP_WIDTH / 2;
-        const hoopRight = hoopX + HOOP_WIDTH / 2;
-        const ballCenterX = newX;
-        const ballRadius = BALL_SIZE / 2;
-        
-        // MORE FORGIVING scoring: Ball passes through hoop area while falling
-        const scoringZoneLeft = hoopLeft + 5; // More forgiving zone (was 12)
-        const scoringZoneRight = hoopRight - 5; // More forgiving zone (was 12)
-        const isInScoringZone = ballCenterX >= scoringZoneLeft && ballCenterX <= scoringZoneRight;
-        const isAtHoopLevel = prev.y <= HOOP_Y + 15 && newY >= HOOP_Y - 10; // Larger window
-        const isMovingDown = prev.vy > 0.5; // Less strict falling speed (was 1.5)
-        
-        if (!prev.scored && isInScoringZone && isAtHoopLevel && isMovingDown) {
-          setScore(s => s + 1);
-          scoreRef.current += 1;
-          return { ...prev, y: newY, x: newX, vy: newVy * 0.6, scored: true };
+      const hitRightRim = !scored &&
+        ballCenterX >= hoopRight - 3 &&
+        ballCenterX - ballRadius <= hoopRight + 2 &&
+        newY >= rimTopY && newY <= rimBottomY;
+
+      if (hitLeftRim) {
+        if (Math.random() < 0.3 && prev.vy > 0) {
+          newX = newX + 3; newVx = prev.vx * 0.3 + 1; newVy = newVy * 0.9;
+        } else {
+          newX = hoopLeft - ballRadius - 3; newVx = -Math.abs(prev.vx) * 0.5 - 1; newVy = newVy * 0.5;
         }
-        
-        // Rim collision - softer bounces, ball can roll in
-        const rimTopY = HOOP_Y - 5;
-        const rimBottomY = HOOP_Y + 12;
-        
-        // Left rim collision - check if hitting the very edge only
-        const hitLeftRim = !prev.scored &&
-          ballCenterX + ballRadius >= hoopLeft - 2 &&
-          ballCenterX <= hoopLeft + 3 && // Only the edge, not the middle
-          newY >= rimTopY && 
-          newY <= rimBottomY;
-          
-        // Right rim collision - check if hitting the very edge only
-        const hitRightRim = !prev.scored &&
-          ballCenterX >= hoopRight - 3 && // Only the edge, not the middle
-          ballCenterX - ballRadius <= hoopRight + 2 &&
-          newY >= rimTopY && 
-          newY <= rimBottomY;
-        
-        // Softer rim bounces - ball can still go in sometimes (30% chance)
-        if (hitLeftRim) {
-          // 30% chance ball rolls into the hoop instead of bouncing
-          if (Math.random() < 0.3 && prev.vy > 0) {
-            // Ball rolls in - slight nudge towards center
-            return { ...prev, x: newX + 3, y: newY, vx: prev.vx * 0.3 + 1, vy: newVy * 0.9 };
-          }
-          return { 
-            ...prev, 
-            x: hoopLeft - ballRadius - 3, 
-            y: newY, 
-            vx: -Math.abs(prev.vx) * 0.5 - 1, // Softer bounce
-            vy: newVy * 0.5 
-          };
+      }
+      
+      if (hitRightRim) {
+        if (Math.random() < 0.3 && prev.vy > 0) {
+          newX = newX - 3; newVx = prev.vx * 0.3 - 1; newVy = newVy * 0.9;
+        } else {
+          newX = hoopRight + ballRadius + 3; newVx = Math.abs(prev.vx) * 0.5 + 1; newVy = newVy * 0.5;
         }
-        
-        if (hitRightRim) {
-          // 30% chance ball rolls into the hoop instead of bouncing
-          if (Math.random() < 0.3 && prev.vy > 0) {
-            // Ball rolls in - slight nudge towards center
-            return { ...prev, x: newX - 3, y: newY, vx: prev.vx * 0.3 - 1, vy: newVy * 0.9 };
-          }
-          return { 
-            ...prev, 
-            x: hoopRight + ballRadius + 3, 
-            y: newY, 
-            vx: Math.abs(prev.vx) * 0.5 + 1, // Softer bounce
-            vy: newVy * 0.5 
-          };
-        }
-        
-        // Wall bounces
-        if (newX <= ballRadius) {
-          newX = ballRadius;
-          return { ...prev, x: newX, y: newY, vx: -prev.vx * 0.5, vy: newVy };
-        }
-        if (newX >= CONTAINER_WIDTH - ballRadius) {
-          newX = CONTAINER_WIDTH - ballRadius;
-          return { ...prev, x: newX, y: newY, vx: -prev.vx * 0.5, vy: newVy };
-        }
-        
-        // Ball goes off screen or hits ground
-        if (newY > CONTAINER_HEIGHT + 50 || newY < -100) {
-          return { x: BALL_START_X, y: BALL_START_Y, vx: 0, vy: 0, visible: false, scored: false };
-        }
-        
-        return { ...prev, x: newX, y: newY, vy: newVy };
-      });
+      }
+      
+      // Wall bounces
+      if (newX <= ballRadius) { newX = ballRadius; newVx = -prev.vx * 0.5; }
+      if (newX >= CONTAINER_WIDTH - ballRadius) { newX = CONTAINER_WIDTH - ballRadius; newVx = -prev.vx * 0.5; }
+      
+      // Ball goes off screen
+      if (newY > CONTAINER_HEIGHT + 50 || newY < -100) {
+        const resetBall = { x: BALL_START_X, y: BALL_START_Y, vx: 0, vy: 0, visible: false, scored: false };
+        ballRef.current = resetBall;
+        setBall(resetBall);
+        return;
+      }
+      
+      const newBall = { x: newX, y: newY, vx: newVx, vy: newVy, visible: true, scored };
+      ballRef.current = newBall;
+      
+      // Update DOM directly for smooth animation
+      if (ballElRef.current) {
+        ballElRef.current.style.left = `${newX - BALL_SIZE / 2}px`;
+        ballElRef.current.style.top = `${newY - BALL_SIZE / 2}px`;
+        ballElRef.current.style.transform = `rotate(${newX * 2}deg)`;
+      }
       
       animationRef.current = requestAnimationFrame(gameLoop);
     };
@@ -258,7 +254,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [ball.visible, gameOver, hoopX]);
+  }, [ball.visible, gameOver]);
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isPlaying || gameOver || ball.visible) return;
