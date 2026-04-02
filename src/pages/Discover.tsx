@@ -18,6 +18,8 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTimeAgo } from "@/lib/utils";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
 
 export default function Discover() {
   const { user } = useAuth();
