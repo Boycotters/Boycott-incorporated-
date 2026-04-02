@@ -59,7 +59,7 @@ export default function Videos() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
+  const { isWeekendBlocked, hasCampaign, canDoActivity, refetch: refetchLimits } = useDailyLimits();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
