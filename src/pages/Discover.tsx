@@ -18,11 +18,14 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTimeAgo } from "@/lib/utils";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
 
 export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
+  const { data: dailyData, canDoActivity } = useDailyLimits();
 
   // Flash deal visibility - random 2-3 times per week Mon-Fri only
   const [showFlashDeal, setShowFlashDeal] = useState(false);
@@ -374,6 +377,9 @@ export default function Discover() {
             </span>
           </div>
         </div>
+
+        {/* Daily Progress */}
+        <DailyLimitsProgress variant="compact" />
 
         {/* Flash Deal Timer - Only shows 2-3 times per week Mon-Fri */}
         {showFlashDeal && (
