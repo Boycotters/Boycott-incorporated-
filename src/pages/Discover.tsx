@@ -378,6 +378,9 @@ export default function Discover() {
           </div>
         </div>
 
+        {/* Daily Progress */}
+        <DailyLimitsProgress variant="compact" />
+
         {/* Flash Deal Timer - Only shows 2-3 times per week Mon-Fri */}
         {showFlashDeal && (
           <Card className="bg-gradient-to-r from-accent/20 to-primary/20 border-0 rounded-2xl overflow-hidden">
