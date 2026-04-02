@@ -127,6 +127,8 @@ export default function Videos() {
         queryClient.invalidateQueries({ queryKey: ['watched-videos'] });
         queryClient.invalidateQueries({ queryKey: ['wallet'] });
         queryClient.invalidateQueries({ queryKey: ['user-data'] });
+        queryClient.invalidateQueries({ queryKey: ['daily-activity-status'] });
+        refetchLimits();
       } else if (!result.already_completed) {
         toast.info(result.message);
       }
