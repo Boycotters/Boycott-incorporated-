@@ -23,10 +23,9 @@ export function UserLocationMap() {
         const { latitude, longitude } = pos.coords;
         setCurrentPos({ lat: latitude, lng: longitude });
         setLoading(false);
-        toast.success("Location captured!");
 
         if (user?.id) {
-          await supabase.from("user_gps_locations").insert({
+          const { error } = await supabase.from("user_gps_locations").insert({
             user_id: user.id,
             latitude,
             longitude,
@@ -36,6 +35,14 @@ export function UserLocationMap() {
             horizontal_accuracy: pos.coords.accuracy,
             vertical_accuracy: pos.coords.altitudeAccuracy,
           });
+          if (error) {
+            console.error("GPS insert error:", error);
+            toast.error("Location captured but failed to save to server");
+          } else {
+            toast.success("Location captured & saved!");
+          }
+        } else {
+          toast.success("Location captured!");
         }
       },
       (err) => {
