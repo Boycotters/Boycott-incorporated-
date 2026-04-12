@@ -56,8 +56,8 @@ const AI_MODELS: AIModel[] = [
   },
   {
     id: 'chatbot',
-    name: 'Pesa AI Chatbot',
-    description: 'Conversational assistant helping users navigate the app, understand features, and maximize earnings.',
+    name: 'Boycott AI Chatbot',
+    description: 'Conversational assistant for app support and broader real-time questions across work, learning, and everyday topics.',
     icon: MessageCircle,
     status: 'active',
     category: 'User Support',
@@ -178,7 +178,20 @@ export function AIModelsPanel() {
   const [testInput, setTestInput] = useState('');
   const [testResult, setTestResult] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { analyzeSentiment, detectFraud, getLearningInsights, getImplementationRoadmap, loading } = useAI();
+  const {
+    generateSurvey,
+    verifyContent,
+    recommendTasks,
+    moderateContent,
+    analyzeUser,
+    generatePartnership,
+    chatbot,
+    analyzeSentiment,
+    detectFraud,
+    getLearningInsights,
+    getImplementationRoadmap,
+    loading,
+  } = useAI();
 
   const filteredModels = AI_MODELS.filter(m => 
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,30 +201,52 @@ export function AIModelsPanel() {
   const categories = [...new Set(AI_MODELS.map(m => m.category))];
 
   const handleTestModel = async (model: AIModel) => {
-    if (!testInput.trim()) {
-      toast.error('Please enter test input');
-      return;
-    }
-
     setTestResult(null);
     let result: any = null;
+    const prompt = testInput.trim() || 'Run a live Boycott AI test with realistic user input.';
 
     try {
       switch (model.action) {
+        case 'generate_survey':
+          result = await generateSurvey('market_research', 2, 'research', [prompt]);
+          break;
+        case 'verify_content':
+          result = await verifyContent('text', prompt, 'The answer must be relevant, human, and follow the requested topic closely.');
+          break;
+        case 'recommend_tasks':
+          result = await recommendTasks(3, ['survey', 'video_ad'], [prompt, 'learning', 'gaming'], 'gold');
+          break;
+        case 'moderate_content':
+          result = await moderateContent(prompt, 'text');
+          break;
+        case 'analyze_user':
+          result = await analyzeUser(['survey', 'trivia', 'video_ad'], 6, ['learning', prompt]);
+          break;
+        case 'generate_partnership':
+          result = await generatePartnership('lifestyle', prompt, 'engagement');
+          break;
+        case 'chatbot':
+          result = await chatbot([{ role: 'user', content: prompt }], {
+            level: 4,
+            vipTier: 'gold',
+            totalPoints: 540,
+            streak: 8,
+          });
+          break;
         case 'sentiment_analysis':
-          result = await analyzeSentiment(testInput);
+          result = await analyzeSentiment(prompt);
           break;
         case 'fraud_detection':
-          result = await detectFraud('test-user', 'manual_test', { content: testInput });
+          result = await detectFraud('test-user', 'manual_test', { content: prompt }, { currentStreak: 8, tasksCompletedToday: 3 });
           break;
         case 'learning_insights':
-          result = await getLearningInsights('test-user', { description: testInput });
+          result = await getLearningInsights('test-user', { description: prompt, sessionDepth: 4, conversionSignal: 'high' });
           break;
         case 'implementation_roadmap':
-          result = await getImplementationRoadmap(testInput);
-          break;
+          result = await getImplementationRoadmap(prompt);
+          return;
         default:
-          toast.info('Use the app features to test this model');
+          toast.error('This AI model is not wired for testing yet.');
           return;
       }
 
@@ -360,11 +395,18 @@ export function AIModelsPanel() {
                 </div>
 
                 {/* Test Panel */}
-                {isSelected && ['sentiment_analysis', 'fraud_detection', 'learning_insights', 'implementation_roadmap'].includes(model.action || '') && (
+                {isSelected && (
                   <div className="pt-2 border-t border-border space-y-2" onClick={(e) => e.stopPropagation()}>
-                    <p className="text-[10px] font-medium text-primary">Test this model</p>
+                    <p className="text-[10px] font-medium text-primary">Run this model live</p>
                     <Textarea
                       placeholder={
+                        model.action === 'chatbot' ? 'Ask Boycott AI anything...' :
+                        model.action === 'generate_survey' ? 'Describe the survey topic or audience...' :
+                        model.action === 'verify_content' ? 'Paste the content you want verified...' :
+                        model.action === 'recommend_tasks' ? 'Type a user interest or earning goal...' :
+                        model.action === 'moderate_content' ? 'Paste content to moderate...' :
+                        model.action === 'analyze_user' ? 'Describe user behaviour to analyze...' :
+                        model.action === 'generate_partnership' ? 'Describe a brand or target audience...' :
                         model.action === 'sentiment_analysis' ? 'Enter feedback text to analyze...' :
                         model.action === 'fraud_detection' ? 'Describe submission to check...' :
                         model.action === 'implementation_roadmap' ? 'Describe feature to plan...' :

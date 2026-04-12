@@ -76,8 +76,8 @@ export function AIChatbot() {
           <Sparkles className="w-4 h-4 text-primary" />
         </div>
         <div className="flex-1">
-          <p className="font-semibold text-sm">Pesa AI</p>
-          <p className="text-[10px] text-muted-foreground">Your rewards assistant</p>
+          <p className="font-semibold text-sm">Boycott AI</p>
+          <p className="text-[10px] text-muted-foreground">Live app + general assistant</p>
         </div>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
           <X className="w-4 h-4" />
@@ -89,10 +89,10 @@ export function AIChatbot() {
         {messages.length === 0 && (
           <div className="text-center py-6 space-y-2">
             <Bot className="w-10 h-10 mx-auto text-primary/40" />
-            <p className="text-sm text-muted-foreground">Hi! I'm Pesa AI 👋</p>
-            <p className="text-xs text-muted-foreground">Ask me about earning points, tasks, withdrawals, or anything else!</p>
+            <p className="text-sm text-muted-foreground">Hi! I'm Boycott AI 👋</p>
+            <p className="text-xs text-muted-foreground">Ask me about the app, work, learning, tech, or general questions too.</p>
             <div className="flex flex-wrap gap-1.5 justify-center pt-2">
-              {['How do I earn?', 'VIP benefits?', 'Withdrawal help'].map(q => (
+              {['How do I earn?', 'Best side hustles?', 'Withdrawal help'].map(q => (
                 <button
                   key={q}
                   onClick={() => { setInput(q); }}
@@ -142,7 +142,7 @@ export function AIChatbot() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Pesa AI..."
+            placeholder="Ask Boycott AI anything..."
             className="text-xs h-9 rounded-xl"
             disabled={loading}
           />

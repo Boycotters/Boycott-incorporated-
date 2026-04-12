@@ -184,6 +184,8 @@ export default function Admin() {
     source: 'admin',
     partner_name: ''
   });
+  const [newVideoDurationInput, setNewVideoDurationInput] = useState('30');
+  const [newVideoPointsInput, setNewVideoPointsInput] = useState('5');
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -192,6 +194,25 @@ export default function Admin() {
     difficulty: 'easy',
     verification_type: 'url'
   });
+
+  const handleNewVideoNumberChange = (field: 'duration_seconds' | 'points_reward', rawValue: string) => {
+    const sanitizedValue = rawValue.replace(/[^\d]/g, '');
+
+    if (field === 'duration_seconds') {
+      setNewVideoDurationInput(sanitizedValue);
+      setNewVideo((prev) => ({
+        ...prev,
+        duration_seconds: sanitizedValue === '' ? 0 : parseInt(sanitizedValue, 10),
+      }));
+      return;
+    }
+
+    setNewVideoPointsInput(sanitizedValue);
+    setNewVideo((prev) => ({
+      ...prev,
+      points_reward: sanitizedValue === '' ? 0 : parseInt(sanitizedValue, 10),
+    }));
+  };
 
   // Check if user is admin
   const { data: isAdmin, isLoading: adminLoading } = useQuery({
@@ -381,6 +402,8 @@ export default function Admin() {
         .from('videos')
         .insert({
           ...video,
+          duration_seconds: Math.max(1, video.duration_seconds || 30),
+          points_reward: Math.max(1, video.points_reward || 5),
           video_url: videoUrl,
           created_by: user?.id,
           partner_name: video.partner_name || null,
@@ -397,6 +420,8 @@ export default function Admin() {
       setAddVideoOpen(false);
       setSelectedVideoFile(null);
       setVideoUploadType('url');
+      setNewVideoDurationInput('30');
+      setNewVideoPointsInput('5');
       setNewVideo({
         title: '',
         description: '',
@@ -1207,18 +1232,22 @@ export default function Admin() {
                       <Label htmlFor="duration">Duration (seconds)</Label>
                       <Input
                         id="duration"
-                        type="number"
-                        value={newVideo.duration_seconds}
-                        onChange={(e) => setNewVideo(prev => ({ ...prev, duration_seconds: parseInt(e.target.value) || 30 }))}
+                        type="text"
+                        inputMode="numeric"
+                        value={newVideoDurationInput}
+                        onChange={(e) => handleNewVideoNumberChange('duration_seconds', e.target.value)}
+                        placeholder="30"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="points">Points Reward</Label>
                       <Input
                         id="points"
-                        type="number"
-                        value={newVideo.points_reward}
-                        onChange={(e) => setNewVideo(prev => ({ ...prev, points_reward: parseInt(e.target.value) || 5 }))}
+                        type="text"
+                        inputMode="numeric"
+                        value={newVideoPointsInput}
+                        onChange={(e) => handleNewVideoNumberChange('points_reward', e.target.value)}
+                        placeholder="5"
                       />
                     </div>
                   </div>
