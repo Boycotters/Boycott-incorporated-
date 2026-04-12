@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,13 +27,44 @@ export function TransferManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("point_transfers")
-        .select("*, sender:sender_id(full_name, email), recipient:recipient_id(full_name, email)")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
       return data;
     },
   });
+
+  const participantIds = useMemo(
+    () => [...new Set(transfers.flatMap((transfer: any) => [transfer.sender_id, transfer.recipient_id]).filter(Boolean))],
+    [transfers]
+  );
+
+  const { data: transferUsers = [] } = useQuery({
+    queryKey: ["admin-transfer-users", participantIds.join(",")],
+    queryFn: async () => {
+      if (participantIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .in("id", participantIds);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: participantIds.length > 0,
+  });
+
+  const usersById = useMemo(
+    () => new Map(transferUsers.map((transferUser: any) => [transferUser.id, transferUser])),
+    [transferUsers]
+  );
+
+  const getUserLabel = (userId?: string) => {
+    if (!userId) return "Unknown user";
+    const matchedUser = usersById.get(userId);
+    return matchedUser?.full_name || matchedUser?.email || "Unknown user";
+  };
 
   const reviewMutation = useMutation({
     mutationFn: async ({ transferId, action }: { transferId: string; action: string }) => {
@@ -65,10 +96,8 @@ export function TransferManagement() {
     ? transfers.filter((t: any) => {
         const s = search.toLowerCase();
         return (
-          (t.sender as any)?.email?.toLowerCase().includes(s) ||
-          (t.sender as any)?.full_name?.toLowerCase().includes(s) ||
-          (t.recipient as any)?.email?.toLowerCase().includes(s) ||
-          (t.recipient as any)?.full_name?.toLowerCase().includes(s) ||
+          getUserLabel(t.sender_id).toLowerCase().includes(s) ||
+          getUserLabel(t.recipient_id).toLowerCase().includes(s) ||
           t.verification_code?.includes(s)
         );
       })
@@ -110,6 +139,10 @@ export function TransferManagement() {
             />
           </div>
 
+          <p className="text-xs text-muted-foreground">
+            New transfers now appear here immediately so admins can approve and release points to the recipient.
+          </p>
+
           <ScrollArea className="h-[500px]">
             <div className="space-y-2">
               {filteredTransfers.map((t: any) => (
@@ -129,11 +162,11 @@ export function TransferManagement() {
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-muted-foreground">From: </span>
-                      <span className="font-medium">{(t.sender as any)?.full_name || (t.sender as any)?.email}</span>
+                      <span className="font-medium">{getUserLabel(t.sender_id)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">To: </span>
-                      <span className="font-medium">{(t.recipient as any)?.full_name || (t.recipient as any)?.email}</span>
+                      <span className="font-medium">{getUserLabel(t.recipient_id)}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
@@ -161,11 +194,11 @@ export function TransferManagement() {
               <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">From</span>
-                  <span className="text-sm font-medium">{(reviewTransfer.sender as any)?.full_name || (reviewTransfer.sender as any)?.email}</span>
+                  <span className="text-sm font-medium">{getUserLabel(reviewTransfer.sender_id)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">To</span>
-                  <span className="text-sm font-medium">{(reviewTransfer.recipient as any)?.full_name || (reviewTransfer.recipient as any)?.email}</span>
+                  <span className="text-sm font-medium">{getUserLabel(reviewTransfer.recipient_id)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Amount</span>

@@ -153,7 +153,7 @@ export function GPSTrackingDashboard() {
                 <TableHead>Coordinates</TableHead>
                 <TableHead>Speed</TableHead>
                 <TableHead>Last Update</TableHead>
-                <TableHead>Points</TableHead>
+                <TableHead>Updates</TableHead>
                 <TableHead>Map</TableHead>
               </TableRow>
             </TableHeader>
@@ -201,7 +201,7 @@ export function GPSTrackingDashboard() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
-                      {user.locationCount} pts
+                      {user.locationCount} updates
                     </Badge>
                   </TableCell>
                   <TableCell>

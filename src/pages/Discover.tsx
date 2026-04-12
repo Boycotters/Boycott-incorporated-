@@ -25,7 +25,7 @@ export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
-  const { data: dailyData, canDoActivity } = useDailyLimits();
+  const { data: dailyData } = useDailyLimits();
 
   // Flash deal visibility - random 2-3 times per week Mon-Fri only
   const [showFlashDeal, setShowFlashDeal] = useState(false);
@@ -184,16 +184,32 @@ export default function Discover() {
         .eq('user_id', user?.id);
       
       if (error) throw error;
+
+      const taskEntries = data || [];
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
       
-      const completed = data.filter(t => t.status === 'completed').length;
+      const completed = taskEntries.filter(t => t.status === 'completed').length;
       const today = new Date().toDateString();
-      const completedToday = data.filter(t => 
+      const completedToday = taskEntries.filter(t => 
         t.status === 'completed' && 
         t.completed_at && 
         new Date(t.completed_at).toDateString() === today
       ).length;
+      const completedWeek = taskEntries.filter(t => 
+        t.status === 'completed' && 
+        t.completed_at &&
+        new Date(t.completed_at) >= weekAgo
+      ).length;
+      const completedMonth = taskEntries.filter(t => 
+        t.status === 'completed' && 
+        t.completed_at &&
+        new Date(t.completed_at) >= monthAgo
+      ).length;
       
-      return { completed, total: 20, completedToday };
+      return { completed, total: 20, completedToday, completedWeek, completedMonth };
     },
     enabled: !!user?.id,
   });
@@ -202,17 +218,27 @@ export default function Discover() {
   const { data: videoStats } = useQuery({
     queryKey: ['video-stats', user?.id],
     queryFn: async () => {
+      if (!user?.id) return { videosWatchedWeek: 0, videosWatchedMonth: 0 };
+
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
       
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('user_video_views')
-        .select('*', { count: 'exact', head: true })
+        .select('watched_at')
         .eq('user_id', user?.id)
-        .gte('watched_at', weekAgo.toISOString());
+        .gte('watched_at', monthAgo.toISOString());
       
       if (error) throw error;
-      return { videosWatched: count || 0 };
+
+      const videoEntries = data || [];
+
+      return {
+        videosWatchedWeek: videoEntries.filter((entry) => new Date(entry.watched_at) >= weekAgo).length,
+        videosWatchedMonth: videoEntries.length,
+      };
     },
     enabled: !!user?.id,
   });
@@ -224,88 +250,139 @@ export default function Discover() {
     return base + Math.floor(Math.random() * 100);
   }, []);
 
-  const challenges = useMemo(() => [
+  const challengeGroups = useMemo(() => [
     {
-      id: 1,
-      title: "Daily Hustler",
-      description: "Complete 3 tasks today",
-      reward: 30,
-      progress: completionStats?.completedToday || 0,
-      total: 3,
-      icon: Target,
-      color: "primary",
+      id: 'daily',
+      title: 'Daily Challenges',
+      description: 'Harder daily objectives that reset at midnight.',
+      items: [
+        {
+          id: 'daily-precision-run',
+          title: 'Precision Run',
+          description: 'Complete 2 standard tasks and 1 survey today.',
+          reward: 45,
+          progress: Math.min((dailyData?.regular_tasks.completed || 0) + (dailyData?.surveys.completed || 0), 3),
+          total: 3,
+          icon: Target,
+          color: 'primary',
+        },
+        {
+          id: 'daily-ad-marathon',
+          title: 'Ad Marathon',
+          description: 'Finish all 5 watch-and-earn videos in one day.',
+          reward: 55,
+          progress: dailyData?.videos.completed || 0,
+          total: 5,
+          icon: Play,
+          color: 'accent',
+        },
+        {
+          id: 'daily-arcade-sweep',
+          title: 'Arcade Sweep',
+          description: 'Use all 3 game attempts today without missing your streak.',
+          reward: 60,
+          progress: dailyData?.games.completed || 0,
+          total: 3,
+          icon: Trophy,
+          color: 'primary',
+        },
+        {
+          id: 'daily-partner-strike',
+          title: 'Partner Strike',
+          description: 'Complete the partnered task and 1 regular task today.',
+          reward: 70,
+          progress: Math.min((dailyData?.partnered_tasks.completed || 0) + Math.min(dailyData?.regular_tasks.completed || 0, 1), 2),
+          total: 2,
+          icon: Crown,
+          color: 'accent',
+        },
+      ],
     },
     {
-      id: 2,
-      title: "Video Star",
-      description: "Watch 4 videos today",
-      reward: 25,
-      progress: Math.min(videoStats?.videosWatched || 0, 4),
-      total: 4,
-      icon: Play,
-      color: "accent",
+      id: 'weekly',
+      title: 'Weekly Challenges',
+      description: 'Momentum-based missions built for the full week.',
+      items: [
+        {
+          id: 'weekly-grindset',
+          title: 'Grindset',
+          description: 'Complete 8 tasks over the next 7 days.',
+          reward: 130,
+          progress: completionStats?.completedWeek || 0,
+          total: 8,
+          icon: Rocket,
+          color: 'primary',
+        },
+        {
+          id: 'weekly-watchlist',
+          title: 'Watchlist Dominator',
+          description: 'Watch 15 videos this week and keep the rewards flowing.',
+          reward: 120,
+          progress: videoStats?.videosWatchedWeek || 0,
+          total: 15,
+          icon: Eye,
+          color: 'accent',
+        },
+        {
+          id: 'weekly-streak-tech',
+          title: 'Streak Technician',
+          description: 'Reach a 7-day streak without breaking your rhythm.',
+          reward: 150,
+          progress: Math.min(userProfile?.current_streak || 0, 7),
+          total: 7,
+          icon: Flame,
+          color: 'primary',
+        },
+        {
+          id: 'weekly-mixed-mode',
+          title: 'Mixed Mode Master',
+          description: 'Combine 12 task completions and video claims in a single week.',
+          reward: 170,
+          progress: Math.min((completionStats?.completedWeek || 0) + (videoStats?.videosWatchedWeek || 0), 12),
+          total: 12,
+          icon: Zap,
+          color: 'accent',
+        },
+      ],
     },
     {
-      id: 3,
-      title: "Streak Builder",
-      description: "Login 7 days in a row",
-      reward: 50,
-      progress: userProfile?.current_streak || 0,
-      total: 7,
-      icon: Flame,
-      color: "primary",
+      id: 'monthly',
+      title: 'Monthly Challenges',
+      description: 'Long-form challenge tracks for serious earners.',
+      items: [
+        {
+          id: 'monthly-iron-climb',
+          title: 'Iron Climb',
+          description: 'Complete 30 tasks across the last 30 days.',
+          reward: 400,
+          progress: completionStats?.completedMonth || 0,
+          total: 30,
+          icon: Star,
+          color: 'primary',
+        },
+        {
+          id: 'monthly-content-crusher',
+          title: 'Content Crusher',
+          description: 'Watch 40 videos this month without slowing down.',
+          reward: 320,
+          progress: videoStats?.videosWatchedMonth || 0,
+          total: 40,
+          icon: Timer,
+          color: 'accent',
+        },
+        {
+          id: 'monthly-loyalty-legend',
+          title: 'Loyalty Legend',
+          description: 'Build toward a 21-day streak and hold the line.',
+          reward: 450,
+          progress: Math.min(userProfile?.current_streak || 0, 21),
+          total: 21,
+          icon: Flame,
+          color: 'primary',
+        },
+      ],
     },
-    {
-      id: 4,
-      title: "Survey Champion",
-      description: "Complete 3 surveys this week",
-      reward: 35,
-      progress: Math.min(completionStats?.completed || 0, 3),
-      total: 3,
-      icon: Star,
-      color: "accent",
-    },
-    {
-      id: 5,
-      title: "Game Master",
-      description: "Play all 4 games today",
-      reward: 40,
-      progress: 0,
-      total: 4,
-      icon: Trophy,
-      color: "primary",
-    },
-    {
-      id: 6,
-      title: "Social Butterfly",
-      description: "Share app with 2 friends",
-      reward: 30,
-      progress: 0,
-      total: 2,
-      icon: Zap,
-      color: "accent",
-    },
-    {
-      id: 7,
-      title: "Task Marathon",
-      description: "Complete 10 tasks this week",
-      reward: 60,
-      progress: completionStats?.completed || 0,
-      total: 10,
-      icon: Rocket,
-      color: "primary",
-    },
-    {
-      id: 8,
-      title: "Early Bird",
-      description: "Complete a task before 9 AM",
-      reward: 20,
-      progress: 0,
-      total: 1,
-      icon: Clock,
-      color: "accent",
-    },
-  ], [completionStats, userProfile, videoStats]);
+  ], [completionStats, dailyData, userProfile, videoStats]);
 
   const flashDeals = [
     { title: "2x Points", description: "All social tasks", multiplier: 2, category: "social" },
@@ -627,43 +704,55 @@ export default function Discover() {
           </TabsContent>
 
           {/* Challenges Tab */}
-          <TabsContent value="challenges" className="space-y-4">
-            {challenges.map((challenge) => {
-              const Icon = challenge.icon;
-              const progress = Math.min(100, (challenge.progress / challenge.total) * 100);
-              const isComplete = challenge.progress >= challenge.total;
+          <TabsContent value="challenges" className="space-y-6">
+            {challengeGroups.map((group) => (
+              <div key={group.id} className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-lg">{group.title}</h3>
+                    <p className="text-sm text-muted-foreground">{group.description}</p>
+                  </div>
+                  <Badge variant="outline" className="shrink-0">{group.items.length} challenges</Badge>
+                </div>
 
-              return (
-                <Card key={challenge.id} className={`overflow-hidden ${isComplete ? 'bg-accent/10 border-accent/30' : ''}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2.5 rounded-xl ${
-                        isComplete ? 'bg-accent/20' : challenge.color === 'accent' ? 'bg-accent/10' : 'bg-primary/10'
-                      }`}>
-                        <Icon className={`w-5 h-5 ${
-                          isComplete ? 'text-accent' : challenge.color === 'accent' ? 'text-accent' : 'text-primary'
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold">{challenge.title}</h3>
-                          <Badge variant={isComplete ? "default" : "secondary"} className="text-xs">
-                            +{challenge.reward} pts
-                          </Badge>
+                {group.items.map((challenge) => {
+                  const Icon = challenge.icon;
+                  const progress = Math.min(100, (challenge.progress / challenge.total) * 100);
+                  const isComplete = challenge.progress >= challenge.total;
+
+                  return (
+                    <Card key={challenge.id} className={`overflow-hidden ${isComplete ? 'bg-accent/10 border-accent/30' : ''}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2.5 rounded-xl ${
+                            isComplete ? 'bg-accent/20' : challenge.color === 'accent' ? 'bg-accent/10' : 'bg-primary/10'
+                          }`}>
+                            <Icon className={`w-5 h-5 ${
+                              isComplete ? 'text-accent' : challenge.color === 'accent' ? 'text-accent' : 'text-primary'
+                            }`} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <h3 className="font-semibold">{challenge.title}</h3>
+                              <Badge variant={isComplete ? "default" : "secondary"} className="text-xs shrink-0">
+                                +{challenge.reward} pts
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">{challenge.description}</p>
+                            <div className="flex items-center gap-2">
+                              <Progress value={progress} className="flex-1 h-2" />
+                              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                                {challenge.progress}/{challenge.total}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{challenge.description}</p>
-                        <div className="flex items-center gap-2">
-                          <Progress value={progress} className="flex-1 h-2" />
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {challenge.progress}/{challenge.total}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ))}
           </TabsContent>
 
           {/* Leaderboard Tab - REAL DATA */}

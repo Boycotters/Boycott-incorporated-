@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +41,7 @@ interface Task {
   verification_type: string | null;
   is_active: boolean | null;
   quiz_data?: QuizQuestion[] | null;
+  page_placement?: string | null;
 }
 
 interface TaskManagementProps {
@@ -132,56 +132,54 @@ function QuizQuestionsEditor({
         </p>
       )}
       
-      <ScrollArea className="max-h-[400px]">
-        <div className="space-y-4 pr-2">
-          {questions.map((q, qIndex) => (
-            <Card key={qIndex} className="p-3 bg-muted/50">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <Label className="text-xs font-medium">Question {qIndex + 1}</Label>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6"
-                    onClick={() => onRemoveQuestion(qIndex)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-                
-                <Input
-                  placeholder="Enter question..."
-                  value={q.question}
-                  onChange={(e) => onUpdateQuestion(qIndex, 'question', e.target.value)}
-                  className="text-sm"
-                />
-                
-                <div className="grid grid-cols-2 gap-2">
-                  {q.options.map((opt, optIndex) => (
-                    <div key={optIndex} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`correct-${qIndex}`}
-                        checked={q.correct_answer === optIndex}
-                        onChange={() => onUpdateQuestion(qIndex, 'correct_answer', optIndex)}
-                        className="w-4 h-4"
-                      />
-                      <Input
-                        placeholder={`Option ${optIndex + 1}`}
-                        value={opt}
-                        onChange={(e) => onUpdateOption(qIndex, optIndex, e.target.value)}
-                        className={`text-sm flex-1 ${q.correct_answer === optIndex ? 'border-green-500' : ''}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-muted-foreground">Select the radio button for the correct answer</p>
+      <div className="space-y-4">
+        {questions.map((q, qIndex) => (
+          <Card key={qIndex} className="p-3 bg-muted/50">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <Label className="text-xs font-medium">Question {qIndex + 1}</Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={() => onRemoveQuestion(qIndex)}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
               </div>
-            </Card>
-          ))}
-        </div>
-      </ScrollArea>
+              
+              <Input
+                placeholder="Enter question..."
+                value={q.question}
+                onChange={(e) => onUpdateQuestion(qIndex, 'question', e.target.value)}
+                className="text-sm"
+              />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {q.options.map((opt, optIndex) => (
+                  <div key={optIndex} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`correct-${qIndex}`}
+                      checked={q.correct_answer === optIndex}
+                      onChange={() => onUpdateQuestion(qIndex, 'correct_answer', optIndex)}
+                      className="w-4 h-4"
+                    />
+                    <Input
+                      placeholder={`Option ${optIndex + 1}`}
+                      value={opt}
+                      onChange={(e) => onUpdateOption(qIndex, optIndex, e.target.value)}
+                      className="text-sm flex-1"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">Select the radio button for the correct answer</p>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
@@ -190,7 +188,7 @@ function QuizQuestionsEditor({
 // Extracted TaskFormContent component
 // ==========================================
 function TaskFormContent({ 
-  title, description, points_reward, category, difficulty, verification_type, page_placement,
+  title, description, points_rewardInput, category, difficulty, verification_type, page_placement,
   quizData,
   onFieldChange,
   onQuizAdd, onQuizUpdate, onQuizOptionUpdate, onQuizRemove,
@@ -198,7 +196,7 @@ function TaskFormContent({
 }: {
   title: string;
   description: string;
-  points_reward: number;
+  points_rewardInput: string;
   category: string;
   difficulty: string;
   verification_type: string;
@@ -217,8 +215,8 @@ function TaskFormContent({
     ['learning', 'challenge', 'trivia'].includes(category);
 
   return (
-    <ScrollArea className="max-h-[70vh]">
-      <div className="space-y-4 py-4 pr-4">
+    <div className="max-h-[70vh] overflow-y-auto overscroll-contain pr-2">
+      <div className="space-y-4 py-4">
         <div className="space-y-2">
           <Label htmlFor="task-title">Title *</Label>
           <Input
@@ -245,11 +243,11 @@ function TaskFormContent({
             <Label htmlFor="task-points">Points Reward</Label>
             <Input
               id="task-points"
-              type="number"
-              value={points_reward}
-              onChange={(e) => onFieldChange('points_reward', parseInt(e.target.value) || 10)}
-              min={1}
-              max={200}
+              type="text"
+              inputMode="numeric"
+              value={points_rewardInput}
+              onChange={(e) => onFieldChange('points_reward', e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="40"
             />
           </div>
           <div className="space-y-2">
@@ -320,7 +318,7 @@ function TaskFormContent({
           {isLoading ? 'Saving...' : submitLabel}
         </Button>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -338,6 +336,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPoints, setNewPoints] = useState(40);
+  const [newPointsInput, setNewPointsInput] = useState('40');
   const [newCategory, setNewCategory] = useState('digital');
   const [newDifficulty, setNewDifficulty] = useState('easy');
   const [newVerification, setNewVerification] = useState('quiz');
@@ -348,6 +347,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPoints, setEditPoints] = useState(40);
+  const [editPointsInput, setEditPointsInput] = useState('40');
   const [editCategory, setEditCategory] = useState('digital');
   const [editDifficulty, setEditDifficulty] = useState('easy');
   const [editVerification, setEditVerification] = useState('quiz');
@@ -358,7 +358,12 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
     switch (field) {
       case 'title': setNewTitle(value); break;
       case 'description': setNewDescription(value); break;
-      case 'points_reward': setNewPoints(value); break;
+      case 'points_reward': {
+        setNewPointsInput(value);
+        const parsed = parseInt(value, 10);
+        setNewPoints(Number.isFinite(parsed) ? parsed : 0);
+        break;
+      }
       case 'category': setNewCategory(value); break;
       case 'difficulty': setNewDifficulty(value); break;
       case 'verification_type': setNewVerification(value); break;
@@ -370,7 +375,12 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
     switch (field) {
       case 'title': setEditTitle(value); break;
       case 'description': setEditDescription(value); break;
-      case 'points_reward': setEditPoints(value); break;
+      case 'points_reward': {
+        setEditPointsInput(value);
+        const parsed = parseInt(value, 10);
+        setEditPoints(Number.isFinite(parsed) ? parsed : 0);
+        break;
+      }
       case 'category': setEditCategory(value); break;
       case 'difficulty': setEditDifficulty(value); break;
       case 'verification_type': setEditVerification(value); break;
@@ -412,7 +422,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
       const insertData: any = {
         title: newTitle,
         description: newDescription,
-        points_reward: newPoints,
+        points_reward: Math.max(1, newPoints || 10),
         category: newCategory,
         difficulty: newDifficulty,
         verification_type: newVerification,
@@ -441,7 +451,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
       const updateData: any = {
         title: editTitle,
         description: editDescription,
-        points_reward: editPoints,
+        points_reward: Math.max(1, editPoints || 10),
         category: editCategory,
         difficulty: editDifficulty,
         verification_type: editVerification,
@@ -492,6 +502,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
     setNewTitle('');
     setNewDescription('');
     setNewPoints(40);
+    setNewPointsInput('40');
     setNewCategory('digital');
     setNewDifficulty('easy');
     setNewVerification('quiz');
@@ -504,6 +515,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
     setEditTitle(task.title);
     setEditDescription(task.description || '');
     setEditPoints(task.points_reward);
+    setEditPointsInput(String(task.points_reward));
     setEditCategory(task.category || 'digital');
     setEditDifficulty(task.difficulty || 'easy');
     setEditVerification(task.verification_type || 'quiz');
@@ -522,7 +534,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
             Create New Task
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
@@ -532,7 +544,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
           <TaskFormContent
             title={newTitle}
             description={newDescription}
-            points_reward={newPoints}
+            points_rewardInput={newPointsInput}
             category={newCategory}
             difficulty={newDifficulty}
             verification_type={newVerification}
@@ -552,7 +564,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
 
       {/* Edit Task Dialog */}
       <Dialog open={editTaskOpen} onOpenChange={setEditTaskOpen}>
-        <DialogContent className="max-h-[90vh] overflow-hidden sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>
@@ -563,7 +575,7 @@ export function TaskManagement({ tasks }: TaskManagementProps) {
             <TaskFormContent
               title={editTitle}
               description={editDescription}
-              points_reward={editPoints}
+                points_rewardInput={editPointsInput}
               category={editCategory}
               difficulty={editDifficulty}
               verification_type={editVerification}

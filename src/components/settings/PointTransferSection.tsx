@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,13 +40,13 @@ export function PointTransferSection() {
     enabled: !!user?.id,
   });
 
-  const { data: transfers } = useQuery({
+  const { data: transfers = [] } = useQuery({
     queryKey: ["my-transfers", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("point_transfers")
-        .select("*, sender:sender_id(full_name, email), recipient:recipient_id(full_name, email)")
+        .select("*")
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -55,6 +55,37 @@ export function PointTransferSection() {
     },
     enabled: !!user?.id,
   });
+
+  const participantIds = useMemo(
+    () => [...new Set(transfers.flatMap((transfer: any) => [transfer.sender_id, transfer.recipient_id]).filter(Boolean))],
+    [transfers]
+  );
+
+  const { data: transferUsers = [] } = useQuery({
+    queryKey: ["transfer-users", participantIds.join(",")],
+    queryFn: async () => {
+      if (participantIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .in("id", participantIds);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: participantIds.length > 0,
+  });
+
+  const usersById = useMemo(
+    () => new Map(transferUsers.map((transferUser: any) => [transferUser.id, transferUser])),
+    [transferUsers]
+  );
+
+  const getUserLabel = (userId?: string) => {
+    if (!userId) return "Unknown user";
+    const matchedUser = usersById.get(userId);
+    return matchedUser?.full_name || matchedUser?.email || "Unknown user";
+  };
 
   const transferMutation = useMutation({
     mutationFn: async () => {
@@ -75,6 +106,7 @@ export function PointTransferSection() {
         queryClient.invalidateQueries({ queryKey: ["wallet-transfer"] });
         queryClient.invalidateQueries({ queryKey: ["wallet"] });
         queryClient.invalidateQueries({ queryKey: ["my-transfers"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-transfers"] });
       } else {
         toast.error(result.message);
       }
@@ -121,8 +153,12 @@ export function PointTransferSection() {
         Send Points to User
       </Button>
 
+      <p className="text-xs text-muted-foreground mb-3">
+        Transfers appear here instantly and reach the recipient after admin approval.
+      </p>
+
       {/* Recent transfers */}
-      {transfers && transfers.length > 0 && (
+      {transfers.length > 0 && (
         <div className="space-y-2 max-h-48 overflow-y-auto">
           <p className="text-xs font-medium text-muted-foreground">Recent Transfers</p>
           {transfers.map((t: any) => {
@@ -134,8 +170,8 @@ export function PointTransferSection() {
                   <div className="min-w-0">
                     <p className="text-sm truncate">
                       {isSender
-                        ? `To: ${(t.recipient as any)?.full_name || (t.recipient as any)?.email}`
-                        : `From: ${(t.sender as any)?.full_name || (t.sender as any)?.email}`}
+                        ? `To: ${getUserLabel(t.recipient_id)}`
+                        : `From: ${getUserLabel(t.sender_id)}`}
                     </p>
                     <p className="text-xs text-muted-foreground">Code: {t.verification_code}</p>
                   </div>
@@ -167,7 +203,7 @@ export function PointTransferSection() {
               <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
               <div>
                 <p className="font-semibold text-lg">Transfer Initiated!</p>
-                <p className="text-sm text-muted-foreground">Awaiting admin approval</p>
+                <p className="text-sm text-muted-foreground">Awaiting admin approval before the recipient receives the points</p>
               </div>
               <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                 <p className="text-sm">Recipient: <span className="font-medium">{lastResult.recipient_name}</span></p>
@@ -178,7 +214,7 @@ export function PointTransferSection() {
                   <p className="text-2xl font-bold font-mono tracking-widest">{lastResult.verification_code}</p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Share this code with the recipient for reference.</p>
+              <p className="text-xs text-muted-foreground">Share this code with the recipient for reference. Admins can review it in the Transfers tab.</p>
             </div>
           ) : (
             <div className="space-y-4 py-2">

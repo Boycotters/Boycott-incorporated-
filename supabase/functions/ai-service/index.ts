@@ -42,7 +42,7 @@ async function checkRateLimit(userId: string | undefined, action: string): Promi
 
 async function callAI(systemPrompt: string, userPrompt: string, useTools = false, tools?: any[], stream = false) {
   const body: any = {
-    model: 'google/gemini-2.5-flash',
+    model: 'google/gemini-3-flash-preview',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
@@ -340,14 +340,20 @@ async function generateQuiz(data: any) {
 
 // Chatbot - conversational assistant
 async function handleChatbot(data: { messages: Array<{ role: string; content: string }>; userContext?: any }) {
-  const systemPrompt = `You are Pesa AI, a friendly and helpful assistant for Pesa Rewards, a Zambian rewards and earning app. You help users with:
-- Understanding how to earn points (tasks, surveys, videos, games)
-- Explaining VIP tiers, streaks, and achievements
-- Providing tips to maximize earnings
-- Answering questions about withdrawals and mobile money
-- General support and troubleshooting
+  const systemPrompt = `You are Boycott AI, the live assistant for Boycott Incorporated, a Zambian rewards and earning app.
 
-Be conversational, encouraging, and use simple language. Mention Zambian Kwacha (ZMW) when discussing money. Keep responses concise but helpful. Use emojis sparingly for friendliness.
+You help users with:
+- Understanding how to earn points from tasks, surveys, videos, games, and streaks
+- Explaining VIP tiers, withdrawals, referrals, challenges, and app features
+- Troubleshooting common user issues inside the app
+- Broader questions outside the app such as productivity, business, technology, learning, writing, planning, and everyday knowledge
+
+Rules:
+- When the user asks about the app, answer precisely and practically.
+- When the user asks broader questions, still answer clearly and confidently.
+- If something is not knowable in real time, say that briefly instead of inventing facts.
+- Keep answers concise, natural, and helpful.
+- Use Zambian context or ZMW only when relevant.
 
 ${data.userContext ? `User context: Level ${data.userContext.level}, VIP: ${data.userContext.vipTier}, Points: ${data.userContext.totalPoints}, Streak: ${data.userContext.streak} days` : ''}`;
 
@@ -363,7 +369,7 @@ ${data.userContext ? `User context: Level ${data.userContext.level}, VIP: ${data
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-3-flash-preview',
       messages,
     }),
   });
