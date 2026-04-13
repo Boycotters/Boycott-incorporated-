@@ -155,9 +155,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         }
         
         hoopXRef.current = newX;
-        setHoopX(newX);
-        
-        // Direct DOM update for backboard and hoop
+        // Direct DOM update only - no setHoopX to avoid re-renders
         if (backboardRef.current) {
           backboardRef.current.style.left = `${newX - 40}px`;
         }
@@ -416,7 +414,8 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
           >
             {/* Backboard */}
             <div 
-              className="absolute bg-white border-4 border-gray-400 rounded transition-all duration-100"
+              ref={backboardRef}
+              className="absolute bg-white border-4 border-gray-400 rounded will-change-transform"
               style={{
                 left: hoopX - 40,
                 top: 45,
@@ -427,7 +426,8 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
             
             {/* Hoop - wider for easier scoring */}
             <div 
-              className="absolute transition-all duration-100"
+              ref={hoopElRef}
+              className="absolute will-change-transform"
               style={{
                 left: hoopX - HOOP_WIDTH / 2,
                 top: HOOP_Y,
