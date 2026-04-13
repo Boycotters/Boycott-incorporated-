@@ -155,9 +155,7 @@ export function Basketball({ playsRemaining, onComplete, isPlaying, setIsPlaying
         }
         
         hoopXRef.current = newX;
-        setHoopX(newX);
-        
-        // Direct DOM update for backboard and hoop
+        // Direct DOM update only - no setHoopX to avoid re-renders
         if (backboardRef.current) {
           backboardRef.current.style.left = `${newX - 40}px`;
         }
