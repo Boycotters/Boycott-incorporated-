@@ -20,7 +20,6 @@ interface Ball {
 }
 
 export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying }: KeepyUppyProps) {
-  const [ball, setBall] = useState<Ball>({ x: 150, y: 100, vx: 0, vy: 0, rotation: 0 });
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('keepy_uppy_high_score');
@@ -36,34 +35,22 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
   const ballRef = useRef<Ball>({ x: 150, y: 100, vx: 0, vy: 0, rotation: 0 });
   const lastTapRef = useRef(0);
   const hasCompletedRef = useRef(false);
+  const scoreElRef = useRef<HTMLDivElement>(null);
+  const bigScoreElRef = useRef<HTMLDivElement>(null);
 
-  const GRAVITY = 0.55; // Heavier ball - more realistic
-  const BOUNCE_POWER = -11; // Stronger kick needed
+  const GRAVITY = 0.55;
+  const BOUNCE_POWER = -11;
   const CONTAINER_WIDTH = 300;
   const CONTAINER_HEIGHT = 350;
   const BALL_SIZE = 55;
   const BALL_RADIUS = BALL_SIZE / 2;
-  const AIR_RESISTANCE = 0.992; // Slight air drag
-
-  // Keep scoreRef in sync
-  useEffect(() => {
-    scoreRef.current = score;
-  }, [score]);
-
-  useEffect(() => {
-    gameOverRef.current = gameOver;
-  }, [gameOver]);
-
-  useEffect(() => {
-    ballRef.current = ball;
-  }, [ball]);
+  const AIR_RESISTANCE = 0.992;
 
   const startGame = useCallback(() => {
     const initialBall = { x: 150, y: 100, vx: (Math.random() - 0.5) * 2, vy: 0, rotation: 0 };
-    setBall(initialBall);
     ballRef.current = initialBall;
-    setScore(0);
     scoreRef.current = 0;
+    setScore(0);
     setTimeLeft(30);
     setGameOver(false);
     gameOverRef.current = false;
@@ -79,10 +66,9 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     hasCompletedRef.current = true;
     gameOverRef.current = true;
     setGameOver(true);
+    setScore(finalScore);
     setIsPlaying(false);
     
-    // Calculate points - Max 10 pts per game
-    // Target: 4 games × 10 pts = 40 pts daily for games
     let points = 0;
     if (finalScore >= 20) points = 10;
     else if (finalScore >= 15) points = 8;
@@ -127,13 +113,10 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     }
   }, [timeLeft, isPlaying, gameOver, endGame]);
 
-  // Track if ball should end game (set outside of render)
   const shouldEndGameRef = useRef(false);
-
-  // Ball DOM ref for direct manipulation
   const ballElRef = useRef<HTMLDivElement>(null);
 
-  // Game physics loop - use refs to avoid re-renders every frame
+  // Game physics loop - pure ref-based, no state updates
   useEffect(() => {
     if (!isPlaying || gameOver) return;
 
@@ -170,15 +153,13 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
       
       if (newY > CONTAINER_HEIGHT - BALL_RADIUS - 16) {
         shouldEndGameRef.current = true;
-        // Don't update - keep last position
         animationRef.current = requestAnimationFrame(gameLoop);
         return;
       }
       
-      const newBall = { x: newX, y: newY, vx: newVx, vy: newVy, rotation: newRotation };
-      ballRef.current = newBall;
+      ballRef.current = { x: newX, y: newY, vx: newVx, vy: newVy, rotation: newRotation };
       
-      // Direct DOM update for smooth animation
+      // Direct DOM update only - no React state
       if (ballElRef.current) {
         ballElRef.current.style.left = `${newX - BALL_RADIUS}px`;
         ballElRef.current.style.top = `${newY - BALL_RADIUS}px`;
@@ -203,7 +184,6 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
     e.preventDefault();
     e.stopPropagation();
     
-    // Strict debounce (minimum 150ms between taps)
     const now = Date.now();
     if (now - lastTapRef.current < 150) return;
     lastTapRef.current = now;
@@ -223,31 +203,32 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
       tapY = e.clientY - rect.top;
     }
     
-    // Use ref for current ball position (more accurate)
     const currentBall = ballRef.current;
-    
-    // Calculate distance from tap to ball center
     const dx = tapX - currentBall.x;
     const dy = tapY - currentBall.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    // STRICT: Must tap within actual ball radius + small tolerance
     const hitboxRadius = BALL_RADIUS + 12;
     
-    // Ball must be falling (vy > 0) or moving, and not too high
     if (distance <= hitboxRadius && currentBall.y > 35) {
-      // Apply upward force - kick direction based on tap position
       const kickAngle = (tapX - currentBall.x) * 0.04;
       const kickPower = BOUNCE_POWER - (Math.random() * 2);
       
-      setBall(prev => ({
-        ...prev,
+      // Update ball via ref only - no setBall
+      ballRef.current = {
+        ...currentBall,
         vy: kickPower,
-        vx: prev.vx * 0.5 + kickAngle + (Math.random() - 0.5) * 0.8,
-      }));
+        vx: currentBall.vx * 0.5 + kickAngle + (Math.random() - 0.5) * 0.8,
+      };
       
-      // Increment score ONCE
-      setScore(prev => prev + 1);
+      scoreRef.current += 1;
+      
+      // Update score DOM directly for zero-lag feedback
+      if (scoreElRef.current) {
+        scoreElRef.current.textContent = `Score: ${scoreRef.current}`;
+      }
+      if (bigScoreElRef.current) {
+        bigScoreElRef.current.textContent = String(scoreRef.current);
+      }
     }
   }, [isPlaying]);
 
@@ -276,7 +257,7 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
               <span className={timeLeft <= 5 ? "text-destructive font-bold animate-pulse" : ""}>
                 ⏱️ {timeLeft}s
               </span>
-              <span className="text-xl font-bold text-primary">Score: {score}</span>
+              <span ref={scoreElRef} className="text-xl font-bold text-primary">Score: {score}</span>
               <span className="text-muted-foreground">
                 <Trophy className="w-4 h-4 inline mr-1" />
                 {highScore}
@@ -306,16 +287,16 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
             {/* Ground */}
             <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-r from-green-600 to-green-500" />
             
-            {/* Ball with visible hitbox indicator */}
+            {/* Ball */}
             <div
               ref={ballElRef}
               className="absolute will-change-transform pointer-events-none"
               style={{
-                left: ball.x - BALL_RADIUS,
-                top: ball.y - BALL_RADIUS,
+                left: ballRef.current.x - BALL_RADIUS,
+                top: ballRef.current.y - BALL_RADIUS,
                 width: BALL_SIZE,
                 height: BALL_SIZE,
-                transform: `rotate(${ball.rotation}deg)`,
+                transform: `rotate(${ballRef.current.rotation}deg)`,
               }}
             >
               <span className="text-5xl select-none block">⚽</span>
@@ -328,9 +309,9 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
               </div>
             )}
             
-            {/* Score indicator */}
-            {score > 0 && isPlaying && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 text-4xl font-bold text-white drop-shadow-lg">
+            {/* Score indicator - DOM ref updated */}
+            {isPlaying && (
+              <div ref={bigScoreElRef} className="absolute top-4 left-1/2 -translate-x-1/2 text-4xl font-bold text-white drop-shadow-lg">
                 {score}
               </div>
             )}
@@ -355,7 +336,7 @@ export function KeepyUppy({ playsRemaining, onComplete, isPlaying, setIsPlaying 
             <p className="text-muted-foreground text-center px-4">
               Keep the ball in the air by tapping it!<br/>
               You have 30 seconds.<br/>
-              <span className="text-xs mt-2 block">Score 50+ for max points!</span>
+              <span className="text-xs mt-2 block">Score 20+ for max points!</span>
             </p>
           </div>
         )}
