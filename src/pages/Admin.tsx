@@ -1727,6 +1727,14 @@ export default function Admin() {
           <TabsContent value="rewards" className="mt-4">
             <RewardsManagement />
           </TabsContent>
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="mt-4">
+            <NotificationManagement />
+          </TabsContent>
+          {/* AI Videos Tab */}
+          <TabsContent value="ai-videos" className="mt-4">
+            <AIVideoManagement />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
