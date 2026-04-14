@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, Loader2, ExternalLink, LocateFixed, Radio, StopCircle } from "lucide-react";
+import { MapPin, Navigation, Loader2, ExternalLink, LocateFixed, Radio, StopCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -16,8 +16,8 @@ type SharedPosition = {
 
 const GEO_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
-  timeout: 15000,
-  maximumAge: 0,
+  timeout: 20000,
+  maximumAge: 5000,
 };
 
 const toSharedPosition = (coords: GeolocationCoordinates): SharedPosition => ({
@@ -40,7 +40,7 @@ const getLocationErrorMessage = (error: GeolocationPositionError) => {
     case error.POSITION_UNAVAILABLE:
       return "Your device could not determine a location right now.";
     case error.TIMEOUT:
-      return "The location request timed out. Please try again.";
+      return "The location request timed out. Retrying...";
     default:
       return "Unable to get your location right now.";
   }
@@ -53,27 +53,21 @@ export function UserLocationMap() {
   const [loadingCurrent, setLoadingCurrent] = useState(false);
   const [startingLive, setStartingLive] = useState(false);
   const [isLiveSharing, setIsLiveSharing] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
   const watchIdRef = useRef<number | null>(null);
   const lastPersistedAtRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveIntentRef = useRef(false); // tracks if user wants live sharing
 
   const visiblePosition = useMemo(() => livePos ?? currentPos, [livePos, currentPos]);
 
   const persistLocation = useCallback(
-    async (
-      coords: GeolocationCoordinates,
-      options?: { notify?: boolean; throttleMs?: number }
-    ) => {
-      if (!user?.id) {
-        return true;
-      }
+    async (coords: GeolocationCoordinates, options?: { notify?: boolean; throttleMs?: number }) => {
+      if (!user?.id) return true;
 
       const throttleMs = options?.throttleMs ?? 0;
       const now = Date.now();
-
-      if (throttleMs > 0 && now - lastPersistedAtRef.current < throttleMs) {
-        return false;
-      }
-
+      if (throttleMs > 0 && now - lastPersistedAtRef.current < throttleMs) return false;
       lastPersistedAtRef.current = now;
 
       const { error } = await supabase.from("user_gps_locations").insert({
@@ -89,26 +83,76 @@ export function UserLocationMap() {
 
       if (error) {
         console.error("GPS insert error:", error);
-        toast.error("Location was captured, but it could not sync to the admin dashboard.");
+        if (options?.notify) toast.error("Location captured but could not sync to dashboard.");
         return false;
       }
-
-      if (options?.notify) {
-        toast.success("Location captured and synced to the dashboard.");
-      }
-
+      if (options?.notify) toast.success("Location captured and synced to the dashboard.");
       return true;
     },
     [user?.id]
   );
 
-  const stopLiveLocation = useCallback(() => {
-    if (watchIdRef.current !== null && navigator.geolocation) {
+  // Core function to start the geolocation watcher
+  const startWatcher = useCallback(() => {
+    if (!navigator.geolocation) return;
+    if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
 
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const nextPosition = toSharedPosition(pos.coords);
+        setLivePos(nextPosition);
+        setCurrentPos(nextPosition);
+        setStartingLive(false);
+        setIsLiveSharing(true);
+        setErrorCount(0);
+        await persistLocation(pos.coords, { throttleMs: 8000 });
+      },
+      (err) => {
+        console.warn("GPS watch error:", err.message);
+        setErrorCount(prev => prev + 1);
+
+        // On timeout or position unavailable, auto-retry if user still wants live sharing
+        if (err.code !== err.PERMISSION_DENIED && liveIntentRef.current) {
+          // Clear the failed watcher
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
+          // Retry after a short delay
+          retryTimerRef.current = setTimeout(() => {
+            if (liveIntentRef.current) startWatcher();
+          }, 3000);
+        } else {
+          // Permission denied — stop everything
+          setStartingLive(false);
+          setIsLiveSharing(false);
+          liveIntentRef.current = false;
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
+          toast.error(getLocationErrorMessage(err));
+        }
+      },
+      GEO_OPTIONS
+    );
+  }, [persistLocation]);
+
+  const stopLiveLocation = useCallback(() => {
+    liveIntentRef.current = false;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     setIsLiveSharing(false);
+    setErrorCount(0);
     toast.success("Live location sharing stopped.");
   }, []);
 
@@ -127,7 +171,6 @@ export function UserLocationMap() {
         const nextPosition = toSharedPosition(pos.coords);
         setCurrentPos(nextPosition);
         setLoadingCurrent(false);
-
         if (user?.id) {
           await persistLocation(pos.coords, { notify: true });
         } else {
@@ -138,7 +181,7 @@ export function UserLocationMap() {
         setLoadingCurrent(false);
         toast.error(getLocationErrorMessage(err));
       },
-      GEO_OPTIONS
+      { ...GEO_OPTIONS, maximumAge: 0 }
     );
   }, [persistLocation, user?.id]);
 
@@ -147,44 +190,35 @@ export function UserLocationMap() {
       toast.error("Geolocation not supported on this device");
       return;
     }
-
-    if (watchIdRef.current !== null) {
-      return;
-    }
+    if (watchIdRef.current !== null) return;
 
     const confirmed = window.confirm(
       "Share your live location with Boycott and keep updating the admin dashboard until you stop?"
     );
-
     if (!confirmed) return;
 
+    liveIntentRef.current = true;
     setStartingLive(true);
+    setErrorCount(0);
+    startWatcher();
+  }, [startWatcher]);
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      async (pos) => {
-        const nextPosition = toSharedPosition(pos.coords);
-        setLivePos(nextPosition);
-        setCurrentPos(nextPosition);
-        setStartingLive(false);
-        setIsLiveSharing(true);
-        await persistLocation(pos.coords, { throttleMs: 8000 });
-      },
-      (err) => {
-        setStartingLive(false);
-        setIsLiveSharing(false);
-        toast.error(getLocationErrorMessage(err));
+  // Keep-alive: periodically check if watcher is still running
+  useEffect(() => {
+    if (!isLiveSharing) return;
+    const interval = setInterval(() => {
+      if (liveIntentRef.current && watchIdRef.current === null) {
+        startWatcher();
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [isLiveSharing, startWatcher]);
 
-        if (watchIdRef.current !== null) {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-          watchIdRef.current = null;
-        }
-      },
-      GEO_OPTIONS
-    );
-  }, [persistLocation]);
-
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      liveIntentRef.current = false;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       if (watchIdRef.current !== null && navigator.geolocation) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
@@ -211,6 +245,12 @@ export function UserLocationMap() {
           <MapPin className="w-5 h-5 text-secondary-foreground" />
         </div>
         <h3 className="font-semibold text-lg">My Location</h3>
+        {isLiveSharing && (
+          <Badge className="gap-1 ml-auto animate-pulse">
+            <Radio className="w-3 h-3" />
+            Live
+          </Badge>
+        )}
       </div>
 
       <div className="bg-muted/20 rounded-xl p-4 mb-4 space-y-3">
@@ -225,10 +265,10 @@ export function UserLocationMap() {
                 <LocateFixed className="w-3 h-3" />
                 Current saved
               </Badge>
-              {isLiveSharing && (
-                <Badge className="gap-1">
-                  <Radio className="w-3 h-3" />
-                  Live location on
+              {errorCount > 0 && isLiveSharing && (
+                <Badge variant="outline" className="gap-1 text-yellow-600 border-yellow-300">
+                  <AlertCircle className="w-3 h-3" />
+                  Reconnecting ({errorCount})
                 </Badge>
               )}
             </div>
@@ -256,7 +296,7 @@ export function UserLocationMap() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button variant="outline" className="gap-2" onClick={openInGoogleMaps}>
                 <ExternalLink className="w-4 h-4" />
-                View Live Location
+                View on Google Maps
               </Button>
               <Button variant="outline" className="gap-2" onClick={openDirections}>
                 <Navigation className="w-4 h-4" />
@@ -281,7 +321,7 @@ export function UserLocationMap() {
           className="w-full gap-2"
         >
           {loadingCurrent ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-          {loadingCurrent ? "Getting Location..." : visiblePosition ? "Refresh Current Location" : "Get My Location"}
+          {loadingCurrent ? "Getting Location..." : visiblePosition ? "Refresh Location" : "Get My Location"}
         </Button>
 
         {isLiveSharing ? (
