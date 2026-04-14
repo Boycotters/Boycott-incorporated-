@@ -75,6 +75,8 @@ import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagem
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
 import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
+import { NotificationManagement } from "@/components/admin/NotificationManagement";
+import { AIVideoManagement } from "@/components/admin/AIVideoManagement";
 
 interface Withdrawal {
   id: string;
