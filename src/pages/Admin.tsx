@@ -38,7 +38,8 @@ import {
   AlertTriangle,
   CalendarClock,
   Brain,
-  Gift
+  Gift,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +76,8 @@ import { TaskManagement, WithdrawalManagement, UserManagement, TournamentManagem
 import { GPSTrackingDashboard } from "@/components/admin/GPSTrackingDashboard";
 import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePanel";
 import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
+import { NotificationManagement } from "@/components/admin/NotificationManagement";
+import { AIVideoManagement } from "@/components/admin/AIVideoManagement";
 
 interface Withdrawal {
   id: string;
@@ -872,6 +875,14 @@ export default function Admin() {
               <TabsTrigger value="rewards" className="gap-1.5 px-3 shrink-0">
                 <Gift className="w-4 h-4" />
                 <span className="hidden sm:inline">Rewards</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-1.5 px-3 shrink-0">
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Notifications</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai-videos" className="gap-1.5 px-3 shrink-0">
+                <Video className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Videos</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1715,6 +1726,14 @@ export default function Admin() {
           {/* Rewards Management Tab */}
           <TabsContent value="rewards" className="mt-4">
             <RewardsManagement />
+          </TabsContent>
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="mt-4">
+            <NotificationManagement />
+          </TabsContent>
+          {/* AI Videos Tab */}
+          <TabsContent value="ai-videos" className="mt-4">
+            <AIVideoManagement />
           </TabsContent>
         </Tabs>
       </div>

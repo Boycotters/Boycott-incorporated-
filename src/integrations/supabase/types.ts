@@ -137,6 +137,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generated_videos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          duration_seconds: number | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          points_reward: number | null
+          prompt: string
+          status: string
+          target_placement: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          points_reward?: number | null
+          prompt: string
+          status?: string
+          target_placement?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          points_reward?: number | null
+          prompt?: string
+          status?: string
+          target_placement?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           action: string
@@ -458,6 +509,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          metadata: Json | null
+          scheduled_for: string | null
+          sent_at: string | null
+          sent_count: number | null
+          status: string
+          target_audience: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          body: string
+          channel?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string
+          target_audience?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string
+          target_audience?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       phone_verification_otps: {
         Row: {
@@ -1362,6 +1461,7 @@ export type Database = {
           video_id: string
           watch_duration_seconds: number
           watched_at: string
+          watched_date: string | null
         }
         Insert: {
           completed?: boolean
@@ -1371,6 +1471,7 @@ export type Database = {
           video_id: string
           watch_duration_seconds?: number
           watched_at?: string
+          watched_date?: string | null
         }
         Update: {
           completed?: boolean
@@ -1380,6 +1481,7 @@ export type Database = {
           video_id?: string
           watch_duration_seconds?: number
           watched_at?: string
+          watched_date?: string | null
         }
         Relationships: [
           {
