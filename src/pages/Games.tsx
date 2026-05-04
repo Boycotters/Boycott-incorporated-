@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, formatDistanceToNow } from "date-fns";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyCapReached } from "@/components/DailyCapReached";
 
 interface PlaysRemaining {
   spin_wheel: number;
@@ -71,7 +72,7 @@ export default function Games() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { fireConfetti } = useConfetti();
-  const { isWeekendBlocked, hasCampaign } = useDailyLimits();
+  const { isWeekendBlocked, hasCampaign, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
   
   const [mainTab, setMainTab] = useState("play");
   const [isSpinning, setIsSpinning] = useState(false);
@@ -261,6 +262,10 @@ export default function Games() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
   }
 
   // Show weekend break message if games are blocked
