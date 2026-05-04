@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyCapReached } from "@/components/DailyCapReached";
 
 
 interface Video {
@@ -59,7 +60,7 @@ export default function Videos() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isWeekendBlocked, hasCampaign, canDoActivity, refetch: refetchLimits } = useDailyLimits();
+  const { isWeekendBlocked, hasCampaign, canDoActivity, refetch: refetchLimits, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
