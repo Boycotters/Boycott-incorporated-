@@ -1876,6 +1876,10 @@ export type Database = {
         Returns: Json
       }
       check_daily_earning_cap: { Args: { p_user_id: string }; Returns: Json }
+      check_daily_limit: {
+        Args: { p_activity_type?: string; p_user_id: string }
+        Returns: Json
+      }
       check_login_streak: { Args: { p_user_id: string }; Returns: Json }
       check_point_expiry_status: { Args: { p_user_id: string }; Returns: Json }
       check_redemption_fraud: { Args: { p_user_id: string }; Returns: Json }
