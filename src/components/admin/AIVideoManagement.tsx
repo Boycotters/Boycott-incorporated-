@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useAI } from "@/hooks/useAI";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Video, Plus, Trash2, Loader2, Sparkles, Eye, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Video, Plus, Trash2, Loader2, Sparkles, Eye, MapPin, Send, Play } from "lucide-react";
 
 interface AIVideo {
   id: string;
@@ -33,9 +32,9 @@ interface AIVideo {
 
 export function AIVideoManagement() {
   const { user } = useAuth();
-  const { loading: aiLoading } = useAI();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [previewVideo, setPreviewVideo] = useState<AIVideo | null>(null);
   const [generating, setGenerating] = useState(false);
   const [newVideo, setNewVideo] = useState({
     title: "",
@@ -43,6 +42,8 @@ export function AIVideoManagement() {
     target_placement: "videos",
     duration_seconds: "30",
     points_reward: "5",
+    video_url: "",
+    thumbnail_url: "",
   });
 
   const { data: aiVideos = [], isLoading } = useQuery({
@@ -61,17 +62,21 @@ export function AIVideoManagement() {
     mutationFn: async (video: typeof newVideo) => {
       setGenerating(true);
       try {
-        // Use AI to generate video concept/script
-        const { data: aiResult, error: aiError } = await supabase.functions.invoke("ai-service", {
-          body: {
-            action: "generate_partnership",
-            data: {
-              brandCategory: "entertainment",
-              targetAudience: "general",
-              campaignType: video.prompt,
+        // Use AI to generate video concept/script when prompt provided
+        let aiConcept: any = null;
+        try {
+          const { data: aiResult } = await supabase.functions.invoke("ai-service", {
+            body: {
+              action: "generate_partnership",
+              data: {
+                brandCategory: "entertainment",
+                targetAudience: "general",
+                campaignType: video.prompt,
+              },
             },
-          },
-        });
+          });
+          aiConcept = aiResult?.data || null;
+        } catch (_) {}
 
         const { error } = await supabase.from("ai_generated_videos").insert({
           title: video.title,
@@ -79,9 +84,11 @@ export function AIVideoManagement() {
           target_placement: video.target_placement,
           duration_seconds: parseInt(video.duration_seconds) || 30,
           points_reward: parseInt(video.points_reward) || 5,
+          video_url: video.video_url || null,
+          thumbnail_url: video.thumbnail_url || null,
           created_by: user?.id,
-          status: "generated",
-          metadata: aiResult?.data ? { ai_concept: aiResult.data } : {},
+          status: video.video_url ? "ready" : "generated",
+          metadata: aiConcept ? { ai_concept: aiConcept } : {},
         });
         if (error) throw error;
       } finally {
@@ -89,10 +96,10 @@ export function AIVideoManagement() {
       }
     },
     onSuccess: () => {
-      toast.success("AI video concept created");
+      toast.success("AI video saved");
       queryClient.invalidateQueries({ queryKey: ["admin-ai-videos"] });
       setCreateOpen(false);
-      setNewVideo({ title: "", prompt: "", target_placement: "videos", duration_seconds: "30", points_reward: "5" });
+      setNewVideo({ title: "", prompt: "", target_placement: "videos", duration_seconds: "30", points_reward: "5", video_url: "", thumbnail_url: "" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -112,6 +119,38 @@ export function AIVideoManagement() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const publishMutation = useMutation({
+    mutationFn: async (video: AIVideo) => {
+      if (!video.video_url) throw new Error("Add a video URL before publishing");
+      // Activate the AI video
+      await supabase
+        .from("ai_generated_videos")
+        .update({ is_active: true, status: "published", updated_at: new Date().toISOString() })
+        .eq("id", video.id);
+      // Mirror into 'videos' table for Watch & Earn placement when applicable
+      if (video.target_placement === "videos" || video.target_placement === "all") {
+        await supabase.from("videos").insert({
+          title: video.title,
+          description: video.prompt,
+          video_url: video.video_url,
+          thumbnail_url: video.thumbnail_url,
+          duration_seconds: video.duration_seconds,
+          points_reward: video.points_reward,
+          category: "ai",
+          source: "ai",
+          partner_name: "AI",
+          is_active: true,
+          created_by: user?.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      toast.success("Published to placement");
+      queryClient.invalidateQueries({ queryKey: ["admin-ai-videos"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("ai_generated_videos").delete().eq("id", id);
@@ -126,7 +165,8 @@ export function AIVideoManagement() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "generated": return <Badge className="bg-blue-500/10 text-blue-600">Generated</Badge>;
+      case "generated": return <Badge className="bg-blue-500/10 text-blue-600">Concept</Badge>;
+      case "ready": return <Badge className="bg-amber-500/10 text-amber-600">Ready</Badge>;
       case "published": return <Badge className="bg-green-500/10 text-green-600">Published</Badge>;
       case "pending": return <Badge variant="secondary">Pending</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
@@ -139,6 +179,7 @@ export function AIVideoManagement() {
       case "home": return "Home Page";
       case "discover": return "Discover";
       case "earn": return "Earn Section";
+      case "all": return "All Sections";
       default: return placement;
     }
   };
@@ -153,7 +194,7 @@ export function AIVideoManagement() {
                 <Sparkles className="w-5 h-5 text-primary" />
                 AI Video Creator & Editor
               </CardTitle>
-              <CardDescription>Generate AI video concepts and manage placement across the app</CardDescription>
+              <CardDescription>Generate, preview, and allocate AI videos across the app</CardDescription>
             </div>
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
@@ -162,12 +203,13 @@ export function AIVideoManagement() {
                   Generate
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5" />
                     Generate AI Video
                   </DialogTitle>
+                  <DialogDescription>Create a concept, attach a video URL, then preview & publish.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-2">
@@ -183,8 +225,25 @@ export function AIVideoManagement() {
                     <Textarea
                       value={newVideo.prompt}
                       onChange={(e) => setNewVideo(p => ({ ...p, prompt: e.target.value }))}
-                      placeholder="Describe the video content you want AI to generate..."
+                      placeholder="Describe the video content..."
                       rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Video URL (mp4 / hosted)</Label>
+                    <Input
+                      value={newVideo.video_url}
+                      onChange={(e) => setNewVideo(p => ({ ...p, video_url: e.target.value }))}
+                      placeholder="https://..."
+                    />
+                    <p className="text-xs text-muted-foreground">Required to preview & publish to a section.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Thumbnail URL (optional)</Label>
+                    <Input
+                      value={newVideo.thumbnail_url}
+                      onChange={(e) => setNewVideo(p => ({ ...p, thumbnail_url: e.target.value }))}
+                      placeholder="https://..."
                     />
                   </div>
                   <div className="space-y-2">
@@ -223,13 +282,25 @@ export function AIVideoManagement() {
                       />
                     </div>
                   </div>
+
+                  {newVideo.video_url && (
+                    <div className="space-y-2">
+                      <Label>Live Preview</Label>
+                      <video
+                        src={newVideo.video_url}
+                        controls
+                        className="w-full rounded-lg bg-black aspect-video"
+                      />
+                    </div>
+                  )}
+
                   <Button
                     className="w-full gap-2"
                     onClick={() => createMutation.mutate(newVideo)}
                     disabled={!newVideo.title || !newVideo.prompt || generating || createMutation.isPending}
                   >
                     {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    {generating ? "Generating with AI..." : "Generate Video Concept"}
+                    {generating ? "Generating..." : "Save Video"}
                   </Button>
                 </div>
               </DialogContent>
@@ -244,8 +315,7 @@ export function AIVideoManagement() {
           ) : aiVideos.length === 0 ? (
             <div className="text-center py-8">
               <Video className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">No AI videos generated yet.</p>
-              <p className="text-xs text-muted-foreground mt-1">Use the Generate button to create AI video concepts.</p>
+              <p className="text-sm text-muted-foreground">No AI videos yet.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -268,7 +338,12 @@ export function AIVideoManagement() {
                       <span>{new Date(video.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
+                    {video.video_url && (
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPreviewVideo(video)}>
+                        <Play className="w-4 h-4 text-primary" />
+                      </Button>
+                    )}
                     <Switch
                       checked={video.is_active}
                       onCheckedChange={(checked) => toggleMutation.mutate({ id: video.id, isActive: checked })}
@@ -288,6 +363,34 @@ export function AIVideoManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Preview & Publish Dialog */}
+      <Dialog open={!!previewVideo} onOpenChange={(o) => !o && setPreviewVideo(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{previewVideo?.title}</DialogTitle>
+            <DialogDescription>Preview before publishing to {previewVideo ? getPlacementLabel(previewVideo.target_placement) : ""}.</DialogDescription>
+          </DialogHeader>
+          {previewVideo?.video_url && (
+            <video
+              src={previewVideo.video_url}
+              controls
+              autoPlay
+              className="w-full rounded-lg bg-black aspect-video"
+            />
+          )}
+          <div className="flex gap-2 pt-2">
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => previewVideo && publishMutation.mutate(previewVideo)}
+              disabled={publishMutation.isPending}
+            >
+              <Send className="w-4 h-4" />
+              Publish to {previewVideo ? getPlacementLabel(previewVideo.target_placement) : ""}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

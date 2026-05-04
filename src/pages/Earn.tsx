@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TaskVerificationModal } from "@/components/task-verification";
 import { useConfetti } from "@/hooks/useConfetti";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyCapReached } from "@/components/DailyCapReached";
 
 const iconMap: Record<string, any> = {
   social: MessageCircle,
@@ -110,6 +112,7 @@ export default function Earn() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [timeUntilReset, setTimeUntilReset] = useState("");
   const { fireConfetti, fireStreakConfetti, fireMilestoneConfetti, fireTierUpgradeConfetti } = useConfetti();
+  const { hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
 
   // Countdown timer to midnight
   useEffect(() => {
@@ -496,6 +499,15 @@ export default function Earn() {
       return;
     }
     
+    // Check global daily cap
+    if (hasReachedDailyCap) {
+      toast({
+        title: "Daily Cap Reached",
+        description: "You've earned all available points today. Come back tomorrow!",
+      });
+      return;
+    }
+
     // Check daily limit
     if (hasReachedDailyLimit) {
       toast({
@@ -549,7 +561,9 @@ export default function Earn() {
     );
   }
 
-  // Determine if tasks are blocked due to weekend
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} showBack={false} />;
+  }
   const isWeekendBlocked = taskAvailability && !taskAvailability.available && taskAvailability.is_weekend;
   const hasWeekendCampaign = taskAvailability?.has_campaign && taskAvailability?.is_weekend;
 

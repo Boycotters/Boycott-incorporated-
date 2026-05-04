@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyCapReached } from "@/components/DailyCapReached";
 
 interface GeneratedSurvey {
   title: string;
@@ -51,7 +52,7 @@ export default function Surveys() {
   const { fireConfetti } = useConfetti();
   const queryClient = useQueryClient();
   const { generateSurvey, loading: aiLoading } = useAI();
-  const { isWeekendBlocked, hasCampaign, canDoActivity, data: limitsData } = useDailyLimits();
+  const { isWeekendBlocked, hasCampaign, canDoActivity, data: limitsData, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
 
   const [activeTab, setActiveTab] = useState<"available" | "active">("available");
   const [activeSurvey, setActiveSurvey] = useState<GeneratedSurvey | null>(null);
@@ -445,6 +446,10 @@ export default function Surveys() {
         </div>
       </div>
     );
+  }
+
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
   }
 
   // Show weekend break message if surveys are blocked

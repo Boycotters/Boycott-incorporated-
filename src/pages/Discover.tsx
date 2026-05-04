@@ -20,12 +20,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatTimeAgo } from "@/lib/utils";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
 import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
+import { DailyCapReached } from "@/components/DailyCapReached";
 
 export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
-  const { data: dailyData } = useDailyLimits();
+  const { data: dailyData, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
 
   // Flash deal visibility - random 2-3 times per week Mon-Fri only
   const [showFlashDeal, setShowFlashDeal] = useState(false);
@@ -433,6 +434,10 @@ export default function Discover() {
         </div>
       </div>
     );
+  }
+
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
   }
 
   return (
