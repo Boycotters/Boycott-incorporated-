@@ -561,7 +561,9 @@ export default function Earn() {
     );
   }
 
-  // Determine if tasks are blocked due to weekend
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} showBack={false} />;
+  }
   const isWeekendBlocked = taskAvailability && !taskAvailability.available && taskAvailability.is_weekend;
   const hasWeekendCampaign = taskAvailability?.has_campaign && taskAvailability?.is_weekend;
 
