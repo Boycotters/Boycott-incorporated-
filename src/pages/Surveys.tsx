@@ -448,6 +448,10 @@ export default function Surveys() {
     );
   }
 
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
+  }
+
   // Show weekend break message if surveys are blocked
   if (isWeekendBlocked) {
     return (
