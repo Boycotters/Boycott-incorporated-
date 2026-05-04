@@ -76,14 +76,37 @@ export default function Videos() {
   const { data: videos, isLoading } = useQuery({
     queryKey: ['videos'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      
+      const [{ data: regular, error }, { data: aiVids }] = await Promise.all([
+        supabase
+          .from('videos')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('ai_generated_videos')
+          .select('*')
+          .eq('is_active', true)
+          .in('target_placement', ['videos', 'all'])
+          .not('video_url', 'is', null)
+          .order('created_at', { ascending: false }),
+      ]);
+
       if (error) throw error;
-      return data as Video[];
+      const aiMapped: Video[] = (aiVids || []).map((v: any) => ({
+        id: v.id,
+        title: v.title,
+        description: v.prompt,
+        video_url: v.video_url,
+        thumbnail_url: v.thumbnail_url,
+        duration_seconds: v.duration_seconds || 30,
+        points_reward: v.points_reward || 5,
+        category: 'ai',
+        source: 'ai',
+        partner_name: 'AI',
+        view_count: 0,
+        is_active: true,
+      }));
+      return [...aiMapped, ...((regular || []) as Video[])];
     },
   });
 
