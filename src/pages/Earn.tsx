@@ -499,6 +499,15 @@ export default function Earn() {
       return;
     }
     
+    // Check global daily cap
+    if (hasReachedDailyCap) {
+      toast({
+        title: "Daily Cap Reached",
+        description: "You've earned all available points today. Come back tomorrow!",
+      });
+      return;
+    }
+
     // Check daily limit
     if (hasReachedDailyLimit) {
       toast({
