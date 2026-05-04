@@ -272,6 +272,10 @@ export default function Videos() {
     );
   }
 
+  if (hasReachedDailyCap) {
+    return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
+  }
+
   // Show weekend break message if videos are blocked
   if (isWeekendBlocked) {
     return (
