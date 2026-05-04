@@ -110,6 +110,7 @@ export default function Earn() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [timeUntilReset, setTimeUntilReset] = useState("");
   const { fireConfetti, fireStreakConfetti, fireMilestoneConfetti, fireTierUpgradeConfetti } = useConfetti();
+  const { hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
 
   // Countdown timer to midnight
   useEffect(() => {
