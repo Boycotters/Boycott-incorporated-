@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TaskVerificationModal } from "@/components/task-verification";
 import { useConfetti } from "@/hooks/useConfetti";
+import { useDailyLimits } from "@/hooks/useDailyLimits";
+import { DailyCapReached } from "@/components/DailyCapReached";
 
 const iconMap: Record<string, any> = {
   social: MessageCircle,
