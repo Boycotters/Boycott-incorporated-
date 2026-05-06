@@ -209,6 +209,246 @@ export type Database = {
         }
         Relationships: []
       }
+      business_campaigns: {
+        Row: {
+          audience: Json
+          budget_zmw: number
+          business_id: string
+          clicks: number
+          conversions: number
+          created_at: string
+          created_by: string | null
+          creative: Json
+          description: string | null
+          end_date: string | null
+          id: string
+          impressions: number
+          name: string
+          objective: string | null
+          spent_zmw: number
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: Json
+          budget_zmw?: number
+          business_id: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          created_by?: string | null
+          creative?: Json
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          impressions?: number
+          name: string
+          objective?: string | null
+          spent_zmw?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: Json
+          budget_zmw?: number
+          business_id?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          created_by?: string | null
+          creative?: Json
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          impressions?: number
+          name?: string
+          objective?: string | null
+          spent_zmw?: number
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_campaigns_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_network_connections: {
+        Row: {
+          created_at: string
+          id: string
+          requester_business_id: string
+          status: string
+          target_business_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_business_id: string
+          status?: string
+          target_business_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_business_id?: string
+          status?: string
+          target_business_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_network_connections_requester_business_id_fkey"
+            columns: ["requester_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_network_connections_target_business_id_fkey"
+            columns: ["target_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_profiles: {
+        Row: {
+          business_type: string | null
+          city: string | null
+          company_name: string
+          created_at: string
+          description: string | null
+          id: string
+          industry: string | null
+          is_listed: boolean
+          is_verified: boolean
+          logo_url: string | null
+          owner_id: string
+          pacra_number: string | null
+          province: string | null
+          tpin: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          business_type?: string | null
+          city?: string | null
+          company_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_listed?: boolean
+          is_verified?: boolean
+          logo_url?: string | null
+          owner_id: string
+          pacra_number?: string | null
+          province?: string | null
+          tpin?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          business_type?: string | null
+          city?: string | null
+          company_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_listed?: boolean
+          is_verified?: boolean
+          logo_url?: string | null
+          owner_id?: string
+          pacra_number?: string | null
+          province?: string | null
+          tpin?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      business_team_members: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["business_role"]
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["business_role"]
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["business_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_team_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_metrics: {
+        Row: {
+          campaign_id: string
+          clicks: number
+          conversions: number
+          created_at: string
+          id: string
+          impressions: number
+          metric_date: string
+          spend_zmw: number
+        }
+        Insert: {
+          campaign_id: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          metric_date?: string
+          spend_zmw?: number
+        }
+        Update: {
+          campaign_id?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          metric_date?: string
+          spend_zmw?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "business_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_activity_limits: {
         Row: {
           activity_date: string
@@ -1967,6 +2207,8 @@ export type Database = {
         Returns: Json
       }
       is_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      is_business_admin: { Args: { _business_id: string }; Returns: boolean }
+      is_business_member: { Args: { _business_id: string }; Returns: boolean }
       join_tournament: {
         Args: { p_tournament_id: string; p_user_id: string }
         Returns: Json
@@ -2056,6 +2298,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      business_role: "owner" | "admin" | "manager" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2184,6 +2427,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      business_role: ["owner", "admin", "manager", "viewer"],
     },
   },
 } as const
