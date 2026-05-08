@@ -508,13 +508,11 @@ export default function Earn() {
       return;
     }
 
-    // Check daily limit (per-task-type)
-    const isPartnered = (task as any)?.is_partnered;
-    const activityType = isPartnered ? 'partnered_tasks' : 'regular_tasks';
-    if (hasReachedDailyLimit || !canDoActivity(activityType)) {
+    // Check daily limit (per-task-type + global)
+    if (hasReachedDailyLimit || !canDoActivity('regular_tasks')) {
       toast({
         title: "Daily Limit Reached",
-        description: "You've completed all tasks for this section today. Come back tomorrow!",
+        description: "You've completed all tasks for today. Come back tomorrow!",
       });
       return;
     }
