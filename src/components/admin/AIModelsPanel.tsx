@@ -195,6 +195,27 @@ export function AIModelsPanel() {
     loading,
   } = useAI();
 
+  // Live AI activity feed (real-time)
+  const [liveLogs, setLiveLogs] = useState<Array<{ id: string; action: string; created_at: string; user_id: string | null }>>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('ai_usage_logs')
+        .select('id, action, created_at, user_id')
+        .order('created_at', { ascending: false })
+        .limit(40);
+      if (active && data) setLiveLogs(data);
+    })();
+    const channel = supabase
+      .channel('ai-usage-logs-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ai_usage_logs' }, (payload) => {
+        setLiveLogs((prev) => [payload.new as any, ...prev].slice(0, 50));
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, []);
+
   const filteredModels = AI_MODELS.filter(m => 
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.category.toLowerCase().includes(searchQuery.toLowerCase())
