@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +57,17 @@ export function AIVideoManagement() {
       return data as AIVideo[];
     },
   });
+
+  // Realtime: live updates whenever an AI video changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-ai-videos-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_generated_videos' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-ai-videos'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (video: typeof newVideo) => {

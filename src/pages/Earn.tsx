@@ -112,7 +112,7 @@ export default function Earn() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [timeUntilReset, setTimeUntilReset] = useState("");
   const { fireConfetti, fireStreakConfetti, fireMilestoneConfetti, fireTierUpgradeConfetti } = useConfetti();
-  const { hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
+  const { hasReachedDailyCap, totalPointsEarned, maxDailyPoints, canDoActivity } = useDailyLimits();
 
   // Countdown timer to midnight
   useEffect(() => {
@@ -508,11 +508,11 @@ export default function Earn() {
       return;
     }
 
-    // Check daily limit
-    if (hasReachedDailyLimit) {
+    // Check daily limit (per-task-type + global)
+    if (hasReachedDailyLimit || !canDoActivity('regular_tasks')) {
       toast({
         title: "Daily Limit Reached",
-        description: "Come back tomorrow for more tasks!",
+        description: "You've completed all tasks for today. Come back tomorrow!",
       });
       return;
     }

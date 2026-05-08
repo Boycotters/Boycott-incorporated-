@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Brain, MessageCircle, Shield, BarChart3, BookOpen, Heart, 
   Map, Eye, Sparkles, CheckCircle2, Activity, Zap, RefreshCw,
-  Search, FileText, TrendingUp
+  Search, FileText, TrendingUp, Radio
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAI } from '@/hooks/useAI';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AIModel {
@@ -193,6 +195,27 @@ export function AIModelsPanel() {
     loading,
   } = useAI();
 
+  // Live AI activity feed (real-time)
+  const [liveLogs, setLiveLogs] = useState<Array<{ id: string; action: string; created_at: string; user_id: string | null }>>([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('ai_usage_logs')
+        .select('id, action, created_at, user_id')
+        .order('created_at', { ascending: false })
+        .limit(40);
+      if (active && data) setLiveLogs(data);
+    })();
+    const channel = supabase
+      .channel('ai-usage-logs-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ai_usage_logs' }, (payload) => {
+        setLiveLogs((prev) => [payload.new as any, ...prev].slice(0, 50));
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, []);
+
   const filteredModels = AI_MODELS.filter(m => 
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -306,7 +329,44 @@ export function AIModelsPanel() {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Live Activity Feed */}
+      <Card className="border-primary/20">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Radio className="w-4 h-4 text-green-500 animate-pulse" />
+            Live AI Activity
+            <Badge variant="outline" className="text-[10px] ml-auto">
+              {liveLogs.length} recent
+            </Badge>
+          </CardTitle>
+          <CardDescription className="text-[11px]">
+            Real-time stream of every AI call across all models.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 pt-0">
+          {liveLogs.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              No AI activity yet. Run a model to see it appear here live.
+            </p>
+          ) : (
+            <ScrollArea className="h-44">
+              <div className="space-y-1.5">
+                {liveLogs.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between gap-2 text-xs p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Sparkles className="w-3 h-3 text-primary shrink-0" />
+                      <span className="font-medium truncate">{log.action}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {new Date(log.created_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input

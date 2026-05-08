@@ -246,6 +246,10 @@ export default function Videos() {
   };
 
   const handleClaim = () => {
+    if (!canDoActivity('videos')) {
+      toast.error("Daily video limit reached. Come back tomorrow!");
+      return;
+    }
     if (currentVideo && canComplete) {
       completeMutation.mutate({
         videoId: currentVideo.id,

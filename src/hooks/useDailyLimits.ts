@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -15,6 +16,7 @@ interface DailyActivityStatus {
 
 export function useDailyLimits() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['daily-activity-status', user?.id],
@@ -29,8 +31,25 @@ export function useDailyLimits() {
       return data as unknown as DailyActivityStatus;
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 10000,
   });
+
+  // Realtime: refetch instantly when this user's daily limit row changes
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`daily-limits-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'daily_activity_limits',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['daily-activity-status', user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, queryClient]);
 
   const canDoActivity = (type: 'partnered_tasks' | 'regular_tasks' | 'surveys' | 'videos' | 'games') => {
     if (!data) return true;

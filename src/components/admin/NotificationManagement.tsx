@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,6 +100,20 @@ export function NotificationManagement() {
     },
     refetchInterval: 15000,
   });
+
+  // Realtime: notifications + queue updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-notifications-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification_queue' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (notification: typeof newNotification) => {
