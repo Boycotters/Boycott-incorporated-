@@ -101,6 +101,20 @@ export function NotificationManagement() {
     refetchInterval: 15000,
   });
 
+  // Realtime: notifications + queue updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-notifications-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification_queue' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const createMutation = useMutation({
     mutationFn: async (notification: typeof newNotification) => {
       const isScheduled = !!notification.scheduled_for;
