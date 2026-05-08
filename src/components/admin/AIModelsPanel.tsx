@@ -329,7 +329,44 @@ export function AIModelsPanel() {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Live Activity Feed */}
+      <Card className="border-primary/20">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Radio className="w-4 h-4 text-green-500 animate-pulse" />
+            Live AI Activity
+            <Badge variant="outline" className="text-[10px] ml-auto">
+              {liveLogs.length} recent
+            </Badge>
+          </CardTitle>
+          <CardDescription className="text-[11px]">
+            Real-time stream of every AI call across all models.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 pt-0">
+          {liveLogs.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              No AI activity yet. Run a model to see it appear here live.
+            </p>
+          ) : (
+            <ScrollArea className="h-44">
+              <div className="space-y-1.5">
+                {liveLogs.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between gap-2 text-xs p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Sparkles className="w-3 h-3 text-primary shrink-0" />
+                      <span className="font-medium truncate">{log.action}</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {new Date(log.created_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
