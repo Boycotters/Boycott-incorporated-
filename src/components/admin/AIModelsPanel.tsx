@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Brain, MessageCircle, Shield, BarChart3, BookOpen, Heart, 
   Map, Eye, Sparkles, CheckCircle2, Activity, Zap, RefreshCw,
-  Search, FileText, TrendingUp
+  Search, FileText, TrendingUp, Radio
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAI } from '@/hooks/useAI';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AIModel {
