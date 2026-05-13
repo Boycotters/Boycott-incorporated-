@@ -101,6 +101,20 @@ export function PointTransferSection() {
       if (result.success) {
         setLastResult(result);
         toast.success(result.message);
+        // Email sender + recipient + admin
+        const amt = parseInt(amount || "0");
+        const senderLabel = user?.email || "A user";
+        if (user?.email) {
+          supabase.functions.invoke("send-email", {
+            body: { template: "transfer_created", to: user.email, data: { role: "sender", amount: amt, counterparty: recipientEmail } },
+          }).catch(() => {});
+        }
+        supabase.functions.invoke("send-email", {
+          body: { template: "transfer_created", to: recipientEmail, data: { role: "recipient", amount: amt, counterparty: senderLabel } },
+        }).catch(() => {});
+        supabase.functions.invoke("send-email", {
+          body: { template: "admin_alert", data: { title: "Transfer pending review", message: `${senderLabel} → ${recipientEmail}: ${amt} pts` } },
+        }).catch(() => {});
         setRecipientEmail("");
         setAmount("");
         queryClient.invalidateQueries({ queryKey: ["wallet-transfer"] });

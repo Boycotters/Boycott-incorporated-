@@ -74,11 +74,27 @@ export function TransferManagement() {
         p_admin_notes: adminNotes || null,
       });
       if (error) throw error;
-      return data as any;
+      return { result: data as any, transferId, action };
     },
-    onSuccess: (result) => {
+    onSuccess: ({ result, transferId, action }) => {
       if (result.success) {
         toast.success(result.message);
+        const t = transfers.find((x: any) => x.id === transferId);
+        if (t) {
+          const sender = usersById.get(t.sender_id) as any;
+          const recipient = usersById.get(t.recipient_id) as any;
+          const status = action === "approve" ? "approved" : "rejected";
+          if (sender?.email) {
+            supabase.functions.invoke("send-email", {
+              body: { template: "transfer_reviewed", to: sender.email, data: { role: "sender", status, amount: t.amount, counterparty: recipient?.email || recipient?.full_name || "recipient" } },
+            }).catch(() => {});
+          }
+          if (recipient?.email) {
+            supabase.functions.invoke("send-email", {
+              body: { template: "transfer_reviewed", to: recipient.email, data: { role: "recipient", status, amount: t.amount, counterparty: sender?.email || sender?.full_name || "sender" } },
+            }).catch(() => {});
+          }
+        }
         setReviewTransfer(null);
         setAdminNotes("");
         queryClient.invalidateQueries({ queryKey: ["admin-transfers"] });

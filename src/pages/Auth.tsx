@@ -406,6 +406,26 @@ const Auth = () => {
         }
       }
 
+      // Welcome email + admin alert (fire-and-forget)
+      if (result.data.email) {
+        supabase.functions.invoke('send-email', {
+          body: {
+            template: 'welcome',
+            to: result.data.email,
+            data: { name: result.data.fullName || result.data.email.split('@')[0] },
+          },
+        }).catch(() => {});
+        supabase.functions.invoke('send-email', {
+          body: {
+            template: 'admin_alert',
+            data: {
+              title: 'New signup',
+              message: `New user joined: ${result.data.email} (${result.data.fullName || 'no name'})`,
+            },
+          },
+        }).catch(() => {});
+      }
+
       if (hasSession) {
         // User is auto-confirmed and logged in - go to home
         toast({
