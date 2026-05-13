@@ -118,9 +118,24 @@ export default function Withdraw() {
       if (error) throw error;
       return result as unknown as WithdrawalResult;
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       if (result.success) {
         toast.success(result.message);
+        // Confirmation email + admin alert (large > 5000 pts)
+        if (user?.email) {
+          supabase.functions.invoke('send-email', {
+            body: {
+              template: 'withdrawal_status',
+              to: user.email,
+              data: { status: 'pending', amount: variables.amount, kwacha: Math.round(variables.amount / 15), provider: variables.provider, phone: variables.phoneNumber },
+            },
+          }).catch(() => {});
+        }
+        if (variables.amount >= 5000) {
+          supabase.functions.invoke('send-email', {
+            body: { template: 'admin_alert', data: { title: 'Large withdrawal request', message: `${user?.email || 'User'} requested ${variables.amount} pts via ${variables.provider}` } },
+          }).catch(() => {});
+        }
         queryClient.invalidateQueries({ queryKey: ['wallet'] });
         queryClient.invalidateQueries({ queryKey: ['withdrawals'] });
         queryClient.invalidateQueries({ queryKey: ['withdrawal-eligibility'] });
