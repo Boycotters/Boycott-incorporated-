@@ -140,11 +140,29 @@ export function WithdrawalManagement({ withdrawals }: WithdrawalManagementProps)
       });
       
       if (error) throw error;
-      return data as any;
+      return { result: data as any, withdrawalId, status, notes };
     },
-    onSuccess: (result) => {
+    onSuccess: ({ result, withdrawalId, status, notes }) => {
       if (result?.success) {
         toast.success(result.message);
+        const w = withdrawals.find((x) => x.id === withdrawalId);
+        const u = w ? usersMap[w.user_id] : null;
+        if (w && u?.email) {
+          supabase.functions.invoke('send-email', {
+            body: {
+              template: 'withdrawal_status',
+              to: u.email,
+              data: {
+                status,
+                amount: w.amount,
+                kwacha: Math.round((w.net_amount / 150) * 10),
+                provider: w.provider,
+                phone: w.phone_number,
+                notes,
+              },
+            },
+          }).catch((e) => console.warn('email send failed', e));
+        }
         queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
         queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
         setRejectDialogOpen(false);
