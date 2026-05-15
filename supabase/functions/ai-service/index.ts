@@ -40,9 +40,24 @@ async function checkRateLimit(userId: string | undefined, action: string): Promi
   return data as { allowed: boolean; message?: string };
 }
 
-async function callAI(systemPrompt: string, userPrompt: string, useTools = false, tools?: any[], stream = false) {
+// Models with automatic fallback chain. Gemini is fast/cheap; OpenAI GPT-5 takes over on rate limit / credit issues.
+const PRIMARY_MODEL = 'google/gemini-3-flash-preview';
+const FALLBACK_MODEL = 'openai/gpt-5-mini';
+
+async function gatewayFetch(body: any) {
+  return await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+async function callAI(systemPrompt: string, userPrompt: string, useTools = false, tools?: any[], stream = false, modelOverride?: string) {
   const body: any = {
-    model: 'google/gemini-3-flash-preview',
+    model: modelOverride || PRIMARY_MODEL,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
@@ -58,14 +73,14 @@ async function callAI(systemPrompt: string, userPrompt: string, useTools = false
     body.stream = true;
   }
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  let response = await gatewayFetch(body);
+
+  // Auto-fallback to OpenAI on rate-limit (429) or credits (402)
+  if (!response.ok && (response.status === 429 || response.status === 402) && body.model !== FALLBACK_MODEL) {
+    console.warn(`Primary model ${body.model} returned ${response.status}, falling back to ${FALLBACK_MODEL}`);
+    body.model = FALLBACK_MODEL;
+    response = await gatewayFetch(body);
+  }
 
   if (!response.ok) {
     const error = await response.text();
