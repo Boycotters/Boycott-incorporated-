@@ -2247,6 +2247,10 @@ export type Database = {
         Args: { p_reward_id: string; p_user_id: string }
         Returns: Json
       }
+      request_vip_upgrade: {
+        Args: { p_target_slug: string; p_user_id: string }
+        Returns: Json
+      }
       request_withdrawal:
         | {
             Args: {
