@@ -15,6 +15,26 @@ export function AIChatbot() {
   const { chatbot, loading } = useAI();
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+
+  const speak = (text: string, idx: number) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (speakingIdx === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1;
+    utter.pitch = 1;
+    utter.onend = () => setSpeakingIdx(null);
+    utter.onerror = () => setSpeakingIdx(null);
+    setSpeakingIdx(idx);
+    window.speechSynthesis.speak(utter);
+  };
+
+  useEffect(() => () => { if (typeof window !== 'undefined') window.speechSynthesis?.cancel(); }, []);
 
   const { data: userData } = useQuery({
     queryKey: ['chatbot-user-data', user?.id],
