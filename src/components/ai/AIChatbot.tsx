@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +15,26 @@ export function AIChatbot() {
   const { chatbot, loading } = useAI();
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+
+  const speak = (text: string, idx: number) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (speakingIdx === idx) {
+      window.speechSynthesis.cancel();
+      setSpeakingIdx(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1;
+    utter.pitch = 1;
+    utter.onend = () => setSpeakingIdx(null);
+    utter.onerror = () => setSpeakingIdx(null);
+    setSpeakingIdx(idx);
+    window.speechSynthesis.speak(utter);
+  };
+
+  useEffect(() => () => { if (typeof window !== 'undefined') window.speechSynthesis?.cancel(); }, []);
 
   const { data: userData } = useQuery({
     queryKey: ['chatbot-user-data', user?.id],
@@ -106,9 +126,7 @@ export function AIChatbot() {
         )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-              msg.role === 'user' ? 'bg-primary/10' : 'bg-primary/10'
-            }`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-primary/10`}>
               {msg.role === 'user' ? <User className="w-3 h-3 text-primary" /> : <Bot className="w-3 h-3 text-primary" />}
             </div>
             <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
@@ -117,6 +135,17 @@ export function AIChatbot() {
                 : 'bg-muted text-foreground rounded-bl-sm'
             }`}>
               {msg.content}
+              {msg.role === 'assistant' && (
+                <button
+                  onClick={() => speak(msg.content, i)}
+                  className="ml-2 inline-flex items-center align-middle text-muted-foreground hover:text-primary transition-colors"
+                  aria-label={speakingIdx === i ? 'Stop reading' : 'Read aloud'}
+                >
+                  {speakingIdx === i
+                    ? <VolumeX className="w-3 h-3" />
+                    : <Volume2 className="w-3 h-3" />}
+                </button>
+              )}
             </div>
           </div>
         ))}
