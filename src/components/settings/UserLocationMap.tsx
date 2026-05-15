@@ -6,6 +6,21 @@ import { MapPin, Navigation, Loader2, ExternalLink, LocateFixed, Radio, StopCirc
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix default Leaflet marker icons in bundlers
+const defaultIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+L.Marker.prototype.options.icon = defaultIcon;
 
 type SharedPosition = {
   lat: number;
@@ -27,24 +42,28 @@ const toSharedPosition = (coords: GeolocationCoordinates): SharedPosition => ({
   updatedAt: new Date().toISOString(),
 });
 
-const getMapsLink = (position: SharedPosition) =>
-  `https://www.google.com/maps?q=${position.lat},${position.lng}`;
+const getMapsLink = (p: SharedPosition) =>
+  `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=16/${p.lat}/${p.lng}`;
 
-const getMapsEmbedLink = (position: SharedPosition) =>
-  `https://maps.google.com/maps?q=${position.lat},${position.lng}&z=15&output=embed`;
+const getDirectionsLink = (p: SharedPosition) =>
+  `https://www.openstreetmap.org/directions?from=&to=${p.lat}%2C${p.lng}`;
 
 const getLocationErrorMessage = (error: GeolocationPositionError) => {
   switch (error.code) {
-    case error.PERMISSION_DENIED:
-      return "Location access was denied. Please allow access and try again.";
-    case error.POSITION_UNAVAILABLE:
-      return "Your device could not determine a location right now.";
-    case error.TIMEOUT:
-      return "The location request timed out. Retrying...";
-    default:
-      return "Unable to get your location right now.";
+    case error.PERMISSION_DENIED: return "Location access was denied. Please allow access and try again.";
+    case error.POSITION_UNAVAILABLE: return "Your device could not determine a location right now.";
+    case error.TIMEOUT: return "The location request timed out. Retrying...";
+    default: return "Unable to get your location right now.";
   }
 };
+
+function RecenterMap({ pos }: { pos: SharedPosition | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pos) map.setView([pos.lat, pos.lng], 15, { animate: true });
+  }, [pos, map]);
+  return null;
+}
 
 export function UserLocationMap() {
   const { user } = useAuth();
@@ -57,14 +76,13 @@ export function UserLocationMap() {
   const watchIdRef = useRef<number | null>(null);
   const lastPersistedAtRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const liveIntentRef = useRef(false); // tracks if user wants live sharing
+  const liveIntentRef = useRef(false);
 
   const visiblePosition = useMemo(() => livePos ?? currentPos, [livePos, currentPos]);
 
   const persistLocation = useCallback(
     async (coords: GeolocationCoordinates, options?: { notify?: boolean; throttleMs?: number }) => {
       if (!user?.id) return true;
-
       const throttleMs = options?.throttleMs ?? 0;
       const now = Date.now();
       if (throttleMs > 0 && now - lastPersistedAtRef.current < throttleMs) return false;
@@ -83,28 +101,26 @@ export function UserLocationMap() {
 
       if (error) {
         console.error("GPS insert error:", error);
-        if (options?.notify) toast.error("Location captured but could not sync to dashboard.");
+        if (options?.notify) toast.error("Location captured but could not sync.");
         return false;
       }
-      if (options?.notify) toast.success("Location captured and synced to the dashboard.");
+      if (options?.notify) toast.success("Location synced to dashboard.");
       return true;
     },
     [user?.id]
   );
 
-  // Core function to start the geolocation watcher
   const startWatcher = useCallback(() => {
     if (!navigator.geolocation) return;
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
-        const nextPosition = toSharedPosition(pos.coords);
-        setLivePos(nextPosition);
-        setCurrentPos(nextPosition);
+        const next = toSharedPosition(pos.coords);
+        setLivePos(next);
+        setCurrentPos(next);
         setStartingLive(false);
         setIsLiveSharing(true);
         setErrorCount(0);
@@ -112,21 +128,14 @@ export function UserLocationMap() {
       },
       (err) => {
         console.warn("GPS watch error:", err.message);
-        setErrorCount(prev => prev + 1);
-
-        // On timeout or position unavailable, auto-retry if user still wants live sharing
+        setErrorCount(p => p + 1);
         if (err.code !== err.PERMISSION_DENIED && liveIntentRef.current) {
-          // Clear the failed watcher
           if (watchIdRef.current !== null) {
             navigator.geolocation.clearWatch(watchIdRef.current);
             watchIdRef.current = null;
           }
-          // Retry after a short delay
-          retryTimerRef.current = setTimeout(() => {
-            if (liveIntentRef.current) startWatcher();
-          }, 3000);
+          retryTimerRef.current = setTimeout(() => { if (liveIntentRef.current) startWatcher(); }, 3000);
         } else {
-          // Permission denied — stop everything
           setStartingLive(false);
           setIsLiveSharing(false);
           liveIntentRef.current = false;
@@ -143,78 +152,49 @@ export function UserLocationMap() {
 
   const stopLiveLocation = useCallback(() => {
     liveIntentRef.current = false;
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
+    if (retryTimerRef.current) { clearTimeout(retryTimerRef.current); retryTimerRef.current = null; }
     if (watchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
     setIsLiveSharing(false);
     setErrorCount(0);
-    toast.success("Live location sharing stopped.");
+    toast.success("Live location stopped.");
   }, []);
 
   const getCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation not supported on this device");
-      return;
-    }
-
-    const confirmed = window.confirm("Share your current location with Boycott now?");
-    if (!confirmed) return;
-
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
     setLoadingCurrent(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const nextPosition = toSharedPosition(pos.coords);
-        setCurrentPos(nextPosition);
+        const next = toSharedPosition(pos.coords);
+        setCurrentPos(next);
         setLoadingCurrent(false);
-        if (user?.id) {
-          await persistLocation(pos.coords, { notify: true });
-        } else {
-          toast.success("Location captured on this device.");
-        }
+        if (user?.id) await persistLocation(pos.coords, { notify: true });
+        else toast.success("Location captured.");
       },
-      (err) => {
-        setLoadingCurrent(false);
-        toast.error(getLocationErrorMessage(err));
-      },
+      (err) => { setLoadingCurrent(false); toast.error(getLocationErrorMessage(err)); },
       { ...GEO_OPTIONS, maximumAge: 0 }
     );
   }, [persistLocation, user?.id]);
 
   const startLiveLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation not supported on this device");
-      return;
-    }
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
     if (watchIdRef.current !== null) return;
-
-    const confirmed = window.confirm(
-      "Share your live location with Boycott and keep updating the admin dashboard until you stop?"
-    );
-    if (!confirmed) return;
-
     liveIntentRef.current = true;
     setStartingLive(true);
     setErrorCount(0);
     startWatcher();
   }, [startWatcher]);
 
-  // Keep-alive: periodically check if watcher is still running
   useEffect(() => {
     if (!isLiveSharing) return;
     const interval = setInterval(() => {
-      if (liveIntentRef.current && watchIdRef.current === null) {
-        startWatcher();
-      }
+      if (liveIntentRef.current && watchIdRef.current === null) startWatcher();
     }, 15000);
     return () => clearInterval(interval);
   }, [isLiveSharing, startWatcher]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       liveIntentRef.current = false;
@@ -224,19 +204,6 @@ export function UserLocationMap() {
       }
     };
   }, []);
-
-  const openInGoogleMaps = () => {
-    if (!visiblePosition) return;
-    window.open(getMapsLink(visiblePosition), "_blank");
-  };
-
-  const openDirections = () => {
-    if (!visiblePosition) return;
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${visiblePosition.lat},${visiblePosition.lng}`,
-      "_blank"
-    );
-  };
 
   return (
     <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
@@ -255,7 +222,7 @@ export function UserLocationMap() {
 
       <div className="bg-muted/20 rounded-xl p-4 mb-4 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Current location captures coordinates once. Live location keeps updating until you stop it.
+          Powered by OpenStreetMap. Live mode keeps updating until you stop it.
         </p>
 
         {visiblePosition ? (
@@ -263,7 +230,7 @@ export function UserLocationMap() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary" className="gap-1">
                 <LocateFixed className="w-3 h-3" />
-                Current saved
+                Tracked
               </Badge>
               {errorCount > 0 && isLiveSharing && (
                 <Badge variant="outline" className="gap-1 text-yellow-600 border-yellow-300">
@@ -279,28 +246,39 @@ export function UserLocationMap() {
                 {visiblePosition.lat.toFixed(6)}, {visiblePosition.lng.toFixed(6)}
               </p>
               <p className="text-xs text-muted-foreground">
-                Accuracy: {visiblePosition.accuracy ? `${Math.round(visiblePosition.accuracy)}m` : "Unknown"} • Updated {new Date(visiblePosition.updatedAt).toLocaleTimeString()}
+                Accuracy: {visiblePosition.accuracy ? `${Math.round(visiblePosition.accuracy)}m` : "Unknown"} · Updated {new Date(visiblePosition.updatedAt).toLocaleTimeString()}
               </p>
             </div>
 
             <div className="rounded-xl overflow-hidden border border-border bg-background">
-              <iframe
-                title="Live location map"
-                src={getMapsEmbedLink(visiblePosition)}
-                className="w-full h-52 border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <MapContainer
+                center={[visiblePosition.lat, visiblePosition.lng]}
+                zoom={15}
+                scrollWheelZoom={false}
+                style={{ height: 220, width: "100%" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={[visiblePosition.lat, visiblePosition.lng]}>
+                  <Popup>
+                    You are here<br />
+                    {visiblePosition.lat.toFixed(5)}, {visiblePosition.lng.toFixed(5)}
+                  </Popup>
+                </Marker>
+                <RecenterMap pos={visiblePosition} />
+              </MapContainer>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Button variant="outline" className="gap-2" onClick={openInGoogleMaps}>
+              <Button variant="outline" className="gap-2" onClick={() => window.open(getMapsLink(visiblePosition), "_blank")}>
                 <ExternalLink className="w-4 h-4" />
-                View on Google Maps
+                Open in OSM
               </Button>
-              <Button variant="outline" className="gap-2" onClick={openDirections}>
+              <Button variant="outline" className="gap-2" onClick={() => window.open(getDirectionsLink(visiblePosition), "_blank")}>
                 <Navigation className="w-4 h-4" />
-                Open Directions
+                Directions
               </Button>
             </div>
           </>
@@ -315,11 +293,7 @@ export function UserLocationMap() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <Button
-          onClick={getCurrentLocation}
-          disabled={loadingCurrent || startingLive}
-          className="w-full gap-2"
-        >
+        <Button onClick={getCurrentLocation} disabled={loadingCurrent || startingLive} className="w-full gap-2">
           {loadingCurrent ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
           {loadingCurrent ? "Getting Location..." : visiblePosition ? "Refresh Location" : "Get My Location"}
         </Button>
@@ -330,14 +304,9 @@ export function UserLocationMap() {
             Stop Live Location
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            onClick={startLiveLocation}
-            disabled={loadingCurrent || startingLive}
-            className="w-full gap-2"
-          >
+          <Button variant="outline" onClick={startLiveLocation} disabled={loadingCurrent || startingLive} className="w-full gap-2">
             {startingLive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}
-            {startingLive ? "Starting Live View..." : "Start Live Location"}
+            {startingLive ? "Starting..." : "Start Live Location"}
           </Button>
         )}
       </div>

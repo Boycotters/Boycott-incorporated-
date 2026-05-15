@@ -18,7 +18,8 @@ type AIAction =
   | 'fraud_detection'
   | 'sentiment_analysis'
   | 'learning_insights'
-  | 'implementation_roadmap';
+  | 'implementation_roadmap'
+  | 'tts';
 
 interface AIRequest {
   action: AIAction;
@@ -559,6 +560,36 @@ Provide detailed phases, timelines, costs, and risks.`,
   );
 }
 
+// Text-to-speech via Lovable AI Gateway (OpenAI TTS-compatible)
+async function handleTTS(data: { text: string; voice?: string }) {
+  const voice = data.voice || 'alloy';
+  const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o-mini-tts',
+      voice,
+      input: (data.text || '').slice(0, 4000),
+      response_format: 'mp3',
+    }),
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('TTS error:', response.status, err);
+    throw new Error(`TTS error: ${response.status}`);
+  }
+  const buf = await response.arrayBuffer();
+  // base64 encode
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  const audioBase64 = btoa(binary);
+  return { audio: audioBase64, mime: 'audio/mpeg' };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -617,6 +648,9 @@ serve(async (req) => {
         break;
       case 'implementation_roadmap':
         result = await handleImplementationRoadmap(data as any);
+        break;
+      case 'tts':
+        result = await handleTTS(data as any);
         break;
       default:
         throw new Error(`Unknown action: ${action}`);

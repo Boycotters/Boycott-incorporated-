@@ -16,25 +16,37 @@ export function AIChatbot() {
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const speak = (text: string, idx: number) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  const speak = async (text: string, idx: number) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     if (speakingIdx === idx) {
-      window.speechSynthesis.cancel();
       setSpeakingIdx(null);
       return;
     }
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 1;
-    utter.pitch = 1;
-    utter.onend = () => setSpeakingIdx(null);
-    utter.onerror = () => setSpeakingIdx(null);
     setSpeakingIdx(idx);
-    window.speechSynthesis.speak(utter);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-service', {
+        body: { action: 'tts', data: { text, voice: 'nova' } },
+      });
+      if (error) throw error;
+      const audioB64 = (data as any)?.data?.audio;
+      if (!audioB64) throw new Error('No audio');
+      const audio = new Audio(`data:audio/mpeg;base64,${audioB64}`);
+      audioRef.current = audio;
+      audio.onended = () => setSpeakingIdx(null);
+      audio.onerror = () => setSpeakingIdx(null);
+      await audio.play();
+    } catch (err) {
+      console.error('TTS failed', err);
+      setSpeakingIdx(null);
+    }
   };
 
-  useEffect(() => () => { if (typeof window !== 'undefined') window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => () => { if (audioRef.current) audioRef.current.pause(); }, []);
 
   const { data: userData } = useQuery({
     queryKey: ['chatbot-user-data', user?.id],
