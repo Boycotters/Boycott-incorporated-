@@ -377,17 +377,13 @@ ${data.userContext ? `User context: Level ${data.userContext.level}, VIP: ${data
     ...data.messages.map(m => ({ role: m.role, content: m.content }))
   ];
 
-  const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-3-flash-preview',
-      messages,
-    }),
-  });
+  // Try OpenAI GPT-5 first for richer answers, fall back to Gemini on rate-limit/credits
+  const tryModel = async (model: string) => gatewayFetch({ model, messages });
+  let response = await tryModel('openai/gpt-5');
+  if (!response.ok && (response.status === 429 || response.status === 402)) {
+    console.warn(`Chatbot: openai/gpt-5 returned ${response.status}, falling back to gemini-3-flash-preview`);
+    response = await tryModel('google/gemini-3-flash-preview');
+  }
 
   if (!response.ok) throw new Error(`AI Gateway error: ${response.status}`);
   const result = await response.json();
