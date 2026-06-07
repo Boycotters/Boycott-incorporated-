@@ -21,12 +21,13 @@ import { formatTimeAgo } from "@/lib/utils";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
 import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
 import { DailyCapReached } from "@/components/DailyCapReached";
+import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 
 export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
-  const { data: dailyData, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
+  const { data: dailyData, hasReachedDailyCap, isWeekendBlocked, totalPointsEarned, maxDailyPoints } = useDailyLimits();
 
   // Flash deal visibility - random 2-3 times per week Mon-Fri only
   const [showFlashDeal, setShowFlashDeal] = useState(false);
@@ -438,6 +439,16 @@ export default function Discover() {
 
   if (hasReachedDailyCap) {
     return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
+  }
+
+  if (isWeekendBlocked) {
+    return (
+      <div className="min-h-screen pb-24 px-4 pt-6">
+        <div className="max-w-md mx-auto">
+          <WeekendBreakMessage />
+        </div>
+      </div>
+    );
   }
 
   return (

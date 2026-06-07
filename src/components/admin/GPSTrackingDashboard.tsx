@@ -234,11 +234,7 @@ export function GPSTrackingDashboard() {
           </div>
           <iframe
             title="Admin live location"
-            src={
-              (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY
-                ? `https://www.google.com/maps/embed/v1/view?key=${import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY}&center=${activeUsers[0].latestLocation.latitude},${activeUsers[0].latestLocation.longitude}&zoom=15`
-                : `https://www.google.com/maps?q=${activeUsers[0].latestLocation.latitude},${activeUsers[0].latestLocation.longitude}&output=embed`)
-            }
+            src={`https://maps.google.com/maps?q=${activeUsers[0].latestLocation.latitude},${activeUsers[0].latestLocation.longitude}&z=15&output=embed`}
             style={{ height: 320, width: "100%", border: 0 }}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
