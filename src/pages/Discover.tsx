@@ -21,6 +21,7 @@ import { formatTimeAgo } from "@/lib/utils";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
 import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
 import { DailyCapReached } from "@/components/DailyCapReached";
+import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 
 export default function Discover() {
   const { user } = useAuth();
