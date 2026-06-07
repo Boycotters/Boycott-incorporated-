@@ -171,6 +171,8 @@ const AI_MODELS: AIModel[] = [
     requestsToday: 0,
     lastUsed: 'Active',
     capabilities: ['Behavior profiling', 'Strength identification', 'Challenge suggestions', 'Churn risk'],
+    action: 'analyze_user',
+  },
   {
     id: 'gpt5-reasoner',
     name: 'GPT-5 Deep Reasoner',
