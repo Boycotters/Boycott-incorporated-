@@ -35,9 +35,9 @@ const getDirectionsLink = (p: SharedPosition) =>
   `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
 
 const getEmbedSrc = (p: SharedPosition) =>
-  GMAPS_BROWSER_KEY
-    ? `https://www.google.com/maps/embed/v1/view?key=${GMAPS_BROWSER_KEY}&center=${p.lat},${p.lng}&zoom=15&maptype=roadmap`
-    : `https://www.google.com/maps?q=${p.lat},${p.lng}&output=embed`;
+  // Use the keyless Google Maps embed — works without enabling the "Maps Embed API"
+  // on the project key, which was the source of the previous blank-map issue.
+  `https://maps.google.com/maps?q=${p.lat},${p.lng}&z=15&output=embed`;
 
 const getLocationErrorMessage = (error: GeolocationPositionError) => {
   switch (error.code) {
