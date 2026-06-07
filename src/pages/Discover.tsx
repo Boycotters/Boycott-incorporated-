@@ -26,7 +26,7 @@ export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [likedTasks, setLikedTasks] = useState<Set<string>>(new Set());
-  const { data: dailyData, hasReachedDailyCap, totalPointsEarned, maxDailyPoints } = useDailyLimits();
+  const { data: dailyData, hasReachedDailyCap, isWeekendBlocked, totalPointsEarned, maxDailyPoints } = useDailyLimits();
 
   // Flash deal visibility - random 2-3 times per week Mon-Fri only
   const [showFlashDeal, setShowFlashDeal] = useState(false);
