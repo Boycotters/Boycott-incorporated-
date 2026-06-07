@@ -561,8 +561,14 @@ Provide detailed phases, timelines, costs, and risks.`,
 }
 
 // Text-to-speech via Lovable AI Gateway (OpenAI TTS-compatible)
-async function handleTTS(data: { text: string; voice?: string }) {
-  const voice = data.voice || 'alloy';
+// Uses gpt-4o-mini-tts with conversational instructions for a smoother,
+// more human-sounding delivery than the default monotone read.
+async function handleTTS(data: { text: string; voice?: string; instructions?: string }) {
+  const voice = data.voice || 'shimmer';
+  const instructions =
+    data.instructions ||
+    'Speak in a warm, friendly, conversational tone. Sound like a helpful human assistant — natural pacing, light intonation, never robotic. Use subtle pauses for clarity.';
+
   const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/speech', {
     method: 'POST',
     headers: {
@@ -573,7 +579,9 @@ async function handleTTS(data: { text: string; voice?: string }) {
       model: 'openai/gpt-4o-mini-tts',
       voice,
       input: (data.text || '').slice(0, 4000),
+      instructions,
       response_format: 'mp3',
+      speed: 1.0,
     }),
   });
   if (!response.ok) {
@@ -582,7 +590,6 @@ async function handleTTS(data: { text: string; voice?: string }) {
     throw new Error(`TTS error: ${response.status}`);
   }
   const buf = await response.arrayBuffer();
-  // base64 encode
   const bytes = new Uint8Array(buf);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
