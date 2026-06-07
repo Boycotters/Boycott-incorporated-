@@ -234,30 +234,20 @@ export function UserLocationMap() {
             </div>
 
             <div className="rounded-xl overflow-hidden border border-border bg-background">
-              <MapContainer
-                center={[visiblePosition.lat, visiblePosition.lng]}
-                zoom={15}
-                scrollWheelZoom={false}
-                style={{ height: 220, width: "100%" }}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={[visiblePosition.lat, visiblePosition.lng]}>
-                  <Popup>
-                    You are here<br />
-                    {visiblePosition.lat.toFixed(5)}, {visiblePosition.lng.toFixed(5)}
-                  </Popup>
-                </Marker>
-                <RecenterMap pos={visiblePosition} />
-              </MapContainer>
+              <iframe
+                title="Your location"
+                src={getEmbedSrc(visiblePosition)}
+                style={{ height: 220, width: "100%", border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button variant="outline" className="gap-2" onClick={() => window.open(getMapsLink(visiblePosition), "_blank")}>
                 <ExternalLink className="w-4 h-4" />
-                Open in OSM
+                Open in Google Maps
               </Button>
               <Button variant="outline" className="gap-2" onClick={() => window.open(getDirectionsLink(visiblePosition), "_blank")}>
                 <Navigation className="w-4 h-4" />
