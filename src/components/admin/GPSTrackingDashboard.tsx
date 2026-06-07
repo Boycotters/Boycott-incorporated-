@@ -225,6 +225,26 @@ export function GPSTrackingDashboard() {
           </Table>
         </div>
       )}
+
+      {/* Live map of most recent active user */}
+      {activeUsers.length > 0 && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="px-3 py-2 text-xs font-medium bg-muted/40 border-b">
+            Live map · {activeUsers[0].userName}
+          </div>
+          <iframe
+            title="Admin live location"
+            src={
+              (import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY
+                ? `https://www.google.com/maps/embed/v1/view?key=${import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY}&center=${activeUsers[0].latestLocation.latitude},${activeUsers[0].latestLocation.longitude}&zoom=15`
+                : `https://www.google.com/maps?q=${activeUsers[0].latestLocation.latitude},${activeUsers[0].latestLocation.longitude}&output=embed`)
+            }
+            style={{ height: 320, width: "100%", border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+      )}
     </div>
   );
 }

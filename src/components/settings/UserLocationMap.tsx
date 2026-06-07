@@ -6,21 +6,7 @@ import { MapPin, Navigation, Loader2, ExternalLink, LocateFixed, Radio, StopCirc
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Fix default Leaflet marker icons in bundlers
-const defaultIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-L.Marker.prototype.options.icon = defaultIcon;
+const GMAPS_BROWSER_KEY = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
 
 type SharedPosition = {
   lat: number;
@@ -43,10 +29,15 @@ const toSharedPosition = (coords: GeolocationCoordinates): SharedPosition => ({
 });
 
 const getMapsLink = (p: SharedPosition) =>
-  `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=16/${p.lat}/${p.lng}`;
+  `https://www.google.com/maps?q=${p.lat},${p.lng}`;
 
 const getDirectionsLink = (p: SharedPosition) =>
-  `https://www.openstreetmap.org/directions?from=&to=${p.lat}%2C${p.lng}`;
+  `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+
+const getEmbedSrc = (p: SharedPosition) =>
+  GMAPS_BROWSER_KEY
+    ? `https://www.google.com/maps/embed/v1/view?key=${GMAPS_BROWSER_KEY}&center=${p.lat},${p.lng}&zoom=15&maptype=roadmap`
+    : `https://www.google.com/maps?q=${p.lat},${p.lng}&output=embed`;
 
 const getLocationErrorMessage = (error: GeolocationPositionError) => {
   switch (error.code) {
@@ -56,14 +47,6 @@ const getLocationErrorMessage = (error: GeolocationPositionError) => {
     default: return "Unable to get your location right now.";
   }
 };
-
-function RecenterMap({ pos }: { pos: SharedPosition | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (pos) map.setView([pos.lat, pos.lng], 15, { animate: true });
-  }, [pos, map]);
-  return null;
-}
 
 export function UserLocationMap() {
   const { user } = useAuth();
@@ -222,7 +205,7 @@ export function UserLocationMap() {
 
       <div className="bg-muted/20 rounded-xl p-4 mb-4 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Powered by OpenStreetMap. Live mode keeps updating until you stop it.
+          Powered by Google Maps. Live mode keeps updating until you stop it.
         </p>
 
         {visiblePosition ? (
@@ -251,30 +234,20 @@ export function UserLocationMap() {
             </div>
 
             <div className="rounded-xl overflow-hidden border border-border bg-background">
-              <MapContainer
-                center={[visiblePosition.lat, visiblePosition.lng]}
-                zoom={15}
-                scrollWheelZoom={false}
-                style={{ height: 220, width: "100%" }}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={[visiblePosition.lat, visiblePosition.lng]}>
-                  <Popup>
-                    You are here<br />
-                    {visiblePosition.lat.toFixed(5)}, {visiblePosition.lng.toFixed(5)}
-                  </Popup>
-                </Marker>
-                <RecenterMap pos={visiblePosition} />
-              </MapContainer>
+              <iframe
+                title="Your location"
+                src={getEmbedSrc(visiblePosition)}
+                style={{ height: 220, width: "100%", border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button variant="outline" className="gap-2" onClick={() => window.open(getMapsLink(visiblePosition), "_blank")}>
                 <ExternalLink className="w-4 h-4" />
-                Open in OSM
+                Open in Google Maps
               </Button>
               <Button variant="outline" className="gap-2" onClick={() => window.open(getDirectionsLink(visiblePosition), "_blank")}>
                 <Navigation className="w-4 h-4" />

@@ -10,8 +10,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
-const FROM = "Boycott Incorporated <onboarding@resend.dev>";
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
+const FROM = "Boycott Incorporated";
 
 type Payload = {
   template:
@@ -99,22 +99,43 @@ function buildTemplate(p: Payload): { subject: string; html: string } {
   }
 }
 
+function b64url(input: string) {
+  // UTF-8 safe base64url encoding
+  const bytes = new TextEncoder().encode(input);
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 async function sendOne(to: string, subject: string, htmlBody: string) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  const GMAIL_KEY = Deno.env.get("GOOGLE_MAIL_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
-  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY missing");
-  const r = await fetch(`${GATEWAY_URL}/emails`, {
+  if (!GMAIL_KEY) throw new Error("GOOGLE_MAIL_API_KEY missing");
+
+  const raw = b64url(
+    [
+      `From: ${FROM}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      "MIME-Version: 1.0",
+      'Content-Type: text/html; charset="UTF-8"',
+      "",
+      htmlBody,
+    ].join("\r\n")
+  );
+
+  const r = await fetch(`${GATEWAY_URL}/users/me/messages/send`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": RESEND_API_KEY,
+      "X-Connection-Api-Key": GMAIL_KEY,
     },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html: htmlBody }),
+    body: JSON.stringify({ raw }),
   });
   const text = await r.text();
-  if (!r.ok) throw new Error(`Resend ${r.status}: ${text}`);
+  if (!r.ok) throw new Error(`Gmail ${r.status}: ${text}`);
   return JSON.parse(text);
 }
 
