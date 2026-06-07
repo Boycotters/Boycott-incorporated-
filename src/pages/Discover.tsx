@@ -441,6 +441,16 @@ export default function Discover() {
     return <DailyCapReached earned={totalPointsEarned} cap={maxDailyPoints} />;
   }
 
+  if (isWeekendBlocked) {
+    return (
+      <div className="min-h-screen pb-24 px-4 pt-6">
+        <div className="max-w-md mx-auto">
+          <WeekendBreakMessage />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6">
       <div className="max-w-md mx-auto space-y-5">
