@@ -209,8 +209,34 @@ export type Database = {
         }
         Relationships: []
       }
+      business_admin_pins: {
+        Row: {
+          business_id: string
+          id: string
+          pin_hash: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          pin_hash: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          pin_hash?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       business_campaigns: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           audience: Json
           budget_zmw: number
           business_id: string
@@ -221,6 +247,7 @@ export type Database = {
           creative: Json
           description: string | null
           end_date: string | null
+          estimated_cost_points: number
           id: string
           impressions: number
           name: string
@@ -231,6 +258,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           audience?: Json
           budget_zmw?: number
           business_id: string
@@ -241,6 +270,7 @@ export type Database = {
           creative?: Json
           description?: string | null
           end_date?: string | null
+          estimated_cost_points?: number
           id?: string
           impressions?: number
           name: string
@@ -251,6 +281,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           audience?: Json
           budget_zmw?: number
           business_id?: string
@@ -261,6 +293,7 @@ export type Database = {
           creative?: Json
           description?: string | null
           end_date?: string | null
+          estimated_cost_points?: number
           id?: string
           impressions?: number
           name?: string
@@ -319,6 +352,87 @@ export type Database = {
           },
         ]
       }
+      business_notification_preferences: {
+        Row: {
+          ai_insight_digest: boolean
+          business_id: string
+          email_billing_alerts: boolean
+          email_campaign_alerts: boolean
+          email_team_activity: boolean
+          id: string
+          push_campaign_alerts: boolean
+          push_competitor_alerts: boolean
+          slack_webhook: string | null
+          sms_critical_alerts: boolean
+          updated_at: string
+          whatsapp_alerts: boolean
+        }
+        Insert: {
+          ai_insight_digest?: boolean
+          business_id: string
+          email_billing_alerts?: boolean
+          email_campaign_alerts?: boolean
+          email_team_activity?: boolean
+          id?: string
+          push_campaign_alerts?: boolean
+          push_competitor_alerts?: boolean
+          slack_webhook?: string | null
+          sms_critical_alerts?: boolean
+          updated_at?: string
+          whatsapp_alerts?: boolean
+        }
+        Update: {
+          ai_insight_digest?: boolean
+          business_id?: string
+          email_billing_alerts?: boolean
+          email_campaign_alerts?: boolean
+          email_team_activity?: boolean
+          id?: string
+          push_campaign_alerts?: boolean
+          push_competitor_alerts?: boolean
+          slack_webhook?: string | null
+          sms_critical_alerts?: boolean
+          updated_at?: string
+          whatsapp_alerts?: boolean
+        }
+        Relationships: []
+      }
+      business_notifications: {
+        Row: {
+          body: string | null
+          business_id: string
+          created_at: string
+          id: string
+          link: string | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title: string
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       business_profiles: {
         Row: {
           business_type: string | null
@@ -376,26 +490,71 @@ export type Database = {
         }
         Relationships: []
       }
+      business_subscriptions: {
+        Row: {
+          auto_renew: boolean
+          business_id: string
+          expires_at: string | null
+          id: string
+          started_at: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          auto_renew?: boolean
+          business_id: string
+          expires_at?: string | null
+          id?: string
+          started_at?: string
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_renew?: boolean
+          business_id?: string
+          expires_at?: string | null
+          id?: string
+          started_at?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_team_members: {
         Row: {
           business_id: string
           created_at: string
+          email: string | null
+          full_name: string | null
           id: string
+          phone: string | null
           role: Database["public"]["Enums"]["business_role"]
+          status: string
+          title: string | null
           user_id: string
         }
         Insert: {
           business_id: string
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["business_role"]
+          status?: string
+          title?: string | null
           user_id: string
         }
         Update: {
           business_id?: string
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["business_role"]
+          status?: string
+          title?: string | null
           user_id?: string
         }
         Relationships: [
@@ -407,6 +566,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      business_wallet_transactions: {
+        Row: {
+          amount: number
+          business_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      business_wallets: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          lifetime_earned: number
+          lifetime_spent: number
+          points_balance: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          lifetime_earned?: number
+          lifetime_spent?: number
+          points_balance?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          lifetime_earned?: number
+          lifetime_spent?: number
+          points_balance?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       campaign_metrics: {
         Row: {
@@ -2099,6 +2321,19 @@ export type Database = {
         }
         Returns: Json
       }
+      business_wallet_spend: {
+        Args: {
+          _amount: number
+          _business_id: string
+          _description: string
+          _reference?: string
+        }
+        Returns: boolean
+      }
+      business_wallet_topup: {
+        Args: { _amount: number; _business_id: string; _description: string }
+        Returns: undefined
+      }
       check_ai_rate_limit: {
         Args: {
           p_action: string
@@ -2278,6 +2513,10 @@ export type Database = {
         }
         Returns: Json
       }
+      set_business_admin_pin: {
+        Args: { _business_id: string; _current_pin: string; _new_pin: string }
+        Returns: boolean
+      }
       submit_tournament_score: {
         Args: { p_score: number; p_tournament_id: string; p_user_id: string }
         Returns: Json
@@ -2298,6 +2537,10 @@ export type Database = {
       verify_admin_access_code: {
         Args: { p_code: string; p_user_id: string }
         Returns: Json
+      }
+      verify_business_admin_pin: {
+        Args: { _business_id: string; _pin: string }
+        Returns: boolean
       }
     }
     Enums: {
