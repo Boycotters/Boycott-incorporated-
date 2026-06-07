@@ -29,10 +29,15 @@ const toSharedPosition = (coords: GeolocationCoordinates): SharedPosition => ({
 });
 
 const getMapsLink = (p: SharedPosition) =>
-  `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=16/${p.lat}/${p.lng}`;
+  `https://www.google.com/maps?q=${p.lat},${p.lng}`;
 
 const getDirectionsLink = (p: SharedPosition) =>
-  `https://www.openstreetmap.org/directions?from=&to=${p.lat}%2C${p.lng}`;
+  `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+
+const getEmbedSrc = (p: SharedPosition) =>
+  GMAPS_BROWSER_KEY
+    ? `https://www.google.com/maps/embed/v1/view?key=${GMAPS_BROWSER_KEY}&center=${p.lat},${p.lng}&zoom=15&maptype=roadmap`
+    : `https://www.google.com/maps?q=${p.lat},${p.lng}&output=embed`;
 
 const getLocationErrorMessage = (error: GeolocationPositionError) => {
   switch (error.code) {
@@ -42,14 +47,6 @@ const getLocationErrorMessage = (error: GeolocationPositionError) => {
     default: return "Unable to get your location right now.";
   }
 };
-
-function RecenterMap({ pos }: { pos: SharedPosition | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (pos) map.setView([pos.lat, pos.lng], 15, { animate: true });
-  }, [pos, map]);
-  return null;
-}
 
 export function UserLocationMap() {
   const { user } = useAuth();
