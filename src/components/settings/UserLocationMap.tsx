@@ -205,7 +205,7 @@ export function UserLocationMap() {
 
       <div className="bg-muted/20 rounded-xl p-4 mb-4 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Powered by OpenStreetMap. Live mode keeps updating until you stop it.
+          Powered by Google Maps. Live mode keeps updating until you stop it.
         </p>
 
         {visiblePosition ? (
