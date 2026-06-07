@@ -30,7 +30,15 @@ export function AIChatbot() {
     setSpeakingIdx(idx);
     try {
       const { data, error } = await supabase.functions.invoke('ai-service', {
-        body: { action: 'tts', data: { text, voice: 'nova' } },
+        body: {
+          action: 'tts',
+          data: {
+            text,
+            voice: 'shimmer',
+            instructions:
+              'Warm, upbeat, conversational. Sound like a real Zambian-friendly assistant chatting with a friend — natural pacing, light emphasis on key words, gentle pauses. Never monotone or robotic.',
+          },
+        },
       });
       if (error) throw error;
       const audioB64 = (data as any)?.data?.audio;
