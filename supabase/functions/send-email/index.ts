@@ -10,8 +10,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
-const FROM = "Boycott Incorporated <onboarding@resend.dev>";
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
+const FROM = "Boycott Incorporated";
 
 type Payload = {
   template:
