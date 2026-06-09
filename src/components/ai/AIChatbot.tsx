@@ -26,7 +26,6 @@ export function AIChatbot() {
       'Samantha',
       'Microsoft Aria Online (Natural) - English (United States)',
       'Microsoft Jenny Online (Natural) - English (United States)',
-besides_default: '',
     ];
     for (const name of prefer) {
       const v = voices.find(v => v.name === name);
