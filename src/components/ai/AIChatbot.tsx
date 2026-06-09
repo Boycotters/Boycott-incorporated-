@@ -16,45 +16,61 @@ export function AIChatbot() {
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const speak = async (text: string, idx: number) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+  const pickVoice = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const prefer = [
+      'Google UK English Female',
+      'Google US English',
+      'Samantha',
+      'Microsoft Aria Online (Natural) - English (United States)',
+      'Microsoft Jenny Online (Natural) - English (United States)',
+besides_default: '',
+    ];
+    for (const name of prefer) {
+      const v = voices.find(v => v.name === name);
+      if (v) return v;
     }
+    return (
+      voices.find(v => /natural|neural|online/i.test(v.name) && v.lang.startsWith('en')) ||
+      voices.find(v => v.lang.startsWith('en-GB')) ||
+      voices.find(v => v.lang.startsWith('en')) ||
+      voices[0]
+    );
+  };
+
+  const speak = (text: string, idx: number) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
     if (speakingIdx === idx) {
       setSpeakingIdx(null);
       return;
     }
     setSpeakingIdx(idx);
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-service', {
-        body: {
-          action: 'tts',
-          data: {
-            text,
-            voice: 'shimmer',
-            instructions:
-              'Warm, upbeat, conversational. Sound like a real Zambian-friendly assistant chatting with a friend — natural pacing, light emphasis on key words, gentle pauses. Never monotone or robotic.',
-          },
-        },
-      });
-      if (error) throw error;
-      const audioB64 = (data as any)?.data?.audio;
-      if (!audioB64) throw new Error('No audio');
-      const audio = new Audio(`data:audio/mpeg;base64,${audioB64}`);
-      audioRef.current = audio;
-      audio.onended = () => setSpeakingIdx(null);
-      audio.onerror = () => setSpeakingIdx(null);
-      await audio.play();
-    } catch (err) {
-      console.error('TTS failed', err);
-      setSpeakingIdx(null);
-    }
+    const utter = new SpeechSynthesisUtterance(text);
+    const voice = pickVoice();
+    if (voice) utter.voice = voice;
+    utter.rate = 1.0;
+    utter.pitch = 1.05;
+    utter.volume = 1;
+    utter.onend = () => setSpeakingIdx(null);
+    utter.onerror = () => setSpeakingIdx(null);
+    window.speechSynthesis.speak(utter);
   };
 
-  useEffect(() => () => { if (audioRef.current) audioRef.current.pause(); }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      // Warm up voice list on some browsers
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const { data: userData } = useQuery({
     queryKey: ['chatbot-user-data', user?.id],
