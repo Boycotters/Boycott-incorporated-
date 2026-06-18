@@ -630,6 +630,38 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_attributions: {
+        Row: {
+          campaign_id: string
+          content_id: string
+          content_type: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          campaign_id: string
+          content_id: string
+          content_type: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          campaign_id?: string
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_attributions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "business_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_metrics: {
         Row: {
           campaign_id: string
@@ -2403,6 +2435,12 @@ export type Database = {
       }
       export_survey_data: { Args: { p_mark_exported?: boolean }; Returns: Json }
       get_active_flash_sales: { Args: never; Returns: Json }
+      get_audience_analytics: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
+      get_campaign_analytics: { Args: { p_campaign_id: string }; Returns: Json }
+      get_campaign_estimates: { Args: never; Returns: Json }
       get_daily_activity_status: { Args: { p_user_id: string }; Returns: Json }
       get_game_leaderboard: {
         Args: { p_game_type?: string; p_period?: string }
