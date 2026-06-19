@@ -148,15 +148,32 @@ export function UserLocationMap() {
   const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
     setLoadingCurrent(true);
+
+    const onSuccess = async (pos: GeolocationPosition) => {
+      const next = toSharedPosition(pos.coords);
+      setCurrentPos(next);
+      setLoadingCurrent(false);
+      if (user?.id) await persistLocation(pos.coords, { notify: true });
+      else toast.success("Location captured.");
+    };
+
+    // First try high-accuracy. If unavailable (common on desktop and in
+    // sandboxed previews where GPS/Wi-Fi positioning fails), fall back to
+    // a low-accuracy attempt before surfacing an error to the user.
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const next = toSharedPosition(pos.coords);
-        setCurrentPos(next);
-        setLoadingCurrent(false);
-        if (user?.id) await persistLocation(pos.coords, { notify: true });
-        else toast.success("Location captured.");
+      onSuccess,
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLoadingCurrent(false);
+          toast.error(getLocationErrorMessage(err));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          (err2) => { setLoadingCurrent(false); toast.error(getLocationErrorMessage(err2)); },
+          { enableHighAccuracy: false, timeout: 25000, maximumAge: 60000 }
+        );
       },
-      (err) => { setLoadingCurrent(false); toast.error(getLocationErrorMessage(err)); },
       { ...GEO_OPTIONS, maximumAge: 0 }
     );
   }, [persistLocation, user?.id]);
