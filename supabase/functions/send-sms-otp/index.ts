@@ -169,8 +169,17 @@ serve(async (req) => {
 
       await supabase.from("phone_verification_otps").update({ verified: true }).eq("id", otpRecord.id);
 
-      if (user_id) {
-        await supabase.from("users").update({ phone_verified: true, phone: phone_number }).eq("id", user_id);
+      // Derive trusted user id from JWT — never trust body's user_id
+      const authHeader = req.headers.get("Authorization");
+      let trustedUserId: string | null = null;
+      if (authHeader?.startsWith("Bearer ")) {
+        const jwt = authHeader.replace("Bearer ", "");
+        const { data: authData } = await supabase.auth.getUser(jwt);
+        trustedUserId = authData?.user?.id ?? null;
+      }
+
+      if (trustedUserId) {
+        await supabase.from("users").update({ phone_verified: true, phone: phone_number }).eq("id", trustedUserId);
       }
 
       await supabase.from("phone_verification_otps").delete().eq("id", otpRecord.id);
