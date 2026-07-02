@@ -1226,6 +1226,7 @@ export type Database = {
       redemptions: {
         Row: {
           created_at: string | null
+          expires_at: string | null
           id: string
           points_spent: number
           reward_id: string
@@ -1234,6 +1235,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          expires_at?: string | null
           id?: string
           points_spent: number
           reward_id: string
@@ -1242,6 +1244,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          expires_at?: string | null
           id?: string
           points_spent?: number
           reward_id?: string
@@ -2524,25 +2527,15 @@ export type Database = {
         Args: { p_target_slug: string; p_user_id: string }
         Returns: Json
       }
-      request_withdrawal:
-        | {
-            Args: {
-              p_amount: number
-              p_phone_number: string
-              p_provider: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_phone_number: string
-              p_provider: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      request_withdrawal: {
+        Args: {
+          p_amount: number
+          p_phone_number: string
+          p_provider: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       secure_complete_task: {
         Args: {
           p_task_id: string
