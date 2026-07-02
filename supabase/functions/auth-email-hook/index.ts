@@ -95,9 +95,30 @@ async function sendGmail(to: string, subject: string, htmlBody: string) {
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
   if (!GMAIL_KEY) throw new Error("GOOGLE_MAIL_API_KEY missing");
 
+  // Look up the authenticated Gmail inbox address so the From header is valid RFC 5322
+  let fromAddress = "";
+  try {
+    const p = await fetch(`${GATEWAY_URL}/users/me/profile`, {
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": GMAIL_KEY,
+      },
+    });
+    if (p.ok) {
+      const pj = await p.json();
+      fromAddress = pj.emailAddress || "";
+    }
+  } catch (_) {
+    // fall through — Gmail will still send from the auth user even if header is minimal
+  }
+
+  const fromHeader = fromAddress
+    ? `${FROM_NAME} <${fromAddress}>`
+    : FROM_NAME;
+
   const raw = b64url(
     [
-      `From: ${FROM}`,
+      `From: ${fromHeader}`,
       `To: ${to}`,
       `Subject: ${subject}`,
       "MIME-Version: 1.0",
