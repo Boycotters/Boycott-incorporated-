@@ -92,8 +92,8 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
           Spin the Wheel
         </CardTitle>
         <CardDescription>
-          {playsRemaining > 0 
-            ? `${playsRemaining} spin${playsRemaining !== 1 ? 's' : ''} remaining today`
+          {playsRemaining > 0
+            ? `Mystery reward! ${playsRemaining} spin${playsRemaining !== 1 ? 's' : ''} remaining today`
             : "Come back tomorrow for more spins!"
           }
         </CardDescription>
@@ -147,7 +147,7 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
                       x={textX}
                       y={textY}
                       fill="white"
-                      fontSize={segment.points >= 100 ? "6" : "8"}
+                      fontSize="10"
                       fontWeight="bold"
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -157,7 +157,7 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
                         textShadow: "1px 1px 2px rgba(0,0,0,0.5)"
                       }}
                     >
-                      {segment.label}
+                      ?
                     </text>
                   </g>
                 );

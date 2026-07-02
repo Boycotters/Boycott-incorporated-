@@ -282,6 +282,13 @@ export function AIVideoManagement() {
                         value={newVideo.duration_seconds}
                         onChange={(e) => setNewVideo(p => ({ ...p, duration_seconds: e.target.value.replace(/\D/g, "") }))}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Users must watch ≥{" "}
+                        <span className="font-semibold text-primary">
+                          {Math.ceil((parseInt(newVideo.duration_seconds) || 0) * 0.8)}s
+                        </span>{" "}
+                        (80%) to claim points.
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>Points Reward</Label>
