@@ -14,7 +14,10 @@ const corsHeaders = {
 };
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
-const FROM = "Boycott Incorporated";
+// Gmail sends from the authenticated inbox. Include a display name only;
+// omitting a bare "From: Name" (no <email>) — that violates RFC 5322 and
+// causes Gmail to silently drop or spam the message.
+const FROM_NAME = "Boycott Incorporated";
 
 function b64url(input: string) {
   const bytes = new TextEncoder().encode(input);
