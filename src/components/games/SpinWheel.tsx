@@ -92,8 +92,8 @@ export function SpinWheel({ playsRemaining, onSpin, isSpinning }: SpinWheelProps
           Spin the Wheel
         </CardTitle>
         <CardDescription>
-          {playsRemaining > 0 
-            ? `${playsRemaining} spin${playsRemaining !== 1 ? 's' : ''} remaining today`
+          {playsRemaining > 0
+            ? `Mystery reward! ${playsRemaining} spin${playsRemaining !== 1 ? 's' : ''} remaining today`
             : "Come back tomorrow for more spins!"
           }
         </CardDescription>
