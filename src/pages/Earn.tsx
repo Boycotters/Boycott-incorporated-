@@ -899,7 +899,15 @@ export default function Earn() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Available Tasks</h2>
           
-          {(tasks || []).filter(task => !isTaskCompleted(task.id)).map((task) => {
+          {(() => {
+            // Rotate available tasks every 4 hours using a deterministic seed shuffle
+            const bucket = Math.floor(Date.now() / (1000 * 60 * 60 * 4));
+            const seeded = [...(tasks || [])].map((t, i) => {
+              const h = Array.from(`${t.id}-${bucket}`).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+              return { t, key: h + i };
+            }).sort((a, b) => a.key - b.key).map(x => x.t);
+            return seeded.filter(task => !isTaskCompleted(task.id));
+          })().map((task) => {
             const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
             const VerifyIcon = verificationIcons[task.verification_type || 'instant'] || Zap;
             const completed = isTaskCompleted(task.id);
