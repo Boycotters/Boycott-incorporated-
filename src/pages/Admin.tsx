@@ -1748,6 +1748,14 @@ export default function Admin() {
           <TabsContent value="ai-videos" className="mt-4">
             <AIVideoManagement />
           </TabsContent>
+          {/* Storage Tab */}
+          <TabsContent value="storage" className="mt-4">
+            <StorageBucketExplorer />
+          </TabsContent>
+          {/* Financial Vault Tab */}
+          <TabsContent value="financial" className="mt-4">
+            <FinancialVault />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
