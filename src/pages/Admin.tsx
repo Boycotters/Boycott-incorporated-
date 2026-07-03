@@ -889,6 +889,14 @@ export default function Admin() {
                 <Video className="w-4 h-4" />
                 <span className="hidden sm:inline">AI Videos</span>
               </TabsTrigger>
+              <TabsTrigger value="storage" className="gap-1.5 px-3 shrink-0">
+                <HardDrive className="w-4 h-4" />
+                <span className="hidden sm:inline">Storage</span>
+              </TabsTrigger>
+              <TabsTrigger value="financial" className="gap-1.5 px-3 shrink-0">
+                <Coins className="w-4 h-4" />
+                <span className="hidden sm:inline">Financial</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
