@@ -78,6 +78,9 @@ import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePa
 import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
 import { NotificationManagement } from "@/components/admin/NotificationManagement";
 import { AIVideoManagement } from "@/components/admin/AIVideoManagement";
+import { StorageBucketExplorer } from "@/components/admin/StorageBucketExplorer";
+import { FinancialVault } from "@/components/admin/FinancialVault";
+import { SurveyDataVault } from "@/components/admin/SurveyDataVault";
 
 interface Withdrawal {
   id: string;
