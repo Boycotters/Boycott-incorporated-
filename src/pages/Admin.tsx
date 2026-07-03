@@ -39,7 +39,9 @@ import {
   CalendarClock,
   Brain,
   Gift,
-  Bell
+  Bell,
+  HardDrive,
+  Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,6 +80,9 @@ import { SecurityCompliancePanel } from "@/components/admin/SecurityCompliancePa
 import { AIModelsPanel } from "@/components/admin/AIModelsPanel";
 import { NotificationManagement } from "@/components/admin/NotificationManagement";
 import { AIVideoManagement } from "@/components/admin/AIVideoManagement";
+import { StorageBucketExplorer } from "@/components/admin/StorageBucketExplorer";
+import { FinancialVault } from "@/components/admin/FinancialVault";
+import { SurveyDataVault } from "@/components/admin/SurveyDataVault";
 
 interface Withdrawal {
   id: string;
@@ -884,6 +889,14 @@ export default function Admin() {
                 <Video className="w-4 h-4" />
                 <span className="hidden sm:inline">AI Videos</span>
               </TabsTrigger>
+              <TabsTrigger value="storage" className="gap-1.5 px-3 shrink-0">
+                <HardDrive className="w-4 h-4" />
+                <span className="hidden sm:inline">Storage</span>
+              </TabsTrigger>
+              <TabsTrigger value="financial" className="gap-1.5 px-3 shrink-0">
+                <Coins className="w-4 h-4" />
+                <span className="hidden sm:inline">Financial</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1378,167 +1391,7 @@ export default function Admin() {
 
           {/* Survey Data Tab */}
           <TabsContent value="surveys" className="mt-4 space-y-4">
-            {/* Survey Stats Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card className="bg-primary/10 border-primary/20">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-primary">{surveyResponses.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Responses</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-accent/10 border-accent/20">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-accent">{unexportedSurveys.length}</p>
-                  <p className="text-xs text-muted-foreground">Ready to Export</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-secondary/50 border-secondary">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-secondary-foreground">
-                    {surveyResponses.reduce((acc, s) => acc + (Array.isArray(s.questions) ? s.questions.length : 0), 0)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Total Questions</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted border-muted">
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-foreground">
-                    K{Math.round(surveyResponses.length * 0.5)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Est. Data Value</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Database className="w-5 h-5" />
-                    Survey Data Vault
-                  </span>
-                  <Button 
-                    onClick={() => exportSurveyMutation.mutate()}
-                    disabled={exportSurveyMutation.isPending || unexportedSurveys.length === 0}
-                    className="gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export All ({unexportedSurveys.length})
-                  </Button>
-                </CardTitle>
-                <CardDescription>
-                  Collected survey responses with user info. Click a row to see full response details.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {surveyResponses.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Database className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                    <p className="text-muted-foreground">No survey responses collected yet</p>
-                    <p className="text-sm text-muted-foreground mt-1">Survey data will appear here as users complete surveys</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {surveyResponses.map((survey) => (
-                      <Collapsible
-                        key={survey.id}
-                        open={expandedSurvey === survey.id}
-                        onOpenChange={(open) => setExpandedSurvey(open ? survey.id : null)}
-                      >
-                        <CollapsibleTrigger asChild>
-                          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                    <User className="w-4 h-4 text-primary" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-medium truncate">{survey.survey_title}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {survey.user_name || survey.user_email || 'Anonymous'} • {new Date(survey.created_at).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <Badge variant="outline" className="shrink-0">
-                                    {Array.isArray(survey.questions) ? survey.questions.length : 0} Q
-                                  </Badge>
-                                  <Badge variant="secondary" className="shrink-0">
-                                    +{survey.points_awarded} pts
-                                  </Badge>
-                                  <Badge 
-                                    variant={survey.is_exported ? "secondary" : "default"} 
-                                    className={!survey.is_exported ? "bg-accent text-accent-foreground" : ""}
-                                  >
-                                    {survey.is_exported ? 'Exported' : 'New'}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <Card className="mt-1 border-primary/20 bg-muted/30">
-                            <CardContent className="p-4 space-y-4">
-                              {/* User Info */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                <div>
-                                  <p className="text-muted-foreground text-xs">User</p>
-                                  <p className="font-medium">{survey.user_name || 'No name'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground text-xs">Email</p>
-                                  <p className="font-medium truncate">{survey.user_email || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground text-xs">Completion Time</p>
-                                  <p className="font-medium">{survey.completion_time_seconds ? `${survey.completion_time_seconds}s` : 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground text-xs">Survey ID</p>
-                                  <p className="font-medium text-xs truncate">{survey.survey_id}</p>
-                                </div>
-                              </div>
-
-                              {/* Questions & Answers */}
-                              <div className="border-t pt-4">
-                                <p className="font-medium text-sm mb-3">Questions & Responses</p>
-                                <div className="space-y-3">
-                                  {Array.isArray(survey.questions) && survey.questions.map((q: any, idx: number) => (
-                                    <div key={idx} className="bg-background rounded-lg p-3">
-                                      <p className="text-sm font-medium text-muted-foreground mb-1">
-                                        Q{idx + 1}: {q.question || q.text || 'Question'}
-                                      </p>
-                                      <p className="text-sm">
-                                        <span className="text-primary font-medium">Answer: </span>
-                                        {Array.isArray(survey.responses) && survey.responses[idx] !== undefined
-                                          ? String(survey.responses[idx].answer || survey.responses[idx])
-                                          : 'No response'}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Device Info */}
-                              {survey.device_info && Object.keys(survey.device_info).length > 0 && (
-                                <div className="border-t pt-4">
-                                  <p className="font-medium text-sm mb-2">Device Info</p>
-                                  <pre className="text-xs bg-background p-2 rounded overflow-auto max-h-24">
-                                    {JSON.stringify(survey.device_info, null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <SurveyDataVault />
           </TabsContent>
 
           {/* Algorithms Tab */}
@@ -1734,6 +1587,14 @@ export default function Admin() {
           {/* AI Videos Tab */}
           <TabsContent value="ai-videos" className="mt-4">
             <AIVideoManagement />
+          </TabsContent>
+          {/* Storage Tab */}
+          <TabsContent value="storage" className="mt-4">
+            <StorageBucketExplorer />
+          </TabsContent>
+          {/* Financial Vault Tab */}
+          <TabsContent value="financial" className="mt-4">
+            <FinancialVault />
           </TabsContent>
         </Tabs>
       </div>
