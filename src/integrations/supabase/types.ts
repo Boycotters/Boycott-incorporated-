@@ -250,11 +250,19 @@ export type Database = {
           estimated_cost_points: number
           id: string
           impressions: number
+          is_weekend: boolean
+          launched_at: string | null
+          linked_task_id: string | null
           name: string
           objective: string | null
+          premium_multiplier: number
+          rejection_reason: string | null
+          reminder_1d_sent: boolean
+          reminder_3d_sent: boolean
           spent_zmw: number
           start_date: string | null
           status: string
+          task_spec: Json
           updated_at: string
         }
         Insert: {
@@ -273,11 +281,19 @@ export type Database = {
           estimated_cost_points?: number
           id?: string
           impressions?: number
+          is_weekend?: boolean
+          launched_at?: string | null
+          linked_task_id?: string | null
           name: string
           objective?: string | null
+          premium_multiplier?: number
+          rejection_reason?: string | null
+          reminder_1d_sent?: boolean
+          reminder_3d_sent?: boolean
           spent_zmw?: number
           start_date?: string | null
           status?: string
+          task_spec?: Json
           updated_at?: string
         }
         Update: {
@@ -296,11 +312,19 @@ export type Database = {
           estimated_cost_points?: number
           id?: string
           impressions?: number
+          is_weekend?: boolean
+          launched_at?: string | null
+          linked_task_id?: string | null
           name?: string
           objective?: string | null
+          premium_multiplier?: number
+          rejection_reason?: string | null
+          reminder_1d_sent?: boolean
+          reminder_3d_sent?: boolean
           spent_zmw?: number
           start_date?: string | null
           status?: string
+          task_spec?: Json
           updated_at?: string
         }
         Relationships: [
@@ -490,31 +514,136 @@ export type Database = {
         }
         Relationships: []
       }
+      business_service_purchases: {
+        Row: {
+          business_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          kind: string
+          price_points: number
+          service_id: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          price_points?: number
+          service_id: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          price_points?: number
+          service_id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_service_purchases_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_service_purchases_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "business_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_services: {
+        Row: {
+          active: boolean
+          billing_period: string | null
+          category: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          kind: string
+          name: string
+          price_points: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          billing_period?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          kind?: string
+          name: string
+          price_points?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          billing_period?: string | null
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          price_points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_subscriptions: {
         Row: {
           auto_renew: boolean
           business_id: string
+          due_date: string | null
           expires_at: string | null
           id: string
+          locked: boolean
           started_at: string
+          status: string
           tier: string
           updated_at: string
         }
         Insert: {
           auto_renew?: boolean
           business_id: string
+          due_date?: string | null
           expires_at?: string | null
           id?: string
+          locked?: boolean
           started_at?: string
+          status?: string
           tier?: string
           updated_at?: string
         }
         Update: {
           auto_renew?: boolean
           business_id?: string
+          due_date?: string | null
           expires_at?: string | null
           id?: string
+          locked?: boolean
           started_at?: string
+          status?: string
           tier?: string
           updated_at?: string
         }
@@ -2343,6 +2472,19 @@ export type Database = {
         Args: { p_user_id: string; p_verified?: boolean }
         Returns: Json
       }
+      approve_business_campaign: {
+        Args: {
+          _business_id: string
+          _campaign_id: string
+          _pin: string
+          _task_category: string
+          _task_description: string
+          _task_points: number
+          _task_title: string
+          _task_verification?: string
+        }
+        Returns: string
+      }
       are_tasks_available_today: { Args: never; Returns: Json }
       award_survey_points: {
         Args: {
@@ -2432,10 +2574,12 @@ export type Database = {
         }
         Returns: string
       }
+      enforce_subscription_locks: { Args: never; Returns: undefined }
       equip_inventory_item: {
         Args: { p_equip?: boolean; p_inventory_id: string; p_user_id: string }
         Returns: Json
       }
+      expire_due_campaigns: { Args: never; Returns: undefined }
       export_survey_data: { Args: { p_mark_exported?: boolean }; Returns: Json }
       get_active_flash_sales: { Args: never; Returns: Json }
       get_audience_analytics: {
@@ -2522,6 +2666,15 @@ export type Database = {
       redeem_reward: {
         Args: { p_reward_id: string; p_user_id: string }
         Returns: Json
+      }
+      reject_business_campaign: {
+        Args: {
+          _business_id: string
+          _campaign_id: string
+          _pin: string
+          _reason: string
+        }
+        Returns: boolean
       }
       request_vip_upgrade: {
         Args: { p_target_slug: string; p_user_id: string }
