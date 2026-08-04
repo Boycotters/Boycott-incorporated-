@@ -152,7 +152,7 @@ export default function Surveys() {
         surveys.push({
           ...survey,
           category,
-          points_reward: 15 + Math.floor(Math.random() * 20),
+          points_reward: 15,
         });
       }
     }

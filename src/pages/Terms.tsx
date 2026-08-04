@@ -58,8 +58,12 @@ export default function Terms() {
               <section>
                 <h2 className="font-semibold text-foreground mb-2">4. Earning Points</h2>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Points are earned by completing legitimate tasks, surveys, watching videos, and other activities</li>
-                  <li>Daily earning caps may apply (currently 180 points per day)</li>
+                  <li>Partnership task: 75 points (1 per day)</li>
+                  <li>Surveys: 15 points each (3 per day)</li>
+                  <li>Mini games: up to 10 points per play (3 plays per day)</li>
+                  <li>Ads / Watch &amp; Earn: 5 points per video (5 per day, 80% of the video must be watched)</li>
+                  <li>Standard tasks: approximately 12.5 points each (2 per day)</li>
+                  <li>A strict daily cap of 200 points applies (400 during an active campaign)</li>
                   <li>Fraudulent activity, including but not limited to using bots, creating fake accounts, or manipulating the system, will result in immediate account termination and forfeiture of all points</li>
                   <li>We reserve the right to adjust point values and earning limits at any time</li>
                 </ul>
