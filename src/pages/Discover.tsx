@@ -17,7 +17,6 @@ import { useNavigate } from "react-router-dom";
 import { formatTimeAgo } from "@/lib/utils";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
 import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
-import { DailyCapReached } from "@/components/DailyCapReached";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
 
 const SectionHeader = ({
@@ -367,8 +366,15 @@ export default function Discover() {
           </Card>
         </section>
 
-        {isWeekendBlocked && <WeekendBreakMessage />}
-        {!isWeekendBlocked && hasReachedDailyCap && <DailyCapReached />}
+        {isWeekendBlocked && <WeekendBreakMessage compact />}
+        {!isWeekendBlocked && hasReachedDailyCap && (
+          <Card className="rounded-2xl p-4 border border-primary/30 bg-primary/5 text-center">
+            <p className="text-sm font-semibold text-primary">Daily cap reached 🎉</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              All {maxDailyPoints} points claimed. Tasks, surveys, ads and games unlock again at midnight.
+            </p>
+          </Card>
+        )}
 
         {/* Trending */}
         <section>

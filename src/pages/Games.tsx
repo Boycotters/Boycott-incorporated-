@@ -426,11 +426,11 @@ export default function Games() {
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-2 flex items-center gap-2"><span>💡</span> Tips</h3>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Each game can be played 3 times per day</li>
-                  <li>• Spin the Wheel: Win 5-100 points (jackpot is rare!)</li>
-                  <li>• Memory Match: Up to 95 points for perfect game</li>
-                  <li>• Basketball: Score 10+ baskets for max points</li>
-                  <li>• Keepy Uppy: Score 50+ kicks for max points</li>
+                  <li>• Each game can be played once per day (3 game plays daily)</li>
+                  <li>• Spin the Wheel: mystery reward, up to 10 points</li>
+                  <li>• Memory Match: up to 10 points for a perfect game</li>
+                  <li>• Basketball: score 6+ baskets for the full 10 points</li>
+                  <li>• Keepy Uppy: score 20+ kicks for the full 10 points</li>
                 </ul>
               </CardContent>
             </Card>
