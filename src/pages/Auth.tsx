@@ -12,6 +12,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneVerification } from "@/components/auth/PhoneVerification";
+import { TermsDialog } from "@/components/auth/TermsDialog";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 // Validation schemas
@@ -929,9 +930,34 @@ const Auth = () => {
                     />
                     <label
                       htmlFor="terms"
-                      className="text-sm text-muted-foreground leading-none cursor-pointer"
+                      className="text-sm text-muted-foreground leading-snug cursor-pointer"
                     >
-                      I agree to the Terms of Service and Privacy Policy
+                      I have read and agree to the{" "}
+                      <TermsDialog
+                        defaultTab="terms"
+                        onAccept={() => {
+                          setAgreedToTerms(true);
+                          setTermsError(false);
+                        }}
+                        trigger={
+                          <button type="button" className="text-primary underline font-medium">
+                            Terms of Service
+                          </button>
+                        }
+                      />{" "}
+                      and{" "}
+                      <TermsDialog
+                        defaultTab="privacy"
+                        onAccept={() => {
+                          setAgreedToTerms(true);
+                          setTermsError(false);
+                        }}
+                        trigger={
+                          <button type="button" className="text-primary underline font-medium">
+                            Privacy Policy
+                          </button>
+                        }
+                      />
                     </label>
                   </div>
                   {termsError && (
