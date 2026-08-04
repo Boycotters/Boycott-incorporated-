@@ -2544,10 +2544,10 @@ export type Database = {
       cleanup_old_tasks: { Args: never; Returns: undefined }
       complete_ai_partner_task: {
         Args: {
-          p_points_amount: number
+          p_points_amount?: number
           p_source?: string
-          p_task_title: string
-          p_task_type: string
+          p_task_title?: string
+          p_task_type?: string
           p_user_id: string
         }
         Returns: Json
@@ -2574,6 +2574,7 @@ export type Database = {
         }
         Returns: string
       }
+      current_daily_cap: { Args: never; Returns: number }
       enforce_subscription_locks: { Args: never; Returns: undefined }
       equip_inventory_item: {
         Args: { p_equip?: boolean; p_inventory_id: string; p_user_id: string }
