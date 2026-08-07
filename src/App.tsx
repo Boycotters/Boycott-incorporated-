@@ -31,6 +31,8 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
 import Leaderboard from "./pages/Leaderboard";
+import Lifestyle from "./pages/Lifestyle";
+import Community from "./pages/Community";
 
 const queryClient = new QueryClient();
 
