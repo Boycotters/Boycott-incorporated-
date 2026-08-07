@@ -1026,6 +1026,66 @@ export type Database = {
         }
         Relationships: []
       }
+      kyc_verifications: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          date_of_birth: string | null
+          full_name: string
+          id: string
+          id_back_path: string | null
+          id_front_path: string | null
+          nrc_number: string
+          province: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_path: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name: string
+          id?: string
+          id_back_path?: string | null
+          id_front_path?: string | null
+          nrc_number: string
+          province?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          full_name?: string
+          id?: string
+          id_back_path?: string | null
+          id_front_path?: string | null
+          nrc_number?: string
+          province?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mobile_money_transactions: {
         Row: {
           amount_zmw: number
@@ -2452,6 +2512,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_review_kyc: { Args: { p_payload: Json }; Returns: Json }
       admin_review_transfer: {
         Args: {
           p_action: string

@@ -1,23 +1,25 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Search, Sparkles, Flame, Trophy, Crown, Star, ChevronRight, Play,
-  Newspaper, Store, Lightbulb, MapPin, CalendarDays, Users, Zap, Target, Gift, Quote
+  Search, Flame, Trophy, ChevronRight, Play, Activity, Store, Lightbulb,
+  MapPin, CalendarDays, Users, Target, Gift, Quote, RefreshCw, Radio, ShieldCheck,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { formatTimeAgo } from "@/lib/utils";
 import { useDailyLimits } from "@/hooks/useDailyLimits";
-import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
 import { WeekendBreakMessage } from "@/components/WeekendBreakMessage";
+import { KycBanner } from "@/components/kyc";
+import { rotate, nextRotationLabel, rotationSeed } from "@/lib/rotation";
+import { buildCommunityStories } from "@/lib/community";
+import { LOCAL_SERVICES } from "@/lib/lifestyle";
 
 const SectionHeader = ({
   icon: Icon,
@@ -51,54 +53,78 @@ const SectionHeader = ({
 );
 
 const TIPS = [
-  {
-    title: "Stack your day the smart way",
-    body: "Start with the partnered task (75 pts), then surveys (15 pts each). That's 120 of your 200 daily points before lunch.",
-    tag: "Strategy",
-  },
-  {
-    title: "Watch 80% or it doesn't count",
-    body: "Watch & Earn only pays once you pass 80% of the video length. Don't skip ahead — the timer is checked server-side.",
-    tag: "Watch & Earn",
-  },
-  {
-    title: "Keep your streak alive",
-    body: "Log in daily. Milestone bonuses hit at 7, 14 and 30 days, and a broken streak resets the ladder.",
-    tag: "Streaks",
-  },
-  {
-    title: "Cash out faster",
-    body: "Verify your phone and invite 2 friends to unlock your first withdrawal. 150 points = K10.",
-    tag: "Withdrawals",
-  },
+  { title: "Stack your day the smart way", body: "Start with the partnered task (75 pts), then surveys (15 pts each). That's 120 of your 200 daily points before lunch.", tag: "Strategy" },
+  { title: "Watch 80% or it doesn't count", body: "Watch & Earn only pays once you pass 80% of the video length. Don't skip ahead — the timer is checked server-side.", tag: "Watch & Earn" },
+  { title: "Keep your streak alive", body: "Log in daily. Milestone bonuses hit at 7, 14 and 30 days, and a broken streak resets the ladder.", tag: "Streaks" },
+  { title: "Cash out faster", body: "Verify your phone, complete KYC and invite 2 friends to unlock your first withdrawal. 150 points = K10.", tag: "Withdrawals" },
+  { title: "KYC before you cash out", body: "Upload your NRC and a selfie once. Approved accounts get payouts processed the same day.", tag: "Verification" },
+  { title: "Weekends are for resting", body: "Tasks are weekday-only unless a bonus campaign is live. Use weekends for games and the marketplace.", tag: "Schedule" },
+  { title: "Games pay per play", body: "Each mini game pays up to 10 points and you get one play per game per day. Aim for the high score.", tag: "Games" },
+  { title: "Transfers cost 5%", body: "Sending points to a friend charges a 5% fee and needs admin approval. Double-check the recipient email.", tag: "Transfers" },
 ];
 
 const FALLBACK_BRANDS = [
   { company_name: "Zamtel Digital", industry: "Telecoms", city: "Lusaka", description: "Data bundles and airtime rewards for active earners." },
   { company_name: "Shoprite Zambia", industry: "Retail", city: "Nationwide", description: "Grocery vouchers redeemable in the marketplace." },
   { company_name: "Hungry Lion", industry: "Food", city: "Lusaka", description: "Meal deals for streak holders and top earners." },
+  { company_name: "Pulse Fitness", industry: "Fitness", city: "Lusaka", description: "Day passes for consistent streak holders." },
 ];
 
 export default function Discover() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const { data: dailyData, hasReachedDailyCap, isWeekendBlocked, totalPointsEarned, maxDailyPoints } = useDailyLimits();
+  const { hasReachedDailyCap, isWeekendBlocked, maxDailyPoints } = useDailyLimits();
+  const seed = rotationSeed();
 
-  const { data: userProfile } = useQuery({
-    queryKey: ["discover-profile", user?.id],
+  /* ---------------- Live activity (realtime) ---------------- */
+  const { data: liveFeed } = useQuery({
+    queryKey: ["discover-live-activity"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("users")
-        .select("full_name, total_points, current_streak, vip_tier, level")
-        .eq("id", user!.id)
-        .maybeSingle();
+        .from("transactions")
+        .select("id, type, description, points_amount, created_at")
+        .eq("status", "completed")
+        .gt("points_amount", 0)
+        .order("created_at", { ascending: false })
+        .limit(15);
       if (error) throw error;
-      return data;
+      const labels: Record<string, string> = {
+        task_completion: "Task completed",
+        survey_completion: "Survey completed",
+        video_reward: "Ad watched",
+        game: "Mini game won",
+        game_play: "Mini game won",
+        referral_bonus: "Referral bonus",
+        streak_milestone: "Streak milestone",
+        redemption: "Reward redeemed",
+        tier_upgrade: "Tier upgraded",
+        withdrawal: "Payout requested",
+      };
+      return (data || []).map((tx) => ({
+        id: tx.id,
+        label: labels[tx.type || ""] || "Points earned",
+        detail: (tx.description || "").replace(/^Completed (task|survey): /, "").slice(0, 60),
+        points: tx.points_amount || 0,
+        time: formatTimeAgo(tx.created_at || new Date().toISOString()),
+      }));
     },
-    enabled: !!user?.id,
+    refetchInterval: 20000,
   });
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("discover-live-activity")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transactions" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["discover-live-activity"] });
+        queryClient.invalidateQueries({ queryKey: ["discover-stories"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
+  /* ---------------- Data ---------------- */
   const { data: trendingTasks, isLoading: trendingLoading } = useQuery({
     queryKey: ["discover-trending"],
     queryFn: async () => {
@@ -107,7 +133,7 @@ export default function Discover() {
         .select("id, title, description, category, points_reward, difficulty")
         .eq("is_active", true)
         .order("points_reward", { ascending: false })
-        .limit(12);
+        .limit(20);
       if (error) throw error;
       return data || [];
     },
@@ -120,21 +146,19 @@ export default function Discover() {
         .from("business_profiles")
         .select("id, company_name, industry, city, description, logo_url")
         .eq("is_listed", true)
-        .limit(6);
+        .limit(8);
       if (error) return [];
       return data || [];
     },
   });
 
-  const { data: deals } = useQuery({
-    queryKey: ["discover-deals"],
+  const { data: rewards } = useQuery({
+    queryKey: ["discover-rewards"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rewards")
         .select("id, name, description, points_cost, category, image, stock")
-        .eq("is_active", true)
-        .order("points_cost", { ascending: true })
-        .limit(8);
+        .eq("is_active", true);
       if (error) throw error;
       return data || [];
     },
@@ -181,32 +205,24 @@ export default function Discover() {
     },
   });
 
-  const { data: stories } = useQuery({
+  const { data: storyTxs } = useQuery({
     queryKey: ["discover-stories"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
-        .select("id, type, description, points_amount, created_at")
+        .select("id, type, description, points_amount, created_at, users(full_name)")
         .eq("status", "completed")
         .gt("points_amount", 0)
         .order("created_at", { ascending: false })
-        .limit(12);
+        .limit(20);
       if (error) throw error;
-      const verbs: Record<string, string> = {
-        task_completion: "smashed a task",
-        survey_completion: "finished a survey",
-        video_reward: "watched an ad",
-        game: "won a mini game",
-        referral_bonus: "brought in a friend",
-        streak_milestone: "hit a streak milestone",
-        redemption: "redeemed a reward",
-      };
-      return (data || []).map((tx) => ({
-        id: tx.id,
-        headline: verbs[tx.type || ""] || "earned points",
-        detail: (tx.description || "").replace(/^Completed (task|survey): /, "").slice(0, 60),
-        points: tx.points_amount || 0,
-        time: formatTimeAgo(tx.created_at || new Date().toISOString()),
+      return (data || []).map((tx: Record<string, unknown>) => ({
+        id: tx.id as string,
+        type: tx.type as string | null,
+        description: tx.description as string | null,
+        points_amount: tx.points_amount as number | null,
+        created_at: tx.created_at as string | null,
+        user_name: (tx.users as { full_name?: string } | null)?.full_name ?? null,
       }));
     },
     refetchInterval: 30000,
@@ -232,6 +248,37 @@ export default function Discover() {
     },
   });
 
+  /* ---------------- Rotated content (every 3 hours) ---------------- */
+  const rotatedTrending = useMemo(() => rotate(trendingTasks, 1).slice(0, 8), [trendingTasks, seed]);
+  const rotatedTips = useMemo(() => rotate(TIPS, 2).slice(0, 4), [seed]);
+  const stories = useMemo(() => buildCommunityStories(storyTxs, 0, 6), [storyTxs, seed]);
+
+  const lifestyleOffers = useMemo(() => {
+    const marketplace = (rewards || []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      meta: `${r.points_cost} pts`,
+      sub: (r.stock ?? 0) > 0 ? `${r.stock} left` : "Sold out",
+      emoji: "🎁",
+      go: "/marketplace",
+    }));
+    const services = LOCAL_SERVICES.map((s) => ({
+      id: s.id,
+      name: s.name,
+      meta: s.perk,
+      sub: `${s.category} · ${s.city}`,
+      emoji: s.emoji,
+      go: "/lifestyle",
+    }));
+    return rotate([...marketplace, ...services], 3).slice(0, 6);
+  }, [rewards, seed]);
+
+  const brandList = useMemo(
+    () => rotate((brands && brands.length ? brands : FALLBACK_BRANDS) as Record<string, string>[], 4).slice(0, 4),
+    [brands, seed]
+  );
+
+  /* ---------------- Search ---------------- */
   const query = search.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!query) return null;
@@ -239,38 +286,24 @@ export default function Discover() {
       .filter((x) => `${x.title} ${x.description} ${x.category}`.toLowerCase().includes(query))
       .slice(0, 5)
       .map((x) => ({ id: x.id, label: x.title, meta: `${x.points_reward} pts · task`, go: "/earn" }));
-    const r = (deals || [])
+    const r = (rewards || [])
       .filter((x) => `${x.name} ${x.description} ${x.category}`.toLowerCase().includes(query))
       .slice(0, 5)
       .map((x) => ({ id: x.id, label: x.name, meta: `${x.points_cost} pts · reward`, go: "/marketplace" }));
-    const b = (brands && brands.length ? brands : FALLBACK_BRANDS)
-      .filter((x: any) => `${x.company_name} ${x.industry}`.toLowerCase().includes(query))
+    const l = LOCAL_SERVICES
+      .filter((x) => `${x.name} ${x.category} ${x.city}`.toLowerCase().includes(query))
+      .slice(0, 4)
+      .map((x) => ({ id: x.id, label: x.name, meta: `${x.category} · ${x.city}`, go: "/lifestyle" }));
+    const b = ((brands && brands.length ? brands : FALLBACK_BRANDS) as Record<string, string>[])
+      .filter((x) => `${x.company_name} ${x.industry}`.toLowerCase().includes(query))
       .slice(0, 3)
-      .map((x: any, i: number) => ({ id: x.id || `b-${i}`, label: x.company_name, meta: `${x.industry || "Brand"} · spotlight`, go: "/discover" }));
-    return [...t, ...r, ...b];
-  }, [query, trendingTasks, deals, brands]);
-
-  const greeting = useMemo(() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  }, []);
-
-  const slots = [
-    { label: "Partner", value: dailyData?.partnered_tasks, pts: 75 },
-    { label: "Surveys", value: dailyData?.surveys, pts: 15 },
-    { label: "Games", value: dailyData?.games, pts: 10 },
-    { label: "Ads", value: dailyData?.videos, pts: 5 },
-    { label: "Tasks", value: dailyData?.regular_tasks, pts: 13 },
-  ];
-
-  const brandList = (brands && brands.length ? brands : FALLBACK_BRANDS) as any[];
+      .map((x, i) => ({ id: x.id || `b-${i}`, label: x.company_name, meta: `${x.industry || "Brand"} · spotlight`, go: "/discover" }));
+    return [...t, ...r, ...l, ...b];
+  }, [query, trendingTasks, rewards, brands]);
 
   return (
     <div className="min-h-screen pb-28 px-4 pt-6 bg-background">
       <div className="max-w-md mx-auto space-y-7">
-        {/* Header */}
         <header>
           <h1 className="text-2xl font-bold tracking-tight">Discover</h1>
           <p className="text-sm text-muted-foreground">Everything happening on Boycott today</p>
@@ -282,7 +315,7 @@ export default function Discover() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value.slice(0, 60))}
-            placeholder="Search tasks, rewards, brands…"
+            placeholder="Search tasks, rewards, places, brands…"
             className="pl-9 rounded-2xl h-11 bg-secondary/40 border-border"
             aria-label="Search Boycott"
           />
@@ -310,61 +343,47 @@ export default function Discover() {
           </Card>
         )}
 
-        {/* Daily briefing */}
+        {/* Live activity */}
         <section>
-          <SectionHeader icon={Newspaper} title="Daily Briefing" subtitle={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} />
-          <Card className="bg-gradient-card rounded-2xl p-4 border border-border shadow-card space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">
-                  {greeting}, {userProfile?.full_name?.split(" ")[0] || "earner"} 👋
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {hasReachedDailyCap
-                    ? "You've maxed out today's cap. Nice work."
-                    : `${Math.max(0, maxDailyPoints - totalPointsEarned)} points still on the table today.`}
-                </p>
-              </div>
-              <Badge variant="secondary" className="shrink-0 capitalize">
-                <Crown className="w-3 h-3 mr-1" />
-                {userProfile?.vip_tier || "bronze"}
-              </Badge>
+          <SectionHeader
+            icon={Activity}
+            title="Live Activity"
+            subtitle="Real-time earnings across the platform"
+            action="History"
+            onAction={() => navigate("/transactions")}
+          />
+          <Card className="rounded-2xl border border-border overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border-b border-border">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+              <p className="text-[11px] font-medium text-primary">Live</p>
+              <Radio className="w-3 h-3 text-primary ml-auto" />
             </div>
-
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Daily cap</span>
-                <span className="font-semibold">{totalPointsEarned}/{maxDailyPoints} pts</span>
-              </div>
-              <Progress value={(totalPointsEarned / maxDailyPoints) * 100} className="h-2" />
-            </div>
-
-            <div className="grid grid-cols-5 gap-1.5">
-              {slots.map((s) => (
-                <div key={s.label} className="rounded-xl bg-secondary/40 p-2 text-center">
-                  <p className="text-[10px] text-muted-foreground leading-tight">{s.label}</p>
-                  <p className="text-xs font-bold">
-                    {s.value?.completed ?? 0}/{s.value?.max ?? 0}
-                  </p>
-                  <p className="text-[9px] text-primary">{s.pts} pts</p>
+            <div className="divide-y divide-border max-h-80 overflow-y-auto">
+              {(liveFeed || []).map((a) => (
+                <div key={a.id} className="flex items-center gap-3 p-3">
+                  <div className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+                    <Activity className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{a.label}</p>
+                    {a.detail && <p className="text-[11px] text-muted-foreground truncate">{a.detail}</p>}
+                    <p className="text-[10px] text-muted-foreground">{a.time}</p>
+                  </div>
+                  <span className="text-xs font-bold text-primary shrink-0">+{a.points}</span>
                 </div>
               ))}
-            </div>
-
-            <div className="flex items-center gap-3 pt-1">
-              <div className="flex items-center gap-1.5 text-xs">
-                <Flame className="w-4 h-4 text-orange-500" />
-                <span className="font-semibold">{userProfile?.current_streak || 0}</span>
-                <span className="text-muted-foreground">day streak</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <Zap className="w-4 h-4 text-primary" />
-                <span className="font-semibold">{userProfile?.total_points || 0}</span>
-                <span className="text-muted-foreground">total pts</span>
-              </div>
+              {(!liveFeed || liveFeed.length === 0) && (
+                <p className="p-4 text-sm text-muted-foreground">Nothing yet today — get the feed moving.</p>
+              )}
             </div>
           </Card>
         </section>
+
+        {/* KYC prompt */}
+        <KycBanner action="cash out" />
 
         {isWeekendBlocked && <WeekendBreakMessage compact />}
         {!isWeekendBlocked && hasReachedDailyCap && (
@@ -378,14 +397,18 @@ export default function Discover() {
 
         {/* Trending */}
         <section>
-          <SectionHeader icon={Flame} title="Trending on Boycott" subtitle="What everyone is grinding right now" action="Earn" onAction={() => navigate("/earn")} />
+          <SectionHeader
+            icon={Flame}
+            title="Trending on Boycott"
+            subtitle={`Reshuffles in ${nextRotationLabel()}`}
+            action="Earn"
+            onAction={() => navigate("/earn")}
+          />
           {trendingLoading ? (
-            <div className="space-y-2">
-              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
-            </div>
+            <div className="space-y-2">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
           ) : (
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x">
-              {(trendingTasks || []).slice(0, 8).map((t, i) => (
+              {rotatedTrending.map((t, i) => (
                 <Card
                   key={t.id}
                   onClick={() => navigate("/earn")}
@@ -407,7 +430,7 @@ export default function Discover() {
         <section>
           <SectionHeader icon={Store} title="Featured Brand Spotlights" subtitle="Partners running campaigns with us" />
           <div className="space-y-2">
-            {brandList.slice(0, 4).map((b, i) => (
+            {brandList.map((b, i) => (
               <Card key={b.id || i} className="rounded-2xl p-3 border border-border flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
                   {(b.company_name || "B").slice(0, 2).toUpperCase()}
@@ -422,26 +445,35 @@ export default function Discover() {
           </div>
         </section>
 
-        {/* Lifestyle / local deals */}
+        {/* Lifestyle */}
         <section>
-          <SectionHeader icon={MapPin} title="Lifestyle" subtitle="Local deals & discovery in Zambia" action="Marketplace" onAction={() => navigate("/marketplace")} />
+          <SectionHeader
+            icon={MapPin}
+            title="Lifestyle"
+            subtitle={`Marketplace offers & local spots · reshuffles in ${nextRotationLabel()}`}
+            action="See all"
+            onAction={() => navigate("/lifestyle")}
+          />
           <div className="grid grid-cols-2 gap-3">
-            {(deals || []).slice(0, 4).map((d) => (
+            {lifestyleOffers.map((o) => (
               <Card
-                key={d.id}
-                onClick={() => navigate("/marketplace")}
+                key={o.id}
+                onClick={() => navigate(o.go)}
                 className="rounded-2xl p-3 border border-border cursor-pointer bg-gradient-card"
               >
                 <div className="flex items-center justify-between mb-1">
-                  <Gift className="w-4 h-4 text-primary" />
-                  <span className="text-[10px] text-muted-foreground capitalize">{d.category || "reward"}</span>
+                  <span className="text-lg leading-none">{o.emoji}</span>
+                  <RefreshCw className="w-3 h-3 text-muted-foreground" />
                 </div>
-                <p className="text-sm font-semibold leading-snug line-clamp-2">{d.name}</p>
-                <p className="text-xs text-primary font-bold mt-1">{d.points_cost} pts</p>
-                <p className="text-[10px] text-muted-foreground">{d.stock > 0 ? `${d.stock} left` : "Out of stock"}</p>
+                <p className="text-sm font-semibold leading-snug line-clamp-2">{o.name}</p>
+                <p className="text-xs text-primary font-bold mt-1 line-clamp-1">{o.meta}</p>
+                <p className="text-[10px] text-muted-foreground line-clamp-1">{o.sub}</p>
               </Card>
             ))}
           </div>
+          <Button variant="secondary" onClick={() => navigate("/lifestyle")} className="w-full rounded-2xl h-11 mt-3">
+            <Gift className="w-4 h-4 mr-2" /> Open the full Lifestyle panel
+          </Button>
         </section>
 
         {/* Upcoming events */}
@@ -472,35 +504,53 @@ export default function Discover() {
 
         {/* Community stories */}
         <section>
-          <SectionHeader icon={Users} title="Community Stories" subtitle="Live wins from the Boycott fam" />
-          <Card className="rounded-2xl border border-border divide-y divide-border overflow-hidden">
-            {(stories || []).slice(0, 6).map((s) => (
+          <SectionHeader
+            icon={Users}
+            title="Community Stories"
+            subtitle={`Wins from the fam · reshuffles in ${nextRotationLabel()}`}
+            action="See more"
+            onAction={() => navigate("/community")}
+          />
+          <Card
+            onClick={() => navigate("/community")}
+            className="rounded-2xl border border-border divide-y divide-border overflow-hidden cursor-pointer"
+          >
+            {stories.map((s) => (
               <div key={s.id} className="flex items-center gap-3 p-3">
                 <Avatar className="w-8 h-8">
-                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary">BC</AvatarFallback>
+                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{s.initials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs">
-                    <span className="font-semibold">A member</span>{" "}
+                    <span className="font-semibold">{s.name}</span>{" "}
                     <span className="text-muted-foreground">{s.headline}</span>
                     {s.detail && <span className="text-muted-foreground"> — {s.detail}</span>}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">{s.time}</p>
+                  <p className="text-[10px] text-muted-foreground">{s.city} · {s.time}</p>
                 </div>
                 <span className="text-xs font-bold text-primary shrink-0">+{s.points}</span>
               </div>
             ))}
-            {(!stories || stories.length === 0) && (
+            {stories.length === 0 && (
               <p className="p-4 text-sm text-muted-foreground">No activity yet today. Be the first.</p>
             )}
+            <div className="p-3 flex items-center justify-center gap-1 text-xs font-medium text-primary">
+              See all community stories <ChevronRight className="w-3 h-3" />
+            </div>
           </Card>
         </section>
 
         {/* Tips & guides */}
         <section>
-          <SectionHeader icon={Lightbulb} title="Tips & Guides" subtitle="Earn smarter, not harder" action="FAQ" onAction={() => navigate("/faq")} />
+          <SectionHeader
+            icon={Lightbulb}
+            title="Tips & Guides"
+            subtitle={`Fresh set every 3 hours · next in ${nextRotationLabel()}`}
+            action="FAQ"
+            onAction={() => navigate("/faq")}
+          />
           <div className="space-y-2">
-            {TIPS.map((tip) => (
+            {rotatedTips.map((tip) => (
               <Card key={tip.title} className="rounded-2xl p-3 border border-border">
                 <div className="flex items-start gap-2">
                   <Quote className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -539,9 +589,6 @@ export default function Discover() {
             {(!leaders || leaders.length === 0) && <p className="p-4 text-sm text-muted-foreground">Leaderboard warming up…</p>}
           </Card>
         </section>
-
-        {/* Daily limits detail */}
-        <DailyLimitsProgress />
 
         <div className="grid grid-cols-2 gap-3">
           <Button onClick={() => navigate("/earn")} className="rounded-2xl h-12">
