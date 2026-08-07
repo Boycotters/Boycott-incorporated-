@@ -38,7 +38,7 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys', '/videos', '/admin', '/games', '/faq', '/terms', '/privacy', '/about', '/leaderboard'];
+  const hideNavRoutes = ['/auth', '/reset-password', '/install', '/transactions', '/referrals', '/settings', '/achievements', '/analytics', '/vip', '/withdraw', '/surveys', '/videos', '/admin', '/games', '/faq', '/terms', '/privacy', '/about', '/leaderboard', '/lifestyle', '/community'];
   const showNav = !hideNavRoutes.includes(location.pathname);
 
   return (
