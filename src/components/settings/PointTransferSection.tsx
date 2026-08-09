@@ -147,6 +147,8 @@ export function PointTransferSection() {
   };
 
   return (
+    <div className="space-y-3">
+    <KycBanner action="transfer points" compact />
     <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
       <div className="flex items-center gap-3 mb-4">
         <div className="bg-secondary p-2 rounded-xl">
