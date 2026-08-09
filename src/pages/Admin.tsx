@@ -83,6 +83,7 @@ import { AIVideoManagement } from "@/components/admin/AIVideoManagement";
 import { StorageBucketExplorer } from "@/components/admin/StorageBucketExplorer";
 import { FinancialVault } from "@/components/admin/FinancialVault";
 import { SurveyDataVault } from "@/components/admin/SurveyDataVault";
+import { KYCManagement } from "@/components/admin/KYCManagement";
 
 interface Withdrawal {
   id: string;
