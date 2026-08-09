@@ -178,7 +178,17 @@ export function KYCManagement() {
                 <div><p className="text-xs text-muted-foreground">DOB</p><p className="font-medium">{selected.date_of_birth || "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">City</p><p className="font-medium">{selected.city || "—"}</p></div>
                 <div className="col-span-2"><p className="text-xs text-muted-foreground">Address</p><p className="font-medium">{selected.address || "—"}</p></div>
+                <div className="col-span-2"><p className="text-xs text-muted-foreground">Document type</p><p className="font-medium capitalize">{(selected.id_type || "nrc").replace(/_/g, " ")}</p></div>
               </div>
+
+              {selected.guardian_name && (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-1">
+                  <p className="text-xs font-semibold text-primary">Guardian-assisted (minor, no NRC)</p>
+                  <p className="text-sm font-medium">{selected.guardian_name} · {selected.guardian_relationship || "Guardian"}</p>
+                  <p className="text-xs text-muted-foreground">NRC {selected.guardian_id_number || "—"} · {selected.guardian_phone || "—"}</p>
+                </div>
+              )}
+
 
               <div className="grid grid-cols-3 gap-2">
                 {[selected.id_front_path, selected.id_back_path, selected.selfie_path].map((p, i) =>
