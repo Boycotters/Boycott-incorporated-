@@ -14,6 +14,7 @@ import {
   PhoneVerificationSheet 
 } from "@/components/wallet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KycBanner } from "@/components/kyc";
 
 interface WithdrawalResult {
   success: boolean;
