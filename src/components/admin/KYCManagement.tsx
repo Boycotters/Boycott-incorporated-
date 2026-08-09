@@ -28,6 +28,11 @@ interface KycRow {
   status: string;
   review_notes: string | null;
   created_at: string;
+  id_type?: string | null;
+  guardian_name?: string | null;
+  guardian_id_number?: string | null;
+  guardian_phone?: string | null;
+  guardian_relationship?: string | null;
 }
 
 export function KYCManagement() {
