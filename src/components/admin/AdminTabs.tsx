@@ -2,7 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
-  BarChart3, DollarSign, Users, ClipboardList, Video, FileText, Settings 
+  BarChart3, DollarSign, Users, ClipboardList, Video, FileText, Settings, ShieldCheck 
 } from "lucide-react";
 
 interface AdminTabsProps {
