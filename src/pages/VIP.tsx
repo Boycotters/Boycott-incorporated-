@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { KycBanner } from "@/components/kyc";
 
 interface VipTier {
   id: string;
