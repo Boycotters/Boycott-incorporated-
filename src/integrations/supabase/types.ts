@@ -1033,9 +1033,14 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           full_name: string
+          guardian_id_number: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          guardian_relationship: string | null
           id: string
           id_back_path: string | null
           id_front_path: string | null
+          id_type: string
           nrc_number: string
           province: string | null
           review_notes: string | null
@@ -1052,9 +1057,14 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           full_name: string
+          guardian_id_number?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
           id?: string
           id_back_path?: string | null
           id_front_path?: string | null
+          id_type?: string
           nrc_number: string
           province?: string | null
           review_notes?: string | null
@@ -1071,9 +1081,14 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           full_name?: string
+          guardian_id_number?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
           id?: string
           id_back_path?: string | null
           id_front_path?: string | null
+          id_type?: string
           nrc_number?: string
           province?: string | null
           review_notes?: string | null
