@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { KycBanner } from "@/components/kyc";
 import {
   Dialog,
   DialogContent,
