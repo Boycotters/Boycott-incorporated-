@@ -295,5 +295,6 @@ export function PointTransferSection() {
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }
