@@ -2,7 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { 
-  BarChart3, DollarSign, Users, ClipboardList, Video, FileText, Settings 
+  BarChart3, DollarSign, Users, ClipboardList, Video, FileText, Settings, ShieldCheck 
 } from "lucide-react";
 
 interface AdminTabsProps {
@@ -19,6 +19,7 @@ export function AdminTabs({ activeTab, onTabChange, pendingWithdrawals, unexport
     { value: "users", label: "Users", icon: Users },
     { value: "tasks", label: "Tasks", icon: ClipboardList },
     { value: "videos", label: "Videos", icon: Video },
+    { value: "kyc", label: "KYC", icon: ShieldCheck },
     { value: "surveys", label: "Surveys", icon: FileText, badge: unexportedSurveys > 0 ? unexportedSurveys : undefined, badgeVariant: "default" as const },
     { value: "algorithms", label: "Config", icon: Settings },
   ];

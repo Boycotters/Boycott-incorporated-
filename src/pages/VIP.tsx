@@ -17,6 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { KycBanner } from "@/components/kyc";
 
 interface VipTier {
   id: string;
@@ -165,6 +166,7 @@ const VIP = () => {
       </div>
 
       <div className="p-4 space-y-4 -mt-4">
+        <KycBanner action="upgrade your tier" compact />
         {nextTier && (
           <Card className="border-2 border-primary/20 bg-card/80 backdrop-blur">
             <CardContent className="p-4 space-y-3">

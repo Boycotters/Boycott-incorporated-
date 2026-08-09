@@ -83,6 +83,7 @@ import { AIVideoManagement } from "@/components/admin/AIVideoManagement";
 import { StorageBucketExplorer } from "@/components/admin/StorageBucketExplorer";
 import { FinancialVault } from "@/components/admin/FinancialVault";
 import { SurveyDataVault } from "@/components/admin/SurveyDataVault";
+import { KYCManagement } from "@/components/admin/KYCManagement";
 
 interface Withdrawal {
   id: string;
@@ -1390,6 +1391,10 @@ export default function Admin() {
           </TabsContent>
 
           {/* Survey Data Tab */}
+          <TabsContent value="kyc" className="mt-4">
+            <KYCManagement />
+          </TabsContent>
+
           <TabsContent value="surveys" className="mt-4 space-y-4">
             <SurveyDataVault />
           </TabsContent>

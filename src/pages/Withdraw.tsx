@@ -14,6 +14,7 @@ import {
   PhoneVerificationSheet 
 } from "@/components/wallet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KycBanner } from "@/components/kyc";
 
 interface WithdrawalResult {
   success: boolean;
@@ -199,6 +200,9 @@ export default function Withdraw() {
           </TabsList>
           
           <TabsContent value="withdraw" className="mt-4 space-y-4">
+            {/* Identity verification gate */}
+            <KycBanner action="cash out" />
+
             {/* Eligibility Banner - shows only if not eligible */}
             <WithdrawalEligibilityBanner
               referralCount={referralCount}

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { ShieldCheck, Upload, Loader2, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { ShieldCheck, Upload, Loader2, CheckCircle2, Clock, XCircle, Info } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -8,18 +8,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useKyc } from "@/hooks/useKyc";
 import { useToast } from "@/hooks/use-toast";
 
-const schema = z.object({
+const ID_TYPES = [
+  { value: "nrc", label: "NRC (Zambian ID)" },
+  { value: "passport", label: "Passport" },
+  { value: "drivers_licence", label: "Driver's licence" },
+  { value: "student_id", label: "Student / school ID (under 16)" },
+  { value: "birth_certificate", label: "Birth certificate (under 16)" },
+];
+
+/** ID types that mean the person has no NRC yet and needs a guardian to co-sign. */
+const MINOR_TYPES = ["student_id", "birth_certificate"];
+
+const baseSchema = z.object({
   full_name: z.string().trim().min(3, "Enter your full legal name").max(100),
-  nrc_number: z.string().trim().min(6, "Enter a valid NRC / passport number").max(30),
+  nrc_number: z.string().trim().min(4, "Enter your ID / document number").max(30),
   date_of_birth: z.string().min(1, "Date of birth is required"),
   address: z.string().trim().min(4, "Enter your residential address").max(200),
   city: z.string().trim().min(2, "City is required").max(60),
   province: z.string().trim().max(60).optional(),
+});
+
+const guardianSchema = z.object({
+  guardian_name: z.string().trim().min(3, "Guardian's full name is required").max(100),
+  guardian_id_number: z.string().trim().min(6, "Guardian's NRC / passport number is required").max(30),
+  guardian_phone: z.string().trim().min(9, "Guardian's phone number is required").max(20),
+  guardian_relationship: z.string().trim().min(3, "State the relationship (e.g. Mother)").max(40),
 });
 
 const MAX_FILE = 5 * 1024 * 1024;
@@ -30,24 +51,46 @@ export function KycDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
+    id_type: "nrc",
     full_name: "", nrc_number: "", date_of_birth: "", address: "", city: "", province: "",
+    guardian_name: "", guardian_id_number: "", guardian_phone: "", guardian_relationship: "",
   });
   const [files, setFiles] = useState<{ id_front?: File; id_back?: File; selfie?: File }>({});
 
   useEffect(() => {
     if (kyc) {
+      const k = kyc as unknown as Record<string, string | null>;
       setForm({
+        id_type: k.id_type || "nrc",
         full_name: kyc.full_name || "",
         nrc_number: kyc.nrc_number || "",
         date_of_birth: kyc.date_of_birth || "",
         address: kyc.address || "",
         city: kyc.city || "",
         province: kyc.province || "",
+        guardian_name: k.guardian_name || "",
+        guardian_id_number: k.guardian_id_number || "",
+        guardian_phone: k.guardian_phone || "",
+        guardian_relationship: k.guardian_relationship || "",
       });
     }
   }, [kyc]);
 
   const readOnly = status === "pending" || status === "approved";
+
+  /** Age derived from the entered date of birth. */
+  const age = useMemo(() => {
+    if (!form.date_of_birth) return null;
+    const dob = new Date(form.date_of_birth);
+    if (Number.isNaN(dob.getTime())) return null;
+    const now = new Date();
+    let a = now.getFullYear() - dob.getFullYear();
+    const m = now.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) a--;
+    return a;
+  }, [form.date_of_birth]);
+
+  const isMinorFlow = MINOR_TYPES.includes(form.id_type) || (age !== null && age < 16);
 
   const upload = async (file: File | undefined, slot: string) => {
     if (!file || !user) return null;
@@ -61,13 +104,26 @@ export function KycDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
 
   const submit = async () => {
     if (!user) return;
-    const parsed = schema.safeParse(form);
+    const parsed = baseSchema.safeParse(form);
     if (!parsed.success) {
       toast({ title: "Check your details", description: parsed.error.errors[0].message, variant: "destructive" });
       return;
     }
+    let guardian: z.infer<typeof guardianSchema> | null = null;
+    if (isMinorFlow) {
+      const g = guardianSchema.safeParse(form);
+      if (!g.success) {
+        toast({ title: "Guardian details needed", description: g.error.errors[0].message, variant: "destructive" });
+        return;
+      }
+      guardian = g.data;
+    }
+    if (age !== null && age < 13) {
+      toast({ title: "Not eligible", description: "You must be at least 13 to use Boycott Incorporated.", variant: "destructive" });
+      return;
+    }
     if (!kyc && (!files.id_front || !files.selfie)) {
-      toast({ title: "Documents required", description: "Upload your NRC front and a selfie.", variant: "destructive" });
+      toast({ title: "Documents required", description: "Upload your ID document and a selfie.", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -82,6 +138,11 @@ export function KycDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
         user_id: user.id,
         ...parsed.data,
         province: parsed.data.province || null,
+        id_type: form.id_type,
+        guardian_name: guardian?.guardian_name ?? null,
+        guardian_id_number: guardian?.guardian_id_number ?? null,
+        guardian_phone: guardian?.guardian_phone ?? null,
+        guardian_relationship: guardian?.guardian_relationship ?? null,
         status: "pending",
       };
       if (front) payload.id_front_path = front;
@@ -102,6 +163,18 @@ export function KycDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       setSaving(false);
     }
   };
+
+  const docLabels: [keyof typeof files, string][] = isMinorFlow
+    ? [
+        ["id_front", "Your school ID or birth certificate (required)"],
+        ["id_back", "Guardian's NRC / passport"],
+        ["selfie", "Selfie with your guardian (required)"],
+      ]
+    : [
+        ["id_front", "ID front (required)"],
+        ["id_back", "ID back"],
+        ["selfie", "Selfie holding your ID (required)"],
+      ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,13 +200,24 @@ export function KycDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
 
         <div className="space-y-3">
           <div>
+            <Label htmlFor="kyc-idtype">Document type</Label>
+            <Select value={form.id_type} disabled={readOnly}
+              onValueChange={(v) => setForm({ ...form, id_type: v })}>
+              <SelectTrigger id="kyc-idtype"><SelectValue placeholder="Select document" /></SelectTrigger>
+              <SelectContent>
+                {ID_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
             <Label htmlFor="kyc-name">Full legal name</Label>
             <Input id="kyc-name" disabled={readOnly} value={form.full_name} maxLength={100}
-              onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="As shown on your NRC" />
+              onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="As shown on your document" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="kyc-nrc">NRC / Passport</Label>
+              <Label htmlFor="kyc-nrc">Document number</Label>
               <Input id="kyc-nrc" disabled={readOnly} value={form.nrc_number} maxLength={30}
                 onChange={(e) => setForm({ ...form, nrc_number: e.target.value })} placeholder="123456/78/1" />
             </div>
@@ -161,13 +245,41 @@ export function KycDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
             </div>
           </div>
 
+          {isMinorFlow && (
+            <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <p className="text-xs text-muted-foreground flex gap-2">
+                <Info className="w-4 h-4 shrink-0 text-primary" />
+                No NRC yet? Under-16s can verify with a parent or guardian. Cash-outs are paid to the guardian's
+                mobile money number, and the guardian is responsible for the account.
+              </p>
+              <div>
+                <Label htmlFor="kyc-gname">Guardian's full name</Label>
+                <Input id="kyc-gname" disabled={readOnly} value={form.guardian_name} maxLength={100}
+                  onChange={(e) => setForm({ ...form, guardian_name: e.target.value })} placeholder="Parent / guardian" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="kyc-gid">Guardian's NRC</Label>
+                  <Input id="kyc-gid" disabled={readOnly} value={form.guardian_id_number} maxLength={30}
+                    onChange={(e) => setForm({ ...form, guardian_id_number: e.target.value })} placeholder="123456/78/1" />
+                </div>
+                <div>
+                  <Label htmlFor="kyc-gphone">Guardian's phone</Label>
+                  <Input id="kyc-gphone" disabled={readOnly} value={form.guardian_phone} maxLength={20}
+                    onChange={(e) => setForm({ ...form, guardian_phone: e.target.value })} placeholder="09XXXXXXXX" />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="kyc-grel">Relationship to you</Label>
+                <Input id="kyc-grel" disabled={readOnly} value={form.guardian_relationship} maxLength={40}
+                  onChange={(e) => setForm({ ...form, guardian_relationship: e.target.value })} placeholder="Mother, Father, Guardian" />
+              </div>
+            </div>
+          )}
+
           {!readOnly && (
             <div className="space-y-2">
-              {([
-                ["id_front", "NRC front (required)"],
-                ["id_back", "NRC back"],
-                ["selfie", "Selfie holding your NRC (required)"],
-              ] as const).map(([key, label]) => (
+              {docLabels.map(([key, label]) => (
                 <div key={key}>
                   <Label htmlFor={`kyc-${key}`} className="text-xs">{label}</Label>
                   <div className="flex items-center gap-2">

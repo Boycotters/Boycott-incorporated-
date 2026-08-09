@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { KycBanner } from "@/components/kyc";
 import {
   Dialog,
   DialogContent,
@@ -147,6 +148,8 @@ export function PointTransferSection() {
   };
 
   return (
+    <div className="space-y-3">
+    <KycBanner action="transfer points" compact />
     <Card className="bg-gradient-card p-5 rounded-2xl shadow-card border border-border">
       <div className="flex items-center gap-3 mb-4">
         <div className="bg-secondary p-2 rounded-xl">
@@ -293,5 +296,6 @@ export function PointTransferSection() {
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }
