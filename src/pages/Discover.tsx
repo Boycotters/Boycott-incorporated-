@@ -20,6 +20,7 @@ import { KycBanner } from "@/components/kyc";
 import { rotate, nextRotationLabel, rotationSeed } from "@/lib/rotation";
 import { buildCommunityStories } from "@/lib/community";
 import { LOCAL_SERVICES } from "@/lib/lifestyle";
+import { OfferPurchaseDialog, type DiscoverOffer } from "@/components/discover/OfferPurchaseDialog";
 
 const SectionHeader = ({
   icon: Icon,
@@ -75,6 +76,7 @@ export default function Discover() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [selectedOffer, setSelectedOffer] = useState<DiscoverOffer | null>(null);
   const { hasReachedDailyCap, isWeekendBlocked, maxDailyPoints } = useDailyLimits();
   const seed = rotationSeed();
 
@@ -157,12 +159,13 @@ export default function Discover() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rewards")
-        .select("id, name, description, points_cost, category, image, stock")
+        .select("id, name, description, points_cost, category, image, stock, placement")
         .eq("is_active", true);
       if (error) throw error;
       return data || [];
     },
   });
+
 
   const { data: events } = useQuery({
     queryKey: ["discover-events"],
@@ -254,24 +257,38 @@ export default function Discover() {
   const stories = useMemo(() => buildCommunityStories(storyTxs, 0, 6), [storyTxs, seed]);
 
   const lifestyleOffers = useMemo(() => {
-    const marketplace = (rewards || []).map((r) => ({
-      id: r.id,
-      name: r.name,
-      meta: `${r.points_cost} pts`,
-      sub: (r.stock ?? 0) > 0 ? `${r.stock} left` : "Sold out",
-      emoji: "🎁",
-      go: "/marketplace",
-    }));
+    const list = (rewards || []) as Record<string, unknown>[];
+    const marketplace = list
+      .filter((r) => ["discover", "both", "marketplace", undefined, null].includes(r.placement as string))
+      .map((r) => ({
+        kind: "reward" as const,
+        id: r.id as string,
+        name: r.name as string,
+        description: (r.description as string) || null,
+        points: (r.points_cost as number) || 0,
+        stock: (r.stock as number) ?? 0,
+        meta: `${r.points_cost} pts`,
+        sub: ((r.stock as number) ?? 0) > 0 ? `${r.stock} left` : "Sold out",
+        emoji: "🎁",
+        priority: (r.placement as string) === "discover" || (r.placement as string) === "both" ? 0 : 1,
+      }));
     const services = LOCAL_SERVICES.map((s) => ({
+      kind: "service" as const,
       id: s.id,
       name: s.name,
+      description: s.blurb,
+      points: null,
+      stock: null,
       meta: s.perk,
       sub: `${s.category} · ${s.city}`,
       emoji: s.emoji,
-      go: "/lifestyle",
+      priority: 1,
     }));
-    return rotate([...marketplace, ...services], 3).slice(0, 6);
+    const pinned = marketplace.filter((m) => m.priority === 0);
+    const rest = rotate([...marketplace.filter((m) => m.priority === 1), ...services], 3);
+    return [...pinned, ...rest].slice(0, 6);
   }, [rewards, seed]);
+
 
   const brandList = useMemo(
     () => rotate((brands && brands.length ? brands : FALLBACK_BRANDS) as Record<string, string>[], 4).slice(0, 4),
@@ -458,7 +475,7 @@ export default function Discover() {
             {lifestyleOffers.map((o) => (
               <Card
                 key={o.id}
-                onClick={() => navigate(o.go)}
+                onClick={() => setSelectedOffer(o)}
                 className="rounded-2xl p-3 border border-border cursor-pointer bg-gradient-card"
               >
                 <div className="flex items-center justify-between mb-1">
@@ -599,6 +616,12 @@ export default function Discover() {
           </Button>
         </div>
       </div>
+
+      <OfferPurchaseDialog
+        offer={selectedOffer}
+        open={!!selectedOffer}
+        onOpenChange={(o) => !o && setSelectedOffer(null)}
+      />
     </div>
   );
 }

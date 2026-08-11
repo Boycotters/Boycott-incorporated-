@@ -8,6 +8,7 @@ export interface KycRecord {
   id: string;
   full_name: string;
   nrc_number: string;
+  id_type: string | null;
   date_of_birth: string | null;
   address: string | null;
   city: string | null;

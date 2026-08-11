@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { format, addDays, subDays, isToday } from "date-fns";
 import { LiveWalletCard } from "@/components/wallet";
 import { DailyLimitsProgress } from "@/components/DailyLimitsProgress";
+import { NotificationBell } from "@/components/home/NotificationBell";
 interface StreakResult {
   claimed: boolean;
   already_claimed_today: boolean;
@@ -300,9 +301,12 @@ export default function Home() {
     <div className="min-h-screen pb-24 px-4 pt-4">
       <div className="max-w-md mx-auto space-y-3">
         {/* Header */}
-        <div className="space-y-0.5">
-          <h1 className="text-2xl font-bold">Welcome back!</h1>
-          <p className="text-sm text-muted-foreground">Keep earning rewards daily</p>
+        <div className="flex items-start justify-between">
+          <div className="space-y-0.5">
+            <h1 className="text-2xl font-bold">Welcome back!</h1>
+            <p className="text-sm text-muted-foreground">Keep earning rewards daily</p>
+          </div>
+          <NotificationBell />
         </div>
 
         {/* Live Wallet Card */}

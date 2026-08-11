@@ -1530,6 +1530,7 @@ export type Database = {
           image: string | null
           is_active: boolean | null
           name: string
+          placement: string
           points_cost: number
           stock: number
         }
@@ -1541,6 +1542,7 @@ export type Database = {
           image?: string | null
           is_active?: boolean | null
           name: string
+          placement?: string
           points_cost: number
           stock?: number
         }
@@ -1552,6 +1554,7 @@ export type Database = {
           image?: string | null
           is_active?: boolean | null
           name?: string
+          placement?: string
           points_cost?: number
           stock?: number
         }

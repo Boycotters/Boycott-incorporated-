@@ -36,6 +36,8 @@ interface WithdrawalEligibility {
   required_referrals?: number;
   remaining_referrals?: number;
   is_verified?: boolean;
+  phone_required?: boolean;
+  completed_withdrawals?: number;
 }
 
 export default function Withdraw() {
@@ -165,7 +167,10 @@ export default function Withdraw() {
   const requiredReferrals = eligibility?.required_referrals || 2;
   const isPhoneVerified = userData?.phone_verified || false;
   const hasEnoughReferrals = referralCount >= requiredReferrals;
-  const isFullyEligible = hasEnoughReferrals && isPhoneVerified && kycApproved;
+  // Phone verification is only required from the second withdrawal onwards
+  const phoneRequired = eligibility?.phone_required ?? false;
+  const isFullyEligible =
+    hasEnoughReferrals && kycApproved && (!phoneRequired || isPhoneVerified);
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
@@ -207,6 +212,7 @@ export default function Withdraw() {
               referralCount={referralCount}
               requiredReferrals={requiredReferrals}
               isPhoneVerified={isPhoneVerified}
+              phoneRequired={phoneRequired}
               onVerifyPhone={() => setPhoneVerificationOpen(true)}
             />
             
