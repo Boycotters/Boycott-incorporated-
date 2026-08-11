@@ -127,6 +127,7 @@ export function WithdrawalEligibilityBanner({
           </p>
         </div>
       )}
+      <KycDialog open={kycOpen} onOpenChange={setKycOpen} />
     </div>
   );
 }
