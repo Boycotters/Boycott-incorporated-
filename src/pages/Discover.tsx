@@ -20,6 +20,7 @@ import { KycBanner } from "@/components/kyc";
 import { rotate, nextRotationLabel, rotationSeed } from "@/lib/rotation";
 import { buildCommunityStories } from "@/lib/community";
 import { LOCAL_SERVICES } from "@/lib/lifestyle";
+import { OfferPurchaseDialog, type DiscoverOffer } from "@/components/discover/OfferPurchaseDialog";
 
 const SectionHeader = ({
   icon: Icon,
@@ -75,6 +76,7 @@ export default function Discover() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [selectedOffer, setSelectedOffer] = useState<DiscoverOffer | null>(null);
   const { hasReachedDailyCap, isWeekendBlocked, maxDailyPoints } = useDailyLimits();
   const seed = rotationSeed();
 
@@ -614,6 +616,12 @@ export default function Discover() {
           </Button>
         </div>
       </div>
+
+      <OfferPurchaseDialog
+        offer={selectedOffer}
+        open={!!selectedOffer}
+        onOpenChange={(o) => !o && setSelectedOffer(null)}
+      />
     </div>
   );
 }
