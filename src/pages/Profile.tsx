@@ -1,7 +1,7 @@
 import { 
   Settings, Trophy, Target, Zap, ChevronRight, Award, Gift, LogOut, 
   BarChart3, Crown, Flame, Users, Copy, Check, Edit3, Phone, Mail,
-  Calendar, TrendingUp, Star, Package
+  Calendar, TrendingUp, Star, Package, IdCard
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserInventory } from "@/components/profile";
+import { useKyc } from "@/hooks/useKyc";
+import { KycDialog } from "@/components/kyc";
 import {
   Collapsible,
   CollapsibleContent,
@@ -688,6 +690,33 @@ export default function Profile() {
               <p className="text-[10px] text-muted-foreground">Email</p>
               <p className="text-sm font-medium truncate">{userData?.email || user?.email}</p>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="bg-secondary p-1.5 rounded-lg">
+              <IdCard className="w-4 h-4 text-secondary-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-muted-foreground">
+                {ID_TYPE_LABELS[kyc?.id_type || "nrc"] || "Identity document"}
+              </p>
+              <p className="text-sm font-medium truncate">
+                {kyc?.nrc_number || "Not provided"}
+              </p>
+            </div>
+            <Badge
+              className={
+                kycStatus === "approved"
+                  ? "bg-green-500/10 text-green-600 border-0 text-[10px]"
+                  : kycStatus === "pending"
+                    ? "bg-amber-500/10 text-amber-600 border-0 text-[10px]"
+                    : "bg-muted text-muted-foreground border-0 text-[10px]"
+              }
+            >
+              {kycStatus === "approved" ? "Verified" : kycStatus === "pending" ? "In review" : kycStatus === "rejected" ? "Rejected" : "Unverified"}
+            </Badge>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setKycOpen(true)}>
+              {kyc ? "View" : "Add"}
+            </Button>
           </div>
           {userData?.phone && (
             <div className="flex items-center gap-3">
