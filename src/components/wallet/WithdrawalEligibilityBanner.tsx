@@ -9,6 +9,8 @@ interface WithdrawalEligibilityBannerProps {
   referralCount: number;
   requiredReferrals: number;
   isPhoneVerified: boolean;
+  /** Phone verification only kicks in from the second withdrawal onwards. */
+  phoneRequired?: boolean;
   onVerifyPhone: () => void;
 }
 
@@ -16,6 +18,7 @@ export function WithdrawalEligibilityBanner({
   referralCount,
   requiredReferrals,
   isPhoneVerified,
+  phoneRequired = false,
   onVerifyPhone,
 }: WithdrawalEligibilityBannerProps) {
   const navigate = useNavigate();
@@ -25,7 +28,8 @@ export function WithdrawalEligibilityBanner({
 
   const hasEnoughReferrals = referralCount >= requiredReferrals;
   const kycApproved = kycStatus === "approved";
-  const isFullyEligible = hasEnoughReferrals && isPhoneVerified && kycApproved;
+  const phoneOk = !phoneRequired || isPhoneVerified;
+  const isFullyEligible = hasEnoughReferrals && phoneOk && kycApproved;
 
   if (kycLoading || isFullyEligible) {
     return null;
@@ -41,7 +45,7 @@ export function WithdrawalEligibilityBanner({
       progress: `${referralCount}/${requiredReferrals}`,
     });
   }
-  if (!isPhoneVerified) {
+  if (phoneRequired && !isPhoneVerified) {
     pendingRequirements.push({
       icon: Phone,
       label: 'Verify your phone number',
@@ -50,6 +54,7 @@ export function WithdrawalEligibilityBanner({
       progress: null,
     });
   }
+
   if (!kycApproved) {
     pendingRequirements.push({
       icon: kycStatus === "pending" ? Clock : ShieldCheck,
