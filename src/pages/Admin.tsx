@@ -41,7 +41,8 @@ import {
   Gift,
   Bell,
   HardDrive,
-  Coins
+  Coins,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -842,6 +843,10 @@ export default function Admin() {
               <TabsTrigger value="videos" className="gap-1.5 px-3 shrink-0">
                 <Video className="w-4 h-4" />
                 <span className="hidden sm:inline">Videos</span>
+              </TabsTrigger>
+              <TabsTrigger value="kyc" className="gap-1.5 px-3 shrink-0">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">KYC</span>
               </TabsTrigger>
               <TabsTrigger value="surveys" className="gap-1.5 px-3 shrink-0">
                 <FileText className="w-4 h-4" />
