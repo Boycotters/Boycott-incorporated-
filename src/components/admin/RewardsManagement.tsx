@@ -28,6 +28,7 @@ interface Reward {
   category: string | null;
   image: string | null;
   is_active: boolean | null;
+  placement?: string | null;
   created_at: string | null;
 }
 
@@ -41,6 +42,12 @@ const ZAMBIAN_CATEGORIES = [
   { value: "vouchers", label: "Shopping Vouchers" },
   { value: "digital", label: "Digital Items" },
   { value: "other", label: "Other" },
+];
+
+const PLACEMENTS = [
+  { value: "marketplace", label: "Marketplace only" },
+  { value: "discover", label: "Discover page only" },
+  { value: "both", label: "Marketplace + Discover" },
 ];
 
 const PRESET_REWARDS = [
@@ -73,6 +80,7 @@ export function RewardsManagement() {
     stock: 50,
     category: "airtime",
     image: "",
+    placement: "marketplace",
   });
 
   const { data: rewards = [], isLoading } = useQuery({
@@ -96,6 +104,7 @@ export function RewardsManagement() {
         stock: reward.stock,
         category: reward.category,
         image: reward.image || null,
+        placement: reward.placement,
         is_active: true,
       });
       if (error) throw error;
@@ -138,6 +147,7 @@ export function RewardsManagement() {
           stock: reward.stock,
           category: reward.category,
           image: reward.image,
+          placement: reward.placement || "marketplace",
           is_active: reward.is_active,
         })
         .eq("id", reward.id);
@@ -178,7 +188,7 @@ export function RewardsManagement() {
   });
 
   const resetForm = () => {
-    setNewReward({ name: "", description: "", points_cost: 100, stock: 50, category: "airtime", image: "" });
+    setNewReward({ name: "", description: "", points_cost: 100, stock: 50, category: "airtime", image: "", placement: "marketplace" });
   };
 
   const getCategoryLabel = (cat: string | null) => {
@@ -210,6 +220,19 @@ export function RewardsManagement() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {[
+              { label: "Items", value: rewards.length },
+              { label: "Active", value: rewards.filter((r) => r.is_active).length },
+              { label: "On Discover", value: rewards.filter((r) => ["discover", "both"].includes(r.placement || "")).length },
+              { label: "Out of stock", value: rewards.filter((r) => (r.stock ?? 0) <= 0).length },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-border bg-muted/30 p-2 text-center">
+                <p className="text-lg font-bold">{s.value}</p>
+                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </div>
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
           ) : rewards.length === 0 ? (
@@ -236,6 +259,7 @@ export function RewardsManagement() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge variant="outline">{getCategoryLabel(reward.category)}</Badge>
+                        <Badge variant="secondary" className="capitalize">{(reward.placement || "marketplace").replace("both", "market + discover")}</Badge>
                         <Badge className={reward.is_active ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}>
                           {reward.is_active ? "Active" : "Inactive"}
                         </Badge>
@@ -317,6 +341,17 @@ export function RewardsManagement() {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label>Show on</Label>
+              <Select value={newReward.placement} onValueChange={(v) => setNewReward((p) => ({ ...p, placement: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PLACEMENTS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Image URL (optional)</Label>
               <Input value={newReward.image} onChange={(e) => setNewReward((p) => ({ ...p, image: e.target.value }))} placeholder="https://..." />
             </div>
@@ -360,6 +395,17 @@ export function RewardsManagement() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ZAMBIAN_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Show on</Label>
+                <Select value={editReward.placement || "marketplace"} onValueChange={(v) => setEditReward((p) => p ? { ...p, placement: v } : null)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PLACEMENTS.map((c) => (
                       <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
