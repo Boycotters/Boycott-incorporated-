@@ -14,7 +14,7 @@ import {
   PhoneVerificationSheet 
 } from "@/components/wallet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { KycBanner } from "@/components/kyc";
+import { useKyc } from "@/hooks/useKyc";
 
 interface WithdrawalResult {
   success: boolean;
@@ -43,6 +43,7 @@ export default function Withdraw() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
+  const { isApproved: kycApproved } = useKyc();
 
   // Fetch wallet data
   const { data: wallet } = useQuery({
@@ -164,7 +165,7 @@ export default function Withdraw() {
   const requiredReferrals = eligibility?.required_referrals || 2;
   const isPhoneVerified = userData?.phone_verified || false;
   const hasEnoughReferrals = referralCount >= requiredReferrals;
-  const isFullyEligible = hasEnoughReferrals && isPhoneVerified;
+  const isFullyEligible = hasEnoughReferrals && isPhoneVerified && kycApproved;
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
@@ -200,10 +201,8 @@ export default function Withdraw() {
           </TabsList>
           
           <TabsContent value="withdraw" className="mt-4 space-y-4">
-            {/* Identity verification gate */}
-            <KycBanner action="cash out" />
+            {/* Eligibility Banner - includes identity verification */}
 
-            {/* Eligibility Banner - shows only if not eligible */}
             <WithdrawalEligibilityBanner
               referralCount={referralCount}
               requiredReferrals={requiredReferrals}
