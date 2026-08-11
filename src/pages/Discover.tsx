@@ -473,7 +473,7 @@ export default function Discover() {
             {lifestyleOffers.map((o) => (
               <Card
                 key={o.id}
-                onClick={() => navigate(o.go)}
+                onClick={() => setSelectedOffer(o)}
                 className="rounded-2xl p-3 border border-border cursor-pointer bg-gradient-card"
               >
                 <div className="flex items-center justify-between mb-1">
