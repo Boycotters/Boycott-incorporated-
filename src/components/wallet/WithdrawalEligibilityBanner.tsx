@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { AlertTriangle, Users, Phone, X, Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { Users, Phone, Shield, ChevronDown, ChevronUp, ShieldCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useKyc } from "@/hooks/useKyc";
+import { KycDialog } from "@/components/kyc";
 
 interface WithdrawalEligibilityBannerProps {
   referralCount: number;
@@ -19,14 +20,17 @@ export function WithdrawalEligibilityBanner({
 }: WithdrawalEligibilityBannerProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
-  
+  const [kycOpen, setKycOpen] = useState(false);
+  const { status: kycStatus, isLoading: kycLoading } = useKyc();
+
   const hasEnoughReferrals = referralCount >= requiredReferrals;
-  const isFullyEligible = hasEnoughReferrals && isPhoneVerified;
-  
-  if (isFullyEligible) {
+  const kycApproved = kycStatus === "approved";
+  const isFullyEligible = hasEnoughReferrals && isPhoneVerified && kycApproved;
+
+  if (kycLoading || isFullyEligible) {
     return null;
   }
-  
+
   const pendingRequirements = [];
   if (!hasEnoughReferrals) {
     pendingRequirements.push({
@@ -46,6 +50,22 @@ export function WithdrawalEligibilityBanner({
       progress: null,
     });
   }
+  if (!kycApproved) {
+    pendingRequirements.push({
+      icon: kycStatus === "pending" ? Clock : ShieldCheck,
+      label:
+        kycStatus === "pending"
+          ? "Identity verification under review"
+          : kycStatus === "rejected"
+            ? "Identity verification rejected — resubmit"
+            : "Verify your identity (KYC)",
+      action: () => setKycOpen(true),
+      actionLabel:
+        kycStatus === "pending" ? "View" : kycStatus === "rejected" ? "Resubmit" : "Verify",
+      progress: null,
+    });
+  }
+
 
   return (
     <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl overflow-hidden">
