@@ -847,7 +847,7 @@ export default function Profile() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
       <KycDialog open={kycOpen} onOpenChange={setKycOpen} />
+    </div>
   );
 }
