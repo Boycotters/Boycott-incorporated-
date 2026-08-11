@@ -157,12 +157,13 @@ export default function Discover() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rewards")
-        .select("id, name, description, points_cost, category, image, stock")
+        .select("id, name, description, points_cost, category, image, stock, placement")
         .eq("is_active", true);
       if (error) throw error;
       return data || [];
     },
   });
+
 
   const { data: events } = useQuery({
     queryKey: ["discover-events"],
