@@ -255,24 +255,38 @@ export default function Discover() {
   const stories = useMemo(() => buildCommunityStories(storyTxs, 0, 6), [storyTxs, seed]);
 
   const lifestyleOffers = useMemo(() => {
-    const marketplace = (rewards || []).map((r) => ({
-      id: r.id,
-      name: r.name,
-      meta: `${r.points_cost} pts`,
-      sub: (r.stock ?? 0) > 0 ? `${r.stock} left` : "Sold out",
-      emoji: "🎁",
-      go: "/marketplace",
-    }));
+    const list = (rewards || []) as Record<string, unknown>[];
+    const marketplace = list
+      .filter((r) => ["discover", "both", "marketplace", undefined, null].includes(r.placement as string))
+      .map((r) => ({
+        kind: "reward" as const,
+        id: r.id as string,
+        name: r.name as string,
+        description: (r.description as string) || null,
+        points: (r.points_cost as number) || 0,
+        stock: (r.stock as number) ?? 0,
+        meta: `${r.points_cost} pts`,
+        sub: ((r.stock as number) ?? 0) > 0 ? `${r.stock} left` : "Sold out",
+        emoji: "🎁",
+        priority: (r.placement as string) === "discover" || (r.placement as string) === "both" ? 0 : 1,
+      }));
     const services = LOCAL_SERVICES.map((s) => ({
+      kind: "service" as const,
       id: s.id,
       name: s.name,
+      description: s.blurb,
+      points: null,
+      stock: null,
       meta: s.perk,
       sub: `${s.category} · ${s.city}`,
       emoji: s.emoji,
-      go: "/lifestyle",
+      priority: 1,
     }));
-    return rotate([...marketplace, ...services], 3).slice(0, 6);
+    const pinned = marketplace.filter((m) => m.priority === 0);
+    const rest = rotate([...marketplace.filter((m) => m.priority === 1), ...services], 3);
+    return [...pinned, ...rest].slice(0, 6);
   }, [rewards, seed]);
+
 
   const brandList = useMemo(
     () => rotate((brands && brands.length ? brands : FALLBACK_BRANDS) as Record<string, string>[], 4).slice(0, 4),
