@@ -34,6 +34,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+const ID_TYPE_LABELS: Record<string, string> = {
+  nrc: "NRC (Zambian ID)",
+  passport: "Passport",
+  drivers_licence: "Driver's licence",
+  student_id: "Student / school ID",
+  birth_certificate: "Birth certificate",
+};
+
 interface Achievement {
   id: string;
   name: string;
@@ -135,6 +143,8 @@ export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [kycOpen, setKycOpen] = useState(false);
+  const { kyc, status: kycStatus } = useKyc();
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -838,5 +848,6 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
     </div>
+      <KycDialog open={kycOpen} onOpenChange={setKycOpen} />
   );
 }
