@@ -9,8 +9,12 @@ interface WithdrawalEligibilityBannerProps {
   referralCount: number;
   requiredReferrals: number;
   isPhoneVerified: boolean;
+  /** Referrals only gate the first withdrawal. */
+  referralsRequired?: boolean;
   /** Phone verification only kicks in from the second withdrawal onwards. */
   phoneRequired?: boolean;
+  /** Server-reported KYC status (takes precedence over the local hook). */
+  kycStatusOverride?: string;
   onVerifyPhone: () => void;
 }
 
@@ -18,15 +22,18 @@ export function WithdrawalEligibilityBanner({
   referralCount,
   requiredReferrals,
   isPhoneVerified,
+  referralsRequired = true,
   phoneRequired = false,
+  kycStatusOverride,
   onVerifyPhone,
 }: WithdrawalEligibilityBannerProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
   const [kycOpen, setKycOpen] = useState(false);
-  const { status: kycStatus, isLoading: kycLoading } = useKyc();
+  const { status: localKycStatus, isLoading: kycLoading } = useKyc();
+  const kycStatus = kycStatusOverride ?? localKycStatus;
 
-  const hasEnoughReferrals = referralCount >= requiredReferrals;
+  const hasEnoughReferrals = !referralsRequired || referralCount >= requiredReferrals;
   const kycApproved = kycStatus === "approved";
   const phoneOk = !phoneRequired || isPhoneVerified;
   const isFullyEligible = hasEnoughReferrals && phoneOk && kycApproved;
