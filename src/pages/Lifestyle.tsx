@@ -9,18 +9,20 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { LOCAL_SERVICES, LIFESTYLE_CATEGORIES } from "@/lib/lifestyle";
 import { rotate, nextRotationLabel } from "@/lib/rotation";
+import { OfferPurchaseDialog, type DiscoverOffer } from "@/components/discover/OfferPurchaseDialog";
 
 export default function Lifestyle() {
   const navigate = useNavigate();
   const [category, setCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
+  const [selectedOffer, setSelectedOffer] = useState<DiscoverOffer | null>(null);
 
   const { data: rewards } = useQuery({
     queryKey: ["lifestyle-rewards"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rewards")
-        .select("id, name, description, points_cost, category, image, stock")
+        .select("id, name, description, points_cost, category, image, stock, placement")
         .eq("is_active", true);
       if (error) throw error;
       return data || [];
@@ -113,8 +115,22 @@ export default function Lifestyle() {
           {filtered.map((o) => (
             <Card
               key={o.id}
-              onClick={() => o.kind === "marketplace" && navigate("/marketplace")}
-              className={`rounded-2xl p-3 border border-border flex items-center gap-3 ${o.kind === "marketplace" ? "cursor-pointer" : ""}`}
+              onClick={() =>
+                setSelectedOffer({
+                  kind: o.kind === "marketplace" ? "reward" : "service",
+                  id: o.id,
+                  name: o.name,
+                  emoji: o.emoji,
+                  meta: o.points !== null ? `${o.points} pts` : o.subCategory,
+                  sub: o.kind === "marketplace"
+                    ? ((o.stock ?? 0) > 0 ? `${o.stock} left` : "Sold out")
+                    : `${o.category} · ${o.city}`,
+                  description: o.blurb,
+                  points: o.points,
+                  stock: o.stock,
+                })
+              }
+              className="rounded-2xl p-3 border border-border flex items-center gap-3 cursor-pointer active:scale-[0.99] transition-transform"
             >
               <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-lg shrink-0">
                 {o.emoji}
@@ -147,6 +163,12 @@ export default function Lifestyle() {
             </Card>
           )}
         </div>
+
+        <OfferPurchaseDialog
+          offer={selectedOffer}
+          open={!!selectedOffer}
+          onOpenChange={(v) => !v && setSelectedOffer(null)}
+        />
 
         <Button onClick={() => navigate("/marketplace")} className="w-full rounded-2xl h-12">
           <Gift className="w-4 h-4 mr-2" /> Open Marketplace <ChevronRight className="w-4 h-4 ml-1" />
