@@ -164,15 +164,22 @@ export default function Withdraw() {
     toast.success("Phone verified! You can now withdraw.");
   };
 
-  // Calculate eligibility
+  // Eligibility — trust the server RPC as the source of truth
   const referralCount = eligibility?.referral_count || 0;
   const requiredReferrals = eligibility?.required_referrals || 2;
   const isPhoneVerified = userData?.phone_verified || false;
-  const hasEnoughReferrals = referralCount >= requiredReferrals;
+  const completedWithdrawals = eligibility?.completed_withdrawals ?? 0;
+  // Referrals only gate the FIRST withdrawal
+  const referralsRequired = completedWithdrawals === 0;
   // Phone verification is only required from the second withdrawal onwards
   const phoneRequired = eligibility?.phone_required ?? false;
-  const isFullyEligible =
-    hasEnoughReferrals && kycApproved && (!phoneRequired || isPhoneVerified);
+  const kycOk = (eligibility?.kyc_status ?? (kycApproved ? "approved" : "none")) === "approved";
+  // Only requirement-type blockers disable the form (balance / pending are handled inline)
+  const blockingRequirements = ["kyc", "referrals", "phone_verification"];
+  const isFullyEligible = eligibility
+    ? eligibility.eligible === true ||
+      !blockingRequirements.includes(eligibility.requirement || "")
+    : kycOk && (!referralsRequired || referralCount >= requiredReferrals);
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-4">
