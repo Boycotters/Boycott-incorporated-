@@ -220,8 +220,10 @@ export default function Withdraw() {
             <WithdrawalEligibilityBanner
               referralCount={referralCount}
               requiredReferrals={requiredReferrals}
+              referralsRequired={referralsRequired}
               isPhoneVerified={isPhoneVerified}
               phoneRequired={phoneRequired}
+              kycStatusOverride={eligibility?.kyc_status}
               onVerifyPhone={() => setPhoneVerificationOpen(true)}
             />
             
