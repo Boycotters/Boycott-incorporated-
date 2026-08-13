@@ -31,6 +31,7 @@ interface WithdrawalResult {
 interface WithdrawalEligibility {
   eligible: boolean;
   reason?: string;
+  requirement?: string;
   message: string;
   referral_count?: number;
   required_referrals?: number;
@@ -38,6 +39,7 @@ interface WithdrawalEligibility {
   is_verified?: boolean;
   phone_required?: boolean;
   completed_withdrawals?: number;
+  kyc_status?: string;
 }
 
 export default function Withdraw() {
