@@ -688,6 +688,9 @@ serve(async (req) => {
       case 'generate_quiz':
         result = await generateQuiz(data);
         break;
+      case 'generate_article':
+        result = await generateArticle(data);
+        break;
       case 'chatbot':
         result = await handleChatbot(data as any);
         break;
