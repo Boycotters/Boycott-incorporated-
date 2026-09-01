@@ -1692,6 +1692,8 @@ export type Database = {
           placement: string
           points_cost: number
           stock: number
+          unlock_achievement_id: string | null
+          unlock_type: string
         }
         Insert: {
           category?: string | null
@@ -1704,6 +1706,8 @@ export type Database = {
           placement?: string
           points_cost: number
           stock?: number
+          unlock_achievement_id?: string | null
+          unlock_type?: string
         }
         Update: {
           category?: string | null
@@ -1716,8 +1720,18 @@ export type Database = {
           placement?: string
           points_cost?: number
           stock?: number
+          unlock_achievement_id?: string | null
+          unlock_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rewards_unlock_achievement_id_fkey"
+            columns: ["unlock_achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       streak_milestones: {
         Row: {
