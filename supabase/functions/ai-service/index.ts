@@ -14,6 +14,7 @@ type AIAction =
   | 'analyze_user'
   | 'generate_partnership'
   | 'generate_quiz'
+  | 'generate_article'
   | 'chatbot'
   | 'fraud_detection'
   | 'sentiment_analysis'
