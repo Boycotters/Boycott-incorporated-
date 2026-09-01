@@ -353,6 +353,52 @@ async function generateQuiz(data: any) {
   );
 }
 
+async function generateArticle(data: any) {
+  const seed = Math.floor(Math.random() * 10000);
+  return await callAI(
+    `You are a Zambian editorial writer for Boycott Incorporated, a rewards app. You write short, useful, factual articles in a friendly modern Zambian voice.`,
+    `Write a reading task article (variation ${seed}).
+- Topic / task title: ${data.topic}
+- Category: ${data.category || 'general'}
+- Audience: Zambian users aged 16-35
+- Length: 4 to 6 paragraphs (about 450-650 words), practical and specific.
+Then create 3 comprehension questions that can ONLY be answered by someone who actually read the article.`,
+    true,
+    [{
+      type: 'function',
+      function: {
+        name: 'create_article',
+        description: 'Create a reading article with comprehension questions',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            summary: { type: 'string' },
+            readMinutes: { type: 'number' },
+            paragraphs: { type: 'array', items: { type: 'string' } },
+            keyTakeaways: { type: 'array', items: { type: 'string' } },
+            questions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  question: { type: 'string' },
+                  options: { type: 'array', items: { type: 'string' } },
+                  correctAnswer: { type: 'number' },
+                  explanation: { type: 'string' }
+                },
+                required: ['id', 'question', 'options', 'correctAnswer']
+              }
+            }
+          },
+          required: ['title', 'summary', 'readMinutes', 'paragraphs', 'questions']
+        }
+      }
+    }]
+  );
+}
+
 // ===== NEW AI MODEL HANDLERS =====
 
 // Chatbot - conversational assistant
