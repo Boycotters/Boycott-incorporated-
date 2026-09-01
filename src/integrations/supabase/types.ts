@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -209,6 +209,76 @@ export type Database = {
         }
         Relationships: []
       }
+      business_admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          business_id: string
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          business_id: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          business_id?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_admin_audit_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_admin_pin_attempts: {
+        Row: {
+          business_id: string
+          failed_attempts: number
+          last_attempt_at: string
+          locked_until: string | null
+        }
+        Insert: {
+          business_id: string
+          failed_attempts?: number
+          last_attempt_at?: string
+          locked_until?: string | null
+        }
+        Update: {
+          business_id?: string
+          failed_attempts?: number
+          last_attempt_at?: string
+          locked_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_admin_pin_attempts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_admin_pins: {
         Row: {
           business_id: string
@@ -332,6 +402,95 @@ export type Database = {
             foreignKeyName: "business_campaigns_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_kyc_verifications: {
+        Row: {
+          business_id: string
+          city: string | null
+          contact_phone: string | null
+          created_at: string
+          director_dob: string | null
+          director_full_name: string
+          director_id_path: string | null
+          director_nrc: string
+          id: string
+          legal_name: string
+          pacra_cert_path: string | null
+          pacra_number: string | null
+          proof_of_address_path: string | null
+          province: string | null
+          registered_address: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_path: string | null
+          status: string
+          submitted_by: string | null
+          tpin: string | null
+          tpin_cert_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          city?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          director_dob?: string | null
+          director_full_name: string
+          director_id_path?: string | null
+          director_nrc: string
+          id?: string
+          legal_name: string
+          pacra_cert_path?: string | null
+          pacra_number?: string | null
+          proof_of_address_path?: string | null
+          province?: string | null
+          registered_address?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_path?: string | null
+          status?: string
+          submitted_by?: string | null
+          tpin?: string | null
+          tpin_cert_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          city?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          director_dob?: string | null
+          director_full_name?: string
+          director_id_path?: string | null
+          director_nrc?: string
+          id?: string
+          legal_name?: string
+          pacra_cert_path?: string | null
+          pacra_number?: string | null
+          proof_of_address_path?: string | null
+          province?: string | null
+          registered_address?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_path?: string | null
+          status?: string
+          submitted_by?: string | null
+          tpin?: string | null
+          tpin_cert_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_kyc_verifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
             referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
@@ -2722,6 +2881,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_business_admin_event: {
+        Args: {
+          _action: string
+          _business_id: string
+          _details?: Json
+          _entity_id?: string
+          _entity_type?: string
+        }
+        Returns: undefined
+      }
       play_game: {
         Args: {
           p_game_type: string
@@ -2769,6 +2938,10 @@ export type Database = {
         }
         Returns: Json
       }
+      review_business_kyc: {
+        Args: { _kyc_id: string; _notes?: string; _status: string }
+        Returns: boolean
+      }
       secure_complete_task: {
         Args: {
           p_task_id: string
@@ -2805,6 +2978,10 @@ export type Database = {
       verify_business_admin_pin: {
         Args: { _business_id: string; _pin: string }
         Returns: boolean
+      }
+      verify_business_admin_pin_secure: {
+        Args: { _business_id: string; _pin: string }
+        Returns: Json
       }
     }
     Enums: {
