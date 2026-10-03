@@ -8,3 +8,4 @@ export { AISurveyVerification } from "./AISurveyVerification";
 export { QuizVerification } from "./QuizVerification";
 export { GPSVerification } from "./GPSVerification";
 
+export { ArticleVerification } from "./ArticleVerification";
