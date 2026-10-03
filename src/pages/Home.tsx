@@ -131,6 +131,7 @@ export default function Home() {
         .from('rewards')
         .select('id, name, points_cost, image')
         .eq('is_active', true)
+        .eq('unlock_type', 'purchase')
         .order('points_cost', { ascending: true })
         .limit(1)
         .single();

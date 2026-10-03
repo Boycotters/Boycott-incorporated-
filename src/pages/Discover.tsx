@@ -160,7 +160,8 @@ export default function Discover() {
       const { data, error } = await supabase
         .from("rewards")
         .select("id, name, description, points_cost, category, image, stock, placement")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .eq("unlock_type", "purchase");
       if (error) throw error;
       return data || [];
     },
