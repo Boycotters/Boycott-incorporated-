@@ -1519,7 +1519,8 @@ export default function Admin() {
                   { type: 'quiz', label: 'Quiz Verification', desc: 'User must pass a quiz to earn points' },
                   { type: 'survey', label: 'Survey Verification', desc: 'User completes a survey questionnaire' },
                   { type: 'ai_survey', label: 'AI Survey/Quiz', desc: 'AI-generated questions based on task category' },
-                  { type: 'instant', label: 'Instant / Data Verification', desc: 'Automatic verification against user data' },
+                  { type: 'article', label: 'Article Reading', desc: 'AI article + comprehension check' },
+                  { type: 'data', label: 'Data Verification', desc: 'Automatic verification against user progress' },
                 ].map(item => (
                   <div key={item.type} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
                     <Badge variant="outline" className="shrink-0 mt-0.5">{item.type}</Badge>

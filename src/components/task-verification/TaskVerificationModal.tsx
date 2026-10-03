@@ -13,6 +13,7 @@ import { SurveyVerification } from "./SurveyVerification";
 import { AISurveyVerification } from "./AISurveyVerification";
 import { QuizVerification } from "./QuizVerification";
 import { GPSVerification } from "./GPSVerification";
+import { ArticleVerification } from "./ArticleVerification";
 
 interface QuizData {
   question: string;
@@ -165,7 +166,18 @@ export function TaskVerificationModal({
             onCancel={handleCancel}
           />
         );
+      case 'article':
       case 'instant':
+        return (
+          <ArticleVerification
+            taskId={task.id}
+            taskTitle={task.title}
+            taskDescription={task.description || undefined}
+            taskCategory={task.category || undefined}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
       case 'data':
         return (
           <DataVerification
@@ -186,8 +198,16 @@ export function TaskVerificationModal({
           />
         );
       default:
-        handleComplete();
-        return null;
+        return (
+          <ArticleVerification
+            taskId={task.id}
+            taskTitle={task.title}
+            taskDescription={task.description || undefined}
+            taskCategory={task.category || undefined}
+            onComplete={() => handleComplete()}
+            onCancel={handleCancel}
+          />
+        );
     }
   };
 

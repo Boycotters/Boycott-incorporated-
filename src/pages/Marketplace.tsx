@@ -37,6 +37,7 @@ export default function Marketplace() {
         .from('rewards')
         .select('*')
         .eq('is_active', true)
+        .eq('unlock_type', 'purchase')
         .order('points_cost', { ascending: true });
       
       if (error) throw error;

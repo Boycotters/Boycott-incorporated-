@@ -427,6 +427,7 @@ export type Database = {
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          scan_results: Json
           selfie_path: string | null
           status: string
           submitted_by: string | null
@@ -453,6 +454,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          scan_results?: Json
           selfie_path?: string | null
           status?: string
           submitted_by?: string | null
@@ -479,6 +481,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          scan_results?: Json
           selfie_path?: string | null
           status?: string
           submitted_by?: string | null
@@ -621,6 +624,7 @@ export type Database = {
           business_type: string | null
           city: string | null
           company_name: string
+          contact_phone: string | null
           created_at: string
           description: string | null
           id: string
@@ -639,6 +643,7 @@ export type Database = {
           business_type?: string | null
           city?: string | null
           company_name: string
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -657,6 +662,7 @@ export type Database = {
           business_type?: string | null
           city?: string | null
           company_name?: string
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -776,7 +782,10 @@ export type Database = {
           due_date: string | null
           expires_at: string | null
           id: string
+          lock_notified: boolean
           locked: boolean
+          reminder_1d_sent: boolean
+          reminder_7d_sent: boolean
           started_at: string
           status: string
           tier: string
@@ -788,7 +797,10 @@ export type Database = {
           due_date?: string | null
           expires_at?: string | null
           id?: string
+          lock_notified?: boolean
           locked?: boolean
+          reminder_1d_sent?: boolean
+          reminder_7d_sent?: boolean
           started_at?: string
           status?: string
           tier?: string
@@ -800,7 +812,10 @@ export type Database = {
           due_date?: string | null
           expires_at?: string | null
           id?: string
+          lock_notified?: boolean
           locked?: boolean
+          reminder_1d_sent?: boolean
+          reminder_7d_sent?: boolean
           started_at?: string
           status?: string
           tier?: string
@@ -848,6 +863,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "business_team_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_topup_requests: {
+        Row: {
+          amount_points: number
+          amount_zmw: number
+          business_id: string
+          created_at: string
+          id: string
+          method: string
+          phone_number: string
+          reference: string | null
+          requested_by: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_points: number
+          amount_zmw?: number
+          business_id: string
+          created_at?: string
+          id?: string
+          method: string
+          phone_number: string
+          reference?: string | null
+          requested_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_points?: number
+          amount_zmw?: number
+          business_id?: string
+          created_at?: string
+          id?: string
+          method?: string
+          phone_number?: string
+          reference?: string | null
+          requested_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_topup_requests_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "business_profiles"
@@ -1840,6 +1914,8 @@ export type Database = {
       }
       tasks: {
         Row: {
+          approval_status: string
+          business_campaign_id: string | null
           category: string | null
           created_at: string | null
           description: string | null
@@ -1848,11 +1924,18 @@ export type Database = {
           is_active: boolean | null
           page_placement: string | null
           points_reward: number
+          priority: number
           quiz_data: Json | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          submitted_at: string | null
           title: string
           verification_type: string | null
         }
         Insert: {
+          approval_status?: string
+          business_campaign_id?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
@@ -1861,11 +1944,18 @@ export type Database = {
           is_active?: boolean | null
           page_placement?: string | null
           points_reward: number
+          priority?: number
           quiz_data?: Json | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string | null
           title: string
           verification_type?: string | null
         }
         Update: {
+          approval_status?: string
+          business_campaign_id?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
@@ -1874,11 +1964,24 @@ export type Database = {
           is_active?: boolean | null
           page_placement?: string | null
           points_reward?: number
+          priority?: number
           quiz_data?: Json | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string | null
           title?: string
           verification_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_business_campaign_id_fkey"
+            columns: ["business_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "business_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tournament_participants: {
         Row: {
@@ -2703,12 +2806,44 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_broadcast_notification: {
+        Args: {
+          _body: string
+          _business_id?: string
+          _link?: string
+          _title: string
+          _type?: string
+        }
+        Returns: number
+      }
+      admin_review_campaign: {
+        Args: {
+          _action: string
+          _campaign_id: string
+          _reason?: string
+          _task_category?: string
+          _task_description?: string
+          _task_points?: number
+          _task_title?: string
+          _task_verification?: string
+        }
+        Returns: Json
+      }
       admin_review_kyc: { Args: { p_payload: Json }; Returns: Json }
       admin_review_transfer: {
         Args: {
           p_action: string
           p_admin_notes?: string
           p_transfer_id: string
+        }
+        Returns: Json
+      }
+      admin_set_subscription: {
+        Args: {
+          _business_id: string
+          _locked?: boolean
+          _months?: number
+          _tier?: string
         }
         Returns: Json
       }
@@ -2956,6 +3091,14 @@ export type Database = {
         Args: { _kyc_id: string; _notes?: string; _status: string }
         Returns: boolean
       }
+      review_campaign_task: {
+        Args: { _notes?: string; _status: string; _task_id: string }
+        Returns: Json
+      }
+      review_topup_request: {
+        Args: { _id: string; _notes?: string; _status: string }
+        Returns: Json
+      }
       secure_complete_task: {
         Args: {
           p_task_id: string
@@ -2967,6 +3110,20 @@ export type Database = {
       set_business_admin_pin: {
         Args: { _business_id: string; _current_pin: string; _new_pin: string }
         Returns: boolean
+      }
+      submit_campaign_for_review: {
+        Args: { _campaign_id: string }
+        Returns: Json
+      }
+      submit_topup_request: {
+        Args: {
+          _amount_points: number
+          _business_id: string
+          _method: string
+          _phone: string
+          _reference?: string
+        }
+        Returns: Json
       }
       submit_tournament_score: {
         Args: { p_score: number; p_tournament_id: string; p_user_id: string }
@@ -3016,12 +3173,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3045,11 +3202,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3070,11 +3227,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3095,11 +3252,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3112,11 +3269,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

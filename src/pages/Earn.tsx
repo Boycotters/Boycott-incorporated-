@@ -37,6 +37,7 @@ const verificationIcons: Record<string, any> = {
   url: Link2,
   timer: Clock,
   instant: Zap,
+  article: BookOpen,
 };
 
 interface Task {
@@ -988,8 +989,10 @@ export default function Earn() {
         task={selectedTask ? {
           id: selectedTask.id,
           title: selectedTask.title,
-          verification_type: selectedTask.verification_type || 'instant',
+          verification_type: selectedTask.verification_type || 'article',
           points_reward: selectedTask.points_reward,
+          description: selectedTask.description,
+          category: selectedTask.category,
         } : null}
         userId={user?.id || ''}
         onVerificationComplete={handleVerificationComplete}
