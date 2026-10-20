@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -303,6 +303,68 @@ export type Database = {
         }
         Relationships: []
       }
+      business_billing_methods: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string | null
+          branch: string | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          method_type: string
+          provider: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name?: string | null
+          branch?: string | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method_type: string
+          provider: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string | null
+          branch?: string | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method_type?: string
+          provider?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_billing_methods_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_campaigns: {
         Row: {
           approved_at: string | null
@@ -314,6 +376,7 @@ export type Database = {
           conversions: number
           created_at: string
           created_by: string | null
+          created_by_team: boolean
           creative: Json
           description: string | null
           end_date: string | null
@@ -345,6 +408,7 @@ export type Database = {
           conversions?: number
           created_at?: string
           created_by?: string | null
+          created_by_team?: boolean
           creative?: Json
           description?: string | null
           end_date?: string | null
@@ -376,6 +440,7 @@ export type Database = {
           conversions?: number
           created_at?: string
           created_by?: string | null
+          created_by_team?: boolean
           creative?: Json
           description?: string | null
           end_date?: string | null
@@ -499,24 +564,72 @@ export type Database = {
           },
         ]
       }
-      business_network_connections: {
+      business_messages: {
         Row: {
+          body: string
+          connection_id: string
           created_at: string
           id: string
+          sender_business_id: string
+          sender_user_id: string | null
+        }
+        Insert: {
+          body: string
+          connection_id: string
+          created_at?: string
+          id?: string
+          sender_business_id: string
+          sender_user_id?: string | null
+        }
+        Update: {
+          body?: string
+          connection_id?: string
+          created_at?: string
+          id?: string
+          sender_business_id?: string
+          sender_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_messages_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "business_network_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_messages_sender_business_id_fkey"
+            columns: ["sender_business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_network_connections: {
+        Row: {
+          contact_method: string
+          created_at: string
+          id: string
+          note: string | null
           requester_business_id: string
           status: string
           target_business_id: string
         }
         Insert: {
+          contact_method?: string
           created_at?: string
           id?: string
+          note?: string | null
           requester_business_id: string
           status?: string
           target_business_id: string
         }
         Update: {
+          contact_method?: string
           created_at?: string
           id?: string
+          note?: string | null
           requester_business_id?: string
           status?: string
           target_business_id?: string
@@ -632,6 +745,7 @@ export type Database = {
           is_listed: boolean
           is_verified: boolean
           logo_url: string | null
+          managed_campaigns_completed: number
           owner_id: string
           pacra_number: string | null
           province: string | null
@@ -651,6 +765,7 @@ export type Database = {
           is_listed?: boolean
           is_verified?: boolean
           logo_url?: string | null
+          managed_campaigns_completed?: number
           owner_id: string
           pacra_number?: string | null
           province?: string | null
@@ -670,6 +785,7 @@ export type Database = {
           is_listed?: boolean
           is_verified?: boolean
           logo_url?: string | null
+          managed_campaigns_completed?: number
           owner_id?: string
           pacra_number?: string | null
           province?: string | null
@@ -834,7 +950,7 @@ export type Database = {
           role: Database["public"]["Enums"]["business_role"]
           status: string
           title: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           business_id: string
@@ -846,7 +962,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["business_role"]
           status?: string
           title?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           business_id?: string
@@ -858,7 +974,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["business_role"]
           status?: string
           title?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -877,8 +993,10 @@ export type Database = {
           business_id: string
           created_at: string
           id: string
+          metadata: Json
           method: string
           phone_number: string
+          purpose: string
           reference: string | null
           requested_by: string | null
           review_notes: string | null
@@ -893,8 +1011,10 @@ export type Database = {
           business_id: string
           created_at?: string
           id?: string
+          metadata?: Json
           method: string
           phone_number: string
+          purpose?: string
           reference?: string | null
           requested_by?: string | null
           review_notes?: string | null
@@ -909,8 +1029,10 @@ export type Database = {
           business_id?: string
           created_at?: string
           id?: string
+          metadata?: Json
           method?: string
           phone_number?: string
+          purpose?: string
           reference?: string | null
           requested_by?: string | null
           review_notes?: string | null
@@ -1058,6 +1180,81 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "campaign_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "business_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_requests: {
+        Row: {
+          admin_notes: string | null
+          brief: string
+          budget_zmw: number
+          business_id: string
+          campaign_id: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          objective: string | null
+          payment_request_id: string | null
+          payment_status: string
+          preferred_format: string | null
+          requested_by: string | null
+          start_date: string | null
+          status: string
+          target_audience: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          brief: string
+          budget_zmw?: number
+          business_id: string
+          campaign_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          objective?: string | null
+          payment_request_id?: string | null
+          payment_status?: string
+          preferred_format?: string | null
+          requested_by?: string | null
+          start_date?: string | null
+          status?: string
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          brief?: string
+          budget_zmw?: number
+          business_id?: string
+          campaign_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          objective?: string | null
+          payment_request_id?: string | null
+          payment_status?: string
+          preferred_format?: string | null
+          requested_by?: string | null
+          start_date?: string | null
+          status?: string
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_requests_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "business_campaigns"
@@ -2798,6 +2995,16 @@ export type Database = {
       }
     }
     Functions: {
+      _approve_campaign_core: {
+        Args: {
+          _campaign_id: string
+          _task_description: string
+          _task_points: number
+          _task_title: string
+          _task_verification: string
+        }
+        Returns: string
+      }
       admin_ban_user: {
         Args: {
           p_ban_reason?: string
@@ -2815,6 +3022,21 @@ export type Database = {
           _type?: string
         }
         Returns: number
+      }
+      admin_create_managed_campaign: {
+        Args: {
+          _body: string
+          _description: string
+          _format: string
+          _headline: string
+          _name: string
+          _objective: string
+          _request_id: string
+          _task_description: string
+          _task_points: number
+          _task_title: string
+        }
+        Returns: Json
       }
       admin_review_campaign: {
         Args: {
@@ -2885,6 +3107,13 @@ export type Database = {
         }
         Returns: Json
       }
+      business_tier_limits: {
+        Args: { _business_id: string }
+        Returns: {
+          max_connections: number
+          max_team: number
+        }[]
+      }
       business_wallet_spend: {
         Args: {
           _amount: number
@@ -2897,6 +3126,10 @@ export type Database = {
       business_wallet_topup: {
         Args: { _amount: number; _business_id: string; _description: string }
         Returns: undefined
+      }
+      can_self_create_campaigns: {
+        Args: { _business_id: string }
+        Returns: boolean
       }
       check_ai_rate_limit: {
         Args: {
@@ -3087,6 +3320,10 @@ export type Database = {
         }
         Returns: Json
       }
+      review_billing_method: {
+        Args: { _id: string; _notes?: string; _status: string }
+        Returns: Json
+      }
       review_business_kyc: {
         Args: { _kyc_id: string; _notes?: string; _status: string }
         Returns: boolean
@@ -3113,6 +3350,33 @@ export type Database = {
       }
       submit_campaign_for_review: {
         Args: { _campaign_id: string }
+        Returns: Json
+      }
+      submit_campaign_request: {
+        Args: {
+          _account?: string
+          _brief: string
+          _budget_zmw: number
+          _business_id: string
+          _end: string
+          _method: string
+          _objective: string
+          _preferred_format: string
+          _start: string
+          _target_audience: string
+        }
+        Returns: Json
+      }
+      submit_payment_request: {
+        Args: {
+          _account: string
+          _amount_points: number
+          _business_id: string
+          _metadata?: Json
+          _method: string
+          _purpose: string
+          _reference?: string
+        }
         Returns: Json
       }
       submit_topup_request: {
