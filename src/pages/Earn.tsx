@@ -907,7 +907,12 @@ export default function Earn() {
               const h = Array.from(`${t.id}-${bucket}`).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
               return { t, key: h + i };
             }).sort((a, b) => a.key - b.key).map(x => x.t);
-            return seeded.filter(task => !isTaskCompleted(task.id));
+            // Business-app tasks are pinned to the top (newest first), ignoring the shuffle
+            const isBiz = (t: any) => !!t.business_campaign_id;
+            const pinned = [...(tasks || [])].filter(isBiz)
+              .sort((a: any, b: any) => (b.priority ?? 0) - (a.priority ?? 0) || String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')));
+            const rest = seeded.filter(t => !isBiz(t));
+            return [...pinned, ...rest].filter(task => !isTaskCompleted(task.id));
           })().map((task) => {
             const IconComponent = iconMap[task.category || 'quick'] || Sparkles;
             const VerifyIcon = verificationIcons[task.verification_type || 'instant'] || Zap;
